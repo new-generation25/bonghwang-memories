@@ -55,8 +55,8 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
     </div>
   )
 
+  /* 
   // Original camera code (commented out for PC testing)
-  /*
   const [isLoading, setIsLoading] = useState(true)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -87,7 +87,6 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
       onClose()
     }
   }, [onClose])
-  */
 
   // Initialize on mount
   useState(() => {
@@ -137,7 +136,6 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between p-4 bg-black/80 text-white">
         <button
           onClick={handleClose}
@@ -150,7 +148,6 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
         <div className="w-16"></div>
       </div>
 
-      {/* Camera view */}
       <div className="flex-1 relative">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -169,7 +166,6 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
           className="w-full h-full object-cover"
         />
 
-        {/* Guide overlay */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-4 border-2 border-white/50 border-dashed rounded-lg"></div>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
@@ -180,7 +176,6 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
         </div>
       </div>
 
-      {/* Controls */}
       <div className="bg-black/80 p-6 flex items-center justify-center">
         <button
           onClick={capturePhoto}
@@ -193,8 +188,8 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
         </button>
       </div>
 
-      {/* Hidden canvas for photo capture */}
       <canvas ref={canvasRef} className="hidden" />
     </div>
   )
+  */
 }
