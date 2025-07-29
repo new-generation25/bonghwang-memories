@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap');
+
+:root {
+  --sepia-50: #faf8f0;
+  --sepia-100: #f7f3e9;
+  --sepia-200: #f0e6d2;
+  --sepia-300: #e8d5b7;
+  --sepia-400: #d4b896;
+  --sepia-500: #c19a6b;
+  --sepia-600: #a67c5a;
+  --sepia-700: #856447;
+  --sepia-800: #6b4e37;
+  --sepia-900: #543f2c;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: rgb(var(--sepia-800));
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgb(var(--sepia-50))
+  )
+  rgb(var(--sepia-100));
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Vintage paper texture background */
+.vintage-paper {
+  background-color: #f4f1e8;
+  background-image: 
+    radial-gradient(circle at 25px 25px, #e8d5b7 2px, transparent 2px),
+    radial-gradient(circle at 75px 75px, #e8d5b7 2px, transparent 2px);
+  background-size: 100px 100px;
+}
+
+/* Handwriting animation */
+.typing-effect {
+  overflow: hidden;
+  border-right: 2px solid transparent;
+  white-space: nowrap;
+  animation: typing 3.5s steps(40, end), blink-caret .75s step-end infinite;
+}
+
+/* Vintage button styles */
+.vintage-button {
+  @apply bg-gradient-to-r from-vintage-brown to-sepia-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl;
+}
+
+.vintage-button:hover {
+  @apply from-sepia-700 to-vintage-brown;
+}
+
+/* Mission compass icons */
+.compass-icon {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s ease;
+}
+
+.compass-icon:hover {
+  transform: rotate(15deg) scale(1.1);
+}
+
+/* Polaroid photo effect */
+.polaroid {
+  background: white;
+  padding: 1rem 1rem 3rem 1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transform: rotate(-2deg);
+  transition: transform 0.3s ease;
+}
+
+.polaroid:hover {
+  transform: rotate(0deg) scale(1.05);
+}
+
+/* Map vintage overlay */
+.map-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    45deg,
+    rgba(244, 241, 232, 0.1) 0%,
+    rgba(212, 184, 150, 0.1) 100%
+  );
+  pointer-events: none;
+}
+
+/* Bingo cell styles */
+.bingo-cell {
+  @apply aspect-square relative overflow-hidden rounded-lg border-2 border-sepia-400 bg-sepia-100;
+  transition: all 0.3s ease;
+}
+
+.bingo-cell.completed {
+  @apply border-vintage-gold bg-vintage-gold/20;
+}
+
+.bingo-cell:hover {
+  @apply scale-105 shadow-lg;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--sepia-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sepia-400);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sepia-600);
+}
+
+/* Loading animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: currentColor; }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .vintage-button {
+    @apply py-2 px-4 text-sm;
+  }
+  
+  .polaroid {
+    padding: 0.5rem 0.5rem 2rem 0.5rem;
+  }
+}
