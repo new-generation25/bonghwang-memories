@@ -12,10 +12,21 @@ interface MapProps {
 
 export default function Map({ onMissionSelect, completedMissions, userLocation }: MapProps) {
   const [mapContainer, setMapContainer] = useState<HTMLDivElement | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
 
-  // Mock map implementation (replace with actual map library)
+  // Check if device is mobile
   useEffect(() => {
-    if (!mapContainer) return
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent.toLowerCase()
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+      setIsMobile(isMobileDevice)
+    }
+    checkMobile()
+  }, [])
+
+  // Mock map implementation for PC testing
+  useEffect(() => {
+    if (!mapContainer || isMobile) return
 
     // Clear previous content
     mapContainer.innerHTML = ''
@@ -76,49 +87,113 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     })
 
     // Add user location marker if available (disabled for PC testing)
-    // TODO: Re-enable for mobile testing
-    // if (userLocation) {
-    //   const userMarker = document.createElement('div')
-    //   userMarker.className = 'absolute w-4 h-4 transform -translate-x-1/2 -translate-y-1/2 z-20'
-    //   userMarker.style.top = '50%' // Mock position
-    //   userMarker.style.left = '45%' // Mock position
+    if (userLocation) {
+      const userMarker = document.createElement('div')
+      userMarker.className = 'absolute w-4 h-4 transform -translate-x-1/2 -translate-y-1/2 z-20'
+      userMarker.style.top = '50%' // Mock position
+      userMarker.style.left = '45%' // Mock position
       
-    //   userMarker.innerHTML = `
-    //     <div class="relative">
-    //       <div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg"></div>
-    //       <div class="absolute inset-0 w-4 h-4 bg-blue-400 rounded-full animate-ping opacity-75"></div>
-    //     </div>
-    //   `
+      userMarker.innerHTML = `
+        <div class="relative">
+          <div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg"></div>
+          <div class="absolute inset-0 w-4 h-4 bg-blue-400 rounded-full animate-ping opacity-75"></div>
+        </div>
+      `
       
-    //   mapBg.appendChild(userMarker)
-    // }
+      mapBg.appendChild(userMarker)
+    }
 
     mapContainer.appendChild(mapBg)
-  }, [mapContainer, completedMissions, userLocation, onMissionSelect])
+  }, [mapContainer, completedMissions, userLocation, onMissionSelect, isMobile])
+
+  // Mobile map implementation (placeholder for actual map library)
+  useEffect(() => {
+    if (!mapContainer || !isMobile) return
+
+    // Clear previous content
+    mapContainer.innerHTML = ''
+
+    // Create mobile map container
+    const mobileMap = document.createElement('div')
+    mobileMap.className = 'relative w-full h-full bg-blue-100 rounded-lg overflow-hidden'
+    mobileMap.innerHTML = `
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div class="text-center">
+          <div class="text-6xl mb-4">🗺️</div>
+          <h3 class="text-lg font-bold text-gray-800 mb-2">실제 지도</h3>
+          <p class="text-sm text-gray-600 mb-4">모바일에서는 실제 지도가 표시됩니다</p>
+          <div class="space-y-2">
+            ${mainMissions.map((mission, index) => {
+              const isCompleted = completedMissions.includes(mission.missionId)
+              return `
+                <button 
+                  class="w-full p-3 ${isCompleted ? 'bg-green-500' : 'bg-blue-500'} text-white rounded-lg"
+                  onclick="window.missionSelect && window.missionSelect('${mission.missionId}')"
+                >
+                  ${isCompleted ? '✓' : index + 1}. ${mission.title}
+                </button>
+              `
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `
+
+    // Add mission selection handler
+    ;(window as any).missionSelect = (missionId: string) => {
+      const mission = mainMissions.find(m => m.missionId === missionId)
+      if (mission) {
+        onMissionSelect(mission)
+      }
+    }
+
+    mapContainer.appendChild(mobileMap)
+  }, [mapContainer, completedMissions, onMissionSelect, isMobile])
 
   return (
     <div className="w-full h-full min-h-[400px] relative">
       <div 
         ref={setMapContainer}
-        className="w-full h-full rounded-lg shadow-inner"
+        className="w-full h-full"
       />
       
-      {/* Map legend */}
-      <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-        <div className="flex items-center space-x-4 text-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-vintage-brown rounded-full"></div>
-            <span className="text-sepia-700">미완료</span>
+      {/* Map controls */}
+      <div className="absolute top-4 right-4 space-y-2">
+        <button 
+          className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50"
+          title="현재 위치"
+        >
+          📍
+        </button>
+        <button 
+          className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50"
+          title="지도 확대"
+        >
+          🔍+
+        </button>
+        <button 
+          className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50"
+          title="지도 축소"
+        >
+          🔍-
+        </button>
+      </div>
+
+      {/* Map info */}
+      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+        <div className="text-sm text-gray-700">
+          <div className="flex items-center space-x-2 mb-1">
+            <div className="w-3 h-3 bg-vintage-brown rounded-full"></div>
+            <span>미완료 미션</span>
+          </div>
+          <div className="flex items-center space-x-2 mb-1">
+            <div className="w-3 h-3 bg-vintage-gold rounded-full"></div>
+            <span>완료된 미션</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-vintage-gold rounded-full"></div>
-            <span className="text-sepia-700">완료</span>
-          </div>
-          {/* Disabled for PC testing */}
-          {/* <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-            <span className="text-sepia-700">현재 위치</span>
-          </div> */}
+            <span>현재 위치</span>
+          </div>
         </div>
       </div>
     </div>
