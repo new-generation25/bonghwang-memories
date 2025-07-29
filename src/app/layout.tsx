@@ -46,6 +46,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="봉황동 메모리즈" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#8B4513" />
+        {/* CSS 강제 로드 */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap');
+            body { font-family: 'Noto Sans KR', sans-serif; }
+          `
+        }} />
       </head>
       <body className="min-h-screen bg-vintage-paper">
         {children}
