@@ -21,7 +21,8 @@ export const metadata: Metadata = {
   },
   // CSP 헤더 추가로 document.write 경고 방지
   other: {
-    'Content-Security-Policy': "script-src 'self' 'unsafe-inline' https://oapi.map.naver.com https://*.naver.com; object-src 'none';"
+    'Content-Security-Policy': "script-src 'self' 'unsafe-inline' https://oapi.map.naver.com https://*.naver.com; object-src 'none';",
+    'vercel-toolbar': 'true'
   }
 }
 
