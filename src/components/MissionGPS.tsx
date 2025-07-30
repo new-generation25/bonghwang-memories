@@ -29,65 +29,72 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
     return R * c * 1000 // Return distance in meters
   }
 
-  // Get current location
+  // 🚫 Get current location - 임시 비활성화
   const getCurrentLocation = () => {
-    setChecking(true)
-    setError('')
+    // 🚫 위치 기능 임시 비활성화 - 다른 오류 해결 후 재활성화 예정
+    console.log('🚫 GPS 위치 기능이 임시로 비활성화되어 있습니다.')
+    setError('🚫 GPS 위치 기능이 임시로 비활성화되어 있습니다.')
+    setChecking(false)
+    
+    // setChecking(true)
+    // setError('')
 
-    if (!navigator.geolocation) {
-      setError('위치 서비스가 지원되지 않습니다.')
-      setChecking(false)
-      return
-    }
+    // if (!navigator.geolocation) {
+    //   setError('위치 서비스가 지원되지 않습니다.')
+    //   setChecking(false)
+    //   return
+    // }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location: LocationData = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy
-        }
+    // navigator.geolocation.getCurrentPosition(
+    //   (position) => {
+    //     const location: LocationData = {
+    //       latitude: position.coords.latitude,
+    //       longitude: position.coords.longitude,
+    //       accuracy: position.coords.accuracy
+    //     }
         
-        setUserLocation(location)
+    //     setUserLocation(location)
         
-        const dist = calculateDistance(
-          location.latitude,
-          location.longitude,
-          mission.location.lat,
-          mission.location.lng
-        )
+    //     const dist = calculateDistance(
+    //       location.latitude,
+    //       location.longitude,
+    //       mission.location.lat,
+    //       mission.location.lng
+    //     )
         
-        setDistance(Math.round(dist))
-        setIsInRange(dist <= 50) // 50m range
-        setChecking(false)
-      },
-      (error) => {
-        let errorMessage = '위치를 가져올 수 없습니다.'
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = '위치 권한이 거부되었습니다.'
-            break
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = '위치 정보를 사용할 수 없습니다.'
-            break
-          case error.TIMEOUT:
-            errorMessage = '위치 요청 시간이 초과되었습니다.'
-            break
-        }
-        setError(errorMessage)
-        setChecking(false)
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 60000
-      }
-    )
+    //     setDistance(Math.round(dist))
+    //     setIsInRange(dist <= 50) // 50m range
+    //     setChecking(false)
+    //   },
+    //   (error) => {
+    //     let errorMessage = '위치를 가져올 수 없습니다.'
+    //     switch (error.code) {
+    //       case error.PERMISSION_DENIED:
+    //         errorMessage = '위치 권한이 거부되었습니다.'
+    //         break
+    //       case error.POSITION_UNAVAILABLE:
+    //         errorMessage = '위치 정보를 사용할 수 없습니다.'
+    //         break
+    //       case error.TIMEOUT:
+    //         errorMessage = '위치 요청 시간이 초과되었습니다.'
+    //         break
+    //     }
+    //     setError(errorMessage)
+    //     setChecking(false)
+    //   },
+    //   {
+    //     enableHighAccuracy: true,
+    //     timeout: 15000,
+    //     maximumAge: 60000
+    //   }
+    // )
   }
 
-  // Auto-check location on mount
+  // 🚫 Auto-check location on mount - 임시 비활성화
   useEffect(() => {
-    getCurrentLocation()
+    // 🚫 위치 기능 임시 비활성화 - 다른 오류 해결 후 재활성화 예정
+    console.log('🚫 자동 위치 체크가 임시로 비활성화되어 있습니다.')
+    // getCurrentLocation()
   }, [])
 
   const handleVerifyLocation = () => {

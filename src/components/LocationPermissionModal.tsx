@@ -37,12 +37,10 @@ export default function LocationPermissionModal({
   }, [isOpen])
 
   const checkPermissionState = async () => {
-    // PC에서는 권한 확인 건너뛰기
-    if (!isMobile) {
-      console.log('PC 환경: 권한 요청을 건너뜁니다.')
-      onGranted()
-      return
-    }
+    // 🚫 위치 기능 임시 비활성화 - 다른 오류 해결 후 재활성화 예정
+    console.log('🚫 위치 기능이 임시로 비활성화되어 있습니다.')
+    onGranted()
+    return
 
     try {
       // 권한 API 지원 여부 확인

@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import LocationPermissionModal from '@/components/LocationPermissionModal'
 
 export default function IntroPage() {
   const [showButton, setShowButton] = useState(false)
   const [requesting, setRequesting] = useState(false)
-  const [showLocationModal, setShowLocationModal] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -22,41 +20,17 @@ export default function IntroPage() {
     setRequesting(true)
     
     try {
-      // PC 환경 감지
-      const userAgent = navigator.userAgent.toLowerCase()
-      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
-      
-      if (isMobileDevice) {
-        // 모바일: 권한 모달 표시
-        setShowLocationModal(true)
-      } else {
-        // PC: 권한 요청 없이 바로 진행
-        console.log('PC 환경: 권한 요청 없이 바로 진행합니다.')
-        router.push('/story')
-      }
+      // 🚫 위치 기능 임시 비활성화 - 다른 오류 해결 후 재활성화 예정
+      console.log('🚫 위치 기능이 임시로 비활성화되어 있습니다.')
+      router.push('/story')
     } catch (error) {
-      console.error('Permission denied:', error)
-      alert('위치와 카메라 권한이 필요합니다. 브라우저 설정에서 권한을 허용해주세요.')
+      console.error('Error:', error)
     }
     
     setRequesting(false)
   }
 
-  const handleLocationGranted = async () => {
-    setShowLocationModal(false)
-    
-    // 위치와 카메라 권한이 모두 허용되었으므로 바로 스토리 페이지로 이동
-    router.push('/story')
-  }
 
-  const handleLocationDenied = () => {
-    setShowLocationModal(false)
-    alert('위치 권한이 필요합니다. 브라우저 설정에서 권한을 허용해주세요.')
-  }
-
-  const handleLocationClose = () => {
-    setShowLocationModal(false)
-  }
 
   // 디버깅용 - 클릭 위치 확인
   const handleImageClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -195,13 +169,7 @@ export default function IntroPage() {
         }
       `}</style>
 
-      {/* 커스텀 위치 권한 모달 */}
-      <LocationPermissionModal
-        isOpen={showLocationModal}
-        onGranted={handleLocationGranted}
-        onDenied={handleLocationDenied}
-        onClose={handleLocationClose}
-      />
+
     </div>
   )
 }
