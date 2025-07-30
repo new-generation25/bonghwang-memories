@@ -22,8 +22,18 @@ export default function IntroPage() {
     setRequesting(true)
     
     try {
-      // 커스텀 위치 권한 모달 표시
-      setShowLocationModal(true)
+      // PC 환경 감지
+      const userAgent = navigator.userAgent.toLowerCase()
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+      
+      if (isMobileDevice) {
+        // 모바일: 권한 모달 표시
+        setShowLocationModal(true)
+      } else {
+        // PC: 권한 요청 없이 바로 진행
+        console.log('PC 환경: 권한 요청 없이 바로 진행합니다.')
+        router.push('/story')
+      }
     } catch (error) {
       console.error('Permission denied:', error)
       alert('위치와 카메라 권한이 필요합니다. 브라우저 설정에서 권한을 허용해주세요.')
