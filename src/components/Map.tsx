@@ -15,6 +15,8 @@ declare global {
     naver: any
     naverMapLoadError: boolean
     naverMapLoaded: boolean
+    naverMapLoading: boolean
+    loadNaverMapAPI: () => void
   }
 }
 
@@ -109,7 +111,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     }
 
     const checkNaverMaps = (attempts = 0) => {
-      const maxAttempts = 100 // 10초 대기
+      const maxAttempts = 150 // 15초 대기 (개선된 로딩 방식으로 인해 더 긴 대기 시간)
 
       // 전역 오류 상태 확인
       if (window.naverMapLoadError) {
@@ -118,7 +120,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
         return
       }
 
-      // callback 방식으로 로딩 완료 확인
+      // 개선된 로딩 상태 확인
       if (window.naverMapLoaded && window.naver && window.naver.maps) {
         console.log('네이버 지도 API 로딩 완료 확인됨')
         initMap()
@@ -128,6 +130,12 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
         console.warn('네이버 지도 API 로딩 타임아웃. Mock 지도를 표시합니다.')
         showMockMap('로딩 타임아웃')
       }
+    }
+
+    // API 로딩이 시작되지 않았다면 수동으로 시작
+    if (typeof window.loadNaverMapAPI === 'function' && !window.naverMapLoading && !window.naverMapLoaded) {
+      console.log('네이버 지도 API 수동 로딩 시작')
+      window.loadNaverMapAPI()
     }
 
     checkNaverMaps()

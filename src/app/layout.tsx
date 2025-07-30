@@ -40,17 +40,19 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icon-192x192.svg" />
+        <link rel="apple-touch-icon" href="/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="봉황 메모리즈" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#8B4513" />
-        {/* 네이버 지도 오류 처리 */}
+        
+        {/* 네이버 지도 API 개선된 로딩 방식 */}
         <script dangerouslySetInnerHTML={{
           __html: `
             window.naverMapLoadError = false;
             window.naverMapLoaded = false;
+            window.naverMapLoading = false;
             
             // API 키 검증
             const clientId = '${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}';
@@ -62,8 +64,14 @@ export default function RootLayout({
             // 도메인 검증 (개발환경에서만)
             if (typeof window !== 'undefined' && window.location) {
               const currentDomain = window.location.hostname;
+              const currentUrl = window.location.href;
+              const currentProtocol = window.location.protocol;
+              console.log('=== 네이버 지도 API 도메인 정보 ===');
               console.log('현재 도메인:', currentDomain);
+              console.log('현재 URL:', currentUrl);
+              console.log('현재 프로토콜:', currentProtocol);
               console.log('네이버 지도 API 키:', clientId);
+              console.log('================================');
             }
             
             // 네이버 지도 인증 실패 처리 (공식 문서 권장 방식)
@@ -88,9 +96,45 @@ export default function RootLayout({
             window.initNaverMap = function () {
               console.log('네이버 지도 API 로딩 완료');
               window.naverMapLoaded = true;
+              window.naverMapLoading = false;
             };
+            
+            // 개선된 네이버 지도 API 로딩 함수
+            window.loadNaverMapAPI = function() {
+              if (window.naverMapLoading || window.naverMapLoaded) return;
+              
+              window.naverMapLoading = true;
+              console.log('네이버 지도 API 로딩 시작...');
+              
+              // 동적 스크립트 로딩 (document.write 대신)
+              const script = document.createElement('script');
+              script.type = 'text/javascript';
+              script.async = true;
+              script.defer = true;
+              script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + clientId + '&callback=initNaverMap&submodules=geocoder';
+              
+              script.onload = function() {
+                console.log('네이버 지도 API 스크립트 로드 완료');
+              };
+              
+              script.onerror = function() {
+                console.error('네이버 지도 API 스크립트 로드 실패');
+                window.naverMapLoadError = true;
+                window.naverMapLoading = false;
+              };
+              
+              document.head.appendChild(script);
+            };
+            
+            // 페이지 로드 완료 후 API 로딩 시작
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', window.loadNaverMapAPI);
+            } else {
+              window.loadNaverMapAPI();
+            }
           `
         }} />
+        
         {/* CSS 강제 로드 */}
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -98,11 +142,6 @@ export default function RootLayout({
             body { font-family: 'Noto Sans KR', sans-serif; }
           `
         }} />
-        {/* 네이버 지도 API - callback 방식 (공식 문서 권장) */}
-        <script
-          type="text/javascript"
-          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}&callback=initNaverMap&submodules=geocoder`}
-        ></script>
       </head>
       <body className="min-h-screen" style={{
         background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
