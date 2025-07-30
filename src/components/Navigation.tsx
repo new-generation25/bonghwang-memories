@@ -76,22 +76,6 @@ export default function Navigation({ completedMainMissions }: NavigationProps) {
           )
         })}
       </div>
-
-      {/* Progress indicator */}
-      <div className="bg-sepia-100 px-4 py-2">
-        <div className="max-w-md mx-auto">
-          <div className="flex items-center justify-between text-xs text-sepia-600 mb-1">
-            <span>메인 미션 진행률</span>
-            <span>{completedMainMissions}/5</span>
-          </div>
-          <div className="w-full bg-sepia-200 rounded-full h-2">
-            <div 
-              className="bg-vintage-gold h-2 rounded-full transition-all duration-500"
-              style={{ width: `${(completedMainMissions / 5) * 100}%` }}
-            />
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
