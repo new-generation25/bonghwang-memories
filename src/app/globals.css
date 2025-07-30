@@ -5,16 +5,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap');
 
 :root {
-  --sepia-50: #faf8f0;
-  --sepia-100: #f7f3e9;
-  --sepia-200: #f0e6d2;
-  --sepia-300: #e8d5b7;
-  --sepia-400: #d4b896;
-  --sepia-500: #c19a6b;
-  --sepia-600: #a67c5a;
-  --sepia-700: #856447;
-  --sepia-800: #6b4e37;
-  --sepia-900: #543f2c;
+  --sepia-50: 250 248 240;
+  --sepia-100: 247 243 233;
+  --sepia-200: 240 230 210;
+  --sepia-300: 232 213 183;
+  --sepia-400: 212 184 150;
+  --sepia-500: 193 154 107;
+  --sepia-600: 166 124 90;
+  --sepia-700: 133 100 71;
+  --sepia-800: 107 78 55;
+  --sepia-900: 84 63 44;
+  --vintage-brown: 139 69 19;
+  --vintage-gold: 218 165 32;
+  --vintage-cream: 245 245 220;
 }
 
 * {
@@ -64,11 +67,22 @@ a {
 
 /* Vintage button styles */
 .vintage-button {
-  @apply bg-gradient-to-r from-vintage-brown to-sepia-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl;
+  background: linear-gradient(to right, #8B4513, #A67C5A);
+  color: white;
+  font-weight: bold;
+  padding: 12px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  transform: scale(1);
+  border: none;
+  cursor: pointer;
 }
 
 .vintage-button:hover {
-  @apply from-sepia-700 to-vintage-brown;
+  background: linear-gradient(to right, #856447, #8B4513);
+  transform: scale(1.05);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
 }
 
 /* Mission compass icons */

@@ -54,7 +54,9 @@ export default function RootLayout({
           `
         }} />
       </head>
-      <body className="min-h-screen bg-vintage-paper">
+      <body className="min-h-screen" style={{
+        background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
+      }}>
         {children}
       </body>
     </html>
