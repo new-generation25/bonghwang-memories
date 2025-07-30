@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  // CSP 헤더 추가로 document.write 경고 방지
+  other: {
+    'Content-Security-Policy': "script-src 'self' 'unsafe-inline' https://oapi.map.naver.com https://*.naver.com; object-src 'none';"
+  }
 }
 
 export const viewport: Viewport = {
@@ -47,7 +51,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#8B4513" />
         
-        {/* 네이버 지도 API 개선된 로딩 방식 */}
+        {/* 네이버 지도 API 개선된 로딩 방식 - document.write 경고 해결 */}
         <script dangerouslySetInnerHTML={{
           __html: `
             window.naverMapLoadError = false;
@@ -99,19 +103,27 @@ export default function RootLayout({
               window.naverMapLoading = false;
             };
             
-            // 개선된 네이버 지도 API 로딩 함수
+            // 개선된 네이버 지도 API 로딩 함수 - document.write 경고 해결
             window.loadNaverMapAPI = function() {
               if (window.naverMapLoading || window.naverMapLoaded) return;
               
               window.naverMapLoading = true;
               console.log('네이버 지도 API 로딩 시작...');
               
-              // 동적 스크립트 로딩 (document.write 대신)
+              // 동적 스크립트 로딩 (document.write 대신 createElement 사용)
               const script = document.createElement('script');
               script.type = 'text/javascript';
               script.async = true;
               script.defer = true;
-              script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + clientId + '&callback=initNaverMap&submodules=geocoder';
+              script.crossOrigin = 'anonymous';
+              
+              // URL 파라미터를 안전하게 구성
+              const apiUrl = new URL('https://oapi.map.naver.com/openapi/v3/maps.js');
+              apiUrl.searchParams.set('ncpKeyId', clientId);
+              apiUrl.searchParams.set('callback', 'initNaverMap');
+              apiUrl.searchParams.set('submodules', 'geocoder');
+              
+              script.src = apiUrl.toString();
               
               script.onload = function() {
                 console.log('네이버 지도 API 스크립트 로드 완료');
@@ -123,14 +135,18 @@ export default function RootLayout({
                 window.naverMapLoading = false;
               };
               
+              // 스크립트를 head에 추가
               document.head.appendChild(script);
             };
             
-            // 페이지 로드 완료 후 API 로딩 시작
+            // 페이지 로드 완료 후 API 로딩 시작 (지연 로딩)
             if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', window.loadNaverMapAPI);
+              document.addEventListener('DOMContentLoaded', function() {
+                // 약간의 지연을 두어 페이지 렌더링 최적화
+                setTimeout(window.loadNaverMapAPI, 100);
+              });
             } else {
-              window.loadNaverMapAPI();
+              setTimeout(window.loadNaverMapAPI, 100);
             }
           `
         }} />

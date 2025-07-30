@@ -22,6 +22,20 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // CSP 헤더 추가로 document.write 경고 방지
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "script-src 'self' 'unsafe-inline' https://oapi.map.naver.com https://*.naver.com; object-src 'none';"
+          }
+        ]
+      }
+    ]
+  }
 }
 
 module.exports = nextConfig
