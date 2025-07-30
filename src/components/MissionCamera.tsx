@@ -58,6 +58,12 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
 
   // Initialize on mount
   useEffect(() => {
+    // PC에서는 카메라 초기화 건너뛰기
+    if (!isMobile) {
+      setIsLoading(false)
+      return
+    }
+    
     initCamera()
     
     // Cleanup on unmount
@@ -66,7 +72,7 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
         stream.getTracks().forEach(track => track.stop())
       }
     }
-  }, [initCamera, stream])
+  }, [initCamera, stream, isMobile])
 
   const capturePhoto = () => {
     if (isMobile) {
