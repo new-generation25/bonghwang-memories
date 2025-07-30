@@ -66,6 +66,13 @@ export default function RootLayout({
               console.log('현재 도메인:', currentDomain);
               console.log('네이버 지도 API 키:', clientId);
             }
+            
+            // 네이버 지도 인증 실패 처리 (공식 문서 권장 방식)
+            window.navermap_authFailure = function () {
+              console.error('네이버 지도 API 인증 실패');
+              window.naverMapLoadError = true;
+              alert('네이버 지도 API 인증에 실패했습니다. 관리자에게 문의해주세요.');
+            };
           `
         }} />
         {/* CSS 강제 로드 */}
@@ -81,7 +88,7 @@ export default function RootLayout({
       }}>
         {children}
         
-        {/* 네이버 지도 API - 이벤트 핸들러 제거 */}
+        {/* 네이버 지도 API - 공식 문서 권장 방식 */}
         <Script
           strategy="afterInteractive"
           src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}`}

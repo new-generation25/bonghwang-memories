@@ -55,12 +55,6 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
       }
 
       try {
-        // API 인증 확인을 위한 테스트
-        const testPoint = new window.naver.maps.Point(0, 0)
-        if (!testPoint) {
-          throw new Error('네이버 지도 API 인증 실패')
-        }
-
         // 봉황동 중심 좌표
         const center = new window.naver.maps.LatLng(35.2285, 128.6815)
         
@@ -88,13 +82,13 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
           setIsLoaded(true)
         })
 
-        // 지도 로드 실패 처리
+        // 지도 로드 실패 처리 (타임아웃 단축)
         setTimeout(() => {
           if (!isLoaded) {
             console.warn('네이버 지도 로딩 타임아웃')
             showMockMap('로딩 타임아웃')
           }
-        }, 10000)
+        }, 5000)
 
       } catch (error: any) {
         console.error('네이버 지도 초기화 실패:', error)
