@@ -11,8 +11,8 @@ export const mainMissions: Mission[] = [
       outro: '바나나맛 우유의 달콤함이 그때의 기억을 되살려주는구나.'
     },
     location: {
-      lat: 35.2281,
-      lng: 128.6811
+      lat: 35.229116,
+      lng: 128.878596
     },
     quiz: {
       question: '아버지가 좋아했던 우유는?',
@@ -32,8 +32,8 @@ export const mainMissions: Mission[] = [
       outro: '아버지의 목소리가 그 시절의 정겨운 이야기를 들려주는구나.'
     },
     location: {
-      lat: 35.2285,
-      lng: 128.6815
+      lat: 35.228483,
+      lng: 128.876678
     },
     points: 100,
     order: 2
@@ -48,8 +48,8 @@ export const mainMissions: Mission[] = [
       outro: '조용필의 LP판이 회전하며 그 시절의 선율을 들려주는구나.'
     },
     location: {
-      lat: 35.2290,
-      lng: 128.6820
+      lat: 35.229192,
+      lng: 128.879290
     },
     quiz: {
       question: '1988년에 가장 유행했던 가수는?',
@@ -69,8 +69,8 @@ export const mainMissions: Mission[] = [
       outro: '촬영된 사진이 흑백에서 컬러로 변하며 폴라로이드 사진처럼 인화되는구나.'
     },
     location: {
-      lat: 35.2295,
-      lng: 128.6825
+      lat: 35.229361,
+      lng: 128.879839
     },
     guidePhotoUrl: '/images/guide-photo-4.jpg',
     points: 100,
@@ -86,8 +86,8 @@ export const mainMissions: Mission[] = [
       outro: '아버지의 목소리로 에필로그가 재생되며, 사용자가 미션 중 찍었던 사진들로 구성된 슬라이드 쇼가 나타난다.'
     },
     location: {
-      lat: 35.2300,
-      lng: 128.6830
+      lat: 35.229729,
+      lng: 128.880246
     },
     points: 100,
     order: 5
