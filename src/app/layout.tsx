@@ -169,20 +169,15 @@ export default function RootLayout({
               // Service Worker 등록
               navigator.serviceWorker.register('/sw.js')
                 .then((registration) => {
-                  console.log('Service Worker 등록 성공:', registration.scope);
-                  
                   // 앱 시작 시 1회만 업데이트 확인
                   registration.update();
                   
                   // 업데이트 발견 시 처리
                   registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
-                    console.log('Service Worker 업데이트 발견');
                     
                     newWorker.addEventListener('statechange', () => {
                       if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        console.log('새로운 Service Worker 설치됨');
-                        
                         // 사용자에게 업데이트 알림
                         if (confirm('새로운 버전이 있습니다. 업데이트하시겠습니까?')) {
                           newWorker.postMessage({ type: 'SKIP_WAITING' });
