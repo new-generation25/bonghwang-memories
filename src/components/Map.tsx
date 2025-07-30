@@ -40,7 +40,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
 
       try {
         // 김해 중심 좌표
-        const center = new window.naver.maps.LatLng(35.2281, 128.8890)
+        const center = new window.naver.maps.LatLng(35.228802, 128.877551)
         
         const mapOptions = {
           center: center,
@@ -490,7 +490,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
             console.error('위치 정보를 가져올 수 없습니다:', error)
             alert('위치 정보를 가져오는 데 실패했습니다. 브라우저 설정을 확인해주세요.')
             // 김해 중심으로 이동
-            const center = new window.naver.maps.LatLng(35.2281, 128.8890)
+            const center = new window.naver.maps.LatLng(35.228802, 128.877551)
             map.panTo(center)
           }
         )
