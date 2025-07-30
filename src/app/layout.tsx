@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import Script from 'next/script'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -73,6 +72,12 @@ export default function RootLayout({
               window.naverMapLoadError = true;
               alert('네이버 지도 API 인증에 실패했습니다. 관리자에게 문의해주세요.');
             };
+            
+            // 네이버 지도 로딩 완료 처리 (공식 문서 권장 방식)
+            window.initNaverMap = function () {
+              console.log('네이버 지도 API 로딩 완료');
+              window.naverMapLoaded = true;
+            };
           `
         }} />
         {/* CSS 강제 로드 */}
@@ -82,17 +87,16 @@ export default function RootLayout({
             body { font-family: 'Noto Sans KR', sans-serif; }
           `
         }} />
+        {/* 네이버 지도 API - callback 방식 (공식 문서 권장) */}
+        <script
+          type="text/javascript"
+          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}&callback=initNaverMap`}
+        ></script>
       </head>
       <body className="min-h-screen" style={{
         background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
       }}>
         {children}
-        
-        {/* 네이버 지도 API - 공식 문서 권장 방식 */}
-        <Script
-          strategy="afterInteractive"
-          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}`}
-        />
       </body>
     </html>
   )

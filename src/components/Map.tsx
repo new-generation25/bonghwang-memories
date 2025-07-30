@@ -108,7 +108,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     }
 
     const checkNaverMaps = (attempts = 0) => {
-      const maxAttempts = 50 // 5초 대기
+      const maxAttempts = 100 // 10초 대기
 
       // 전역 오류 상태 확인
       if (window.naverMapLoadError) {
@@ -117,7 +117,9 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
         return
       }
 
-      if (window.naver && window.naver.maps) {
+      // callback 방식으로 로딩 완료 확인
+      if (window.naverMapLoaded && window.naver && window.naver.maps) {
+        console.log('네이버 지도 API 로딩 완료 확인됨')
         initMap()
       } else if (attempts < maxAttempts) {
         setTimeout(() => checkNaverMaps(attempts + 1), 100)
