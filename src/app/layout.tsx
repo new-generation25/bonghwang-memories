@@ -70,7 +70,18 @@ export default function RootLayout({
             window.navermap_authFailure = function () {
               console.error('네이버 지도 API 인증 실패');
               window.naverMapLoadError = true;
-              alert('네이버 지도 API 인증에 실패했습니다. 관리자에게 문의해주세요.');
+              
+              // 상세한 오류 정보 제공
+              const currentDomain = window.location.hostname;
+              console.error('인증 실패 상세 정보:');
+              console.error('- 현재 도메인:', currentDomain);
+              console.error('- API 키:', clientId);
+              console.error('- User Agent:', navigator.userAgent);
+              
+              // 사용자에게 친화적인 메시지
+              if (currentDomain.includes('vercel.app')) {
+                console.warn('Vercel 도메인에서 인증 실패. 네이버 클라우드 플랫폼에서 도메인을 등록해주세요.');
+              }
             };
             
             // 네이버 지도 로딩 완료 처리 (공식 문서 권장 방식)
@@ -90,7 +101,7 @@ export default function RootLayout({
         {/* 네이버 지도 API - callback 방식 (공식 문서 권장) */}
         <script
           type="text/javascript"
-          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}&callback=initNaverMap`}
+          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}&callback=initNaverMap&submodules=geocoder`}
         ></script>
       </head>
       <body className="min-h-screen" style={{
