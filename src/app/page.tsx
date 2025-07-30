@@ -118,35 +118,48 @@ export default function IntroPage() {
           {showButton && !requesting && (
             <button
               onClick={handleStartJourney}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 z-20"
+              className="absolute z-20"
               style={{
-                // 이미지 내 버튼 위치에 맞게 조정 (기본값: 중앙 하단)
-                left: '50%',
-                top: '85%',
-                // 반응형 크기
-                width: 'clamp(120px, 25vw, 200px)',
-                height: 'clamp(40px, 8vw, 60px)',
-                // 스타일링
-                background: 'linear-gradient(145deg, #DAA520, #B8860B)',
-                border: '3px solid #F4F1E8',
-                borderRadius: '25px',
+                // 좌표 기반 위치 설정 (X=0.21~0.79, Y=0.88~0.94)
+                left: '21%',
+                top: '88%',
+                width: '58%', // 79% - 21% = 58%
+                height: '6%',  // 94% - 88% = 6%
+                // 스타일링 - 네모랗고 회색 배경에 흰색 글씨
+                background: '#6B7280', // 회색 배경
+                border: '2px solid #4B5563',
+                borderRadius: '8px', // 살짝 둥근 모서리
                 color: '#FFFFFF',
                 fontFamily: 'Noto Sans KR, sans-serif',
                 fontWeight: 'bold',
-                fontSize: 'clamp(14px, 3vw, 18px)',
-                boxShadow: '0 8px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.3)',
+                fontSize: 'clamp(12px, 2.5vw, 16px)',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
                 cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                animation: 'buttonPulse 2s infinite'
+                transition: 'all 0.2s ease',
+                // 텍스트 중앙 정렬
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
               onMouseDown={(e) => {
-                e.currentTarget.style.transform = 'translateX(-50%) translateY(-50%) scale(0.95)'
+                e.currentTarget.style.background = '#4B5563'
+                e.currentTarget.style.transform = 'scale(0.98)'
               }}
               onMouseUp={(e) => {
-                e.currentTarget.style.transform = 'translateX(-50%) translateY(-50%) scale(1)'
+                e.currentTarget.style.background = '#6B7280'
+                e.currentTarget.style.transform = 'scale(1)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateX(-50%) translateY(-50%) scale(1)'
+                e.currentTarget.style.background = '#6B7280'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.background = '#4B5563'
+                e.currentTarget.style.transform = 'scale(0.98)'
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.background = '#6B7280'
+                e.currentTarget.style.transform = 'scale(1)'
               }}
             >
               시작하기
@@ -188,14 +201,6 @@ export default function IntroPage() {
         }
         @keyframes fadeOut {
           to { opacity: 0; }
-        }
-        @keyframes buttonPulse {
-          0%, 100% { 
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.3), 0 0 0 0 rgba(218, 165, 32, 0.4);
-          }
-          50% { 
-            box-shadow: 0 8px 16px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.4), 0 0 0 10px rgba(218, 165, 32, 0.1);
-          }
         }
       `}</style>
 

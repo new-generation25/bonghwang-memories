@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface LocationPermissionModalProps {
   isOpen: boolean
@@ -16,6 +16,76 @@ export default function LocationPermissionModal({
   onClose 
 }: LocationPermissionModalProps) {
   const [isRequesting, setIsRequesting] = useState(false)
+  const [permissionState, setPermissionState] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
+
+  // 권한 상태 확인
+  useEffect(() => {
+    if (isOpen) {
+      checkPermissionState()
+    }
+  }, [isOpen])
+
+  const checkPermissionState = async () => {
+    try {
+      // 권한 API 지원 여부 확인
+      if (navigator.permissions && navigator.permissions.query) {
+        const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName })
+        setPermissionState(permission.state)
+        
+        // 이미 허용된 경우 바로 위치 가져오기
+        if (permission.state === 'granted') {
+          console.log('이미 위치 권한이 허용되어 있습니다.')
+          getCurrentLocation()
+          return
+        }
+      } else {
+        // 권한 API를 지원하지 않는 브라우저
+        setPermissionState('prompt')
+      }
+    } catch (error) {
+      console.log('권한 상태 확인 실패, 기본 요청으로 진행')
+      setPermissionState('prompt')
+    }
+  }
+
+  const getCurrentLocation = async () => {
+    setIsRequesting(true)
+    
+    try {
+      if (!navigator.geolocation) {
+        alert('이 브라우저에서는 위치 서비스를 지원하지 않습니다.')
+        onDenied()
+        return
+      }
+
+      // 실제 위치 가져오기
+      await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 60000
+        })
+      })
+
+      onGranted()
+    } catch (error: any) {
+      console.error('Location error:', error)
+      
+      let errorMessage = '위치를 가져올 수 없습니다.'
+      if (error.code === 1) {
+        errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
+      } else if (error.code === 2) {
+        errorMessage = '위치 정보를 사용할 수 없습니다.'
+      } else if (error.code === 3) {
+        errorMessage = '위치 요청 시간이 초과되었습니다.'
+      }
+      
+      alert(errorMessage)
+      onDenied()
+    } finally {
+      setIsRequesting(false)
+    }
+  }
 
   const requestLocationPermission = async () => {
     setIsRequesting(true)
@@ -27,7 +97,7 @@ export default function LocationPermissionModal({
         return
       }
 
-      // 실제 위치 권한 요청
+      // 권한 요청 (시스템 팝업 발생)
       await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
@@ -57,6 +127,22 @@ export default function LocationPermissionModal({
   }
 
   if (!isOpen) return null
+
+  // 이미 권한이 허용된 경우 로딩 화면만 표시
+  if (permissionState === 'granted' && isRequesting) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 text-center">
+          <div className="w-16 h-16 bg-vintage-brown rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">🏛️</span>
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">봉황 메모리즈</h2>
+          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">위치 정보를 가져오는 중...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
