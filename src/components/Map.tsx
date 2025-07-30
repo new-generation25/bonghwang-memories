@@ -66,13 +66,8 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
           setIsLoaded(true)
         })
 
-        // 지도 로드 실패 처리 (타임아웃 단축)
-        setTimeout(() => {
-          if (!isLoaded) {
-            console.warn('네이버 지도 로딩 타임아웃')
-            showMockMap('로딩 타임아웃')
-          }
-        }, 5000)
+        // 지도 로드 실패 처리 (타임아웃을 제거하여 충돌 방지)
+        // setTimeout 제거 - checkNaverMaps에서 타임아웃 처리
 
       } catch (error: any) {
         console.error('네이버 지도 초기화 실패:', error)
@@ -92,7 +87,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     }
 
     const checkNaverMaps = (attempts = 0) => {
-      const maxAttempts = 150 // 15초 대기 (개선된 로딩 방식으로 인해 더 긴 대기 시간)
+      const maxAttempts = 100 // 10초 대기 (타임아웃 단축)
 
       // 전역 오류 상태 확인
       if (window.naverMapLoadError) {
@@ -101,13 +96,13 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
         return
       }
 
-      // 개선된 로딩 상태 확인
-      if (window.naverMapLoaded && window.naver && window.naver.maps) {
+      // 개선된 로딩 상태 확인 및 중복 초기화 방지
+      if (window.naverMapLoaded && window.naver && window.naver.maps && !isLoaded) {
         console.log('네이버 지도 API 로딩 완료 확인됨')
         initMap()
-      } else if (attempts < maxAttempts) {
+      } else if (attempts < maxAttempts && !isLoaded) {
         setTimeout(() => checkNaverMaps(attempts + 1), 100)
-      } else {
+      } else if (!isLoaded) {
         console.warn('네이버 지도 API 로딩 타임아웃. Mock 지도를 표시합니다.')
         showMockMap('로딩 타임아웃')
       }
