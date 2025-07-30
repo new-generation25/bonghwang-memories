@@ -176,15 +176,7 @@ export default function IntroPage() {
             </div>
           )}
           
-          {/* 개발용 좌표 확인 가이드 */}
-          <div 
-            className="absolute bottom-4 right-4 bg-black bg-opacity-60 text-white px-3 py-2 rounded text-xs z-10"
-            style={{ 
-              animation: 'fadeOut 5s ease-in-out 3s forwards'
-            }}
-          >
-            이미지를 클릭하여 버튼 위치 확인 (콘솔 로그)
-          </div>
+
         </div>
       </div>
 
