@@ -120,9 +120,14 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
   }
 
   return (
-    <div className="fixed inset-0 bg-vintage-paper z-50 flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col" style={{
+      background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
+    }}>
       {/* Header */}
-      <div className="bg-vintage-cream border-b-2 border-sepia-300 shadow-lg">
+      <div className="border-b-2 shadow-lg" style={{
+        backgroundColor: '#F5F5DC',
+        borderColor: '#E8D5B7'
+      }}>
         <div className="flex items-center justify-between p-4">
           <button
             onClick={onClose}
@@ -236,12 +241,117 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
             </button>
           </div>
 
-          {/* Map placeholder */}
-          <div className="mt-6 bg-sepia-100 rounded-lg p-4 text-center">
-            <div className="text-sepia-500 mb-2">🗺️</div>
-            <p className="font-handwriting text-sm text-sepia-600">
-              정확한 위치는 현장에서 확인해주세요
-            </p>
+          {/* Map placeholder with Naver Map integration */}
+          <div className="mt-6 bg-gray-100 rounded-lg overflow-hidden" style={{ height: '200px' }}>
+            <div 
+              id="gps-mini-map" 
+              style={{ width: '100%', height: '100%' }}
+              ref={(ref) => {
+                if (ref && window.naver && userLocation) {
+                  try {
+                    const miniMap = new window.naver.maps.Map(ref, {
+                      center: new window.naver.maps.LatLng(mission.location.lat, mission.location.lng),
+                      zoom: 18,
+                      mapTypeControl: false,
+                      zoomControl: false
+                    })
+
+                    // 미션 위치 마커
+                    new window.naver.maps.Marker({
+                      position: new window.naver.maps.LatLng(mission.location.lat, mission.location.lng),
+                      map: miniMap,
+                      icon: {
+                        content: `
+                          <div style="
+                            width: 24px; 
+                            height: 24px; 
+                            border-radius: 50%; 
+                            background-color: #8B4513; 
+                            border: 2px solid white; 
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-size: 12px;
+                            font-weight: bold;
+                          ">🎯</div>
+                        `,
+                        anchor: new window.naver.maps.Point(12, 12)
+                      }
+                    })
+
+                    // 사용자 위치 마커
+                    if (userLocation) {
+                      new window.naver.maps.Marker({
+                        position: new window.naver.maps.LatLng(userLocation.latitude, userLocation.longitude),
+                        map: miniMap,
+                        icon: {
+                          content: `
+                            <div style="
+                              width: 16px; 
+                              height: 16px; 
+                              border-radius: 50%; 
+                              background-color: #3B82F6; 
+                              border: 2px solid white; 
+                              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                            "></div>
+                          `,
+                          anchor: new window.naver.maps.Point(8, 8)
+                        }
+                      })
+                    }
+
+                    // 50m 반경 원 표시
+                    new window.naver.maps.Circle({
+                      map: miniMap,
+                      center: new window.naver.maps.LatLng(mission.location.lat, mission.location.lng),
+                      radius: 50,
+                      fillColor: isInRange ? '#10B981' : '#F59E0B',
+                      fillOpacity: 0.2,
+                      strokeColor: isInRange ? '#10B981' : '#F59E0B',
+                      strokeOpacity: 0.6,
+                      strokeWeight: 2
+                    })
+                  } catch (error) {
+                    console.error('Mini map error:', error)
+                    // 폴백 표시
+                    ref.innerHTML = `
+                      <div style="
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        height: 100%; 
+                        background-color: #F7F3E9;
+                        color: #A67C5A;
+                      ">
+                        <div style="text-align: center;">
+                          <div style="font-size: 2rem; margin-bottom: 8px;">🗺️</div>
+                          <p style="font-size: 0.875rem;">위치 확인 중...</p>
+                        </div>
+                      </div>
+                    `
+                  }
+                } else if (ref) {
+                  // 네이버 지도 로딩 중이거나 위치 정보 없음
+                  ref.innerHTML = `
+                    <div style="
+                      display: flex; 
+                      align-items: center; 
+                      justify-content: center; 
+                      height: 100%; 
+                      background-color: #F7F3E9;
+                      color: #A67C5A;
+                    ">
+                      <div style="text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 8px;">🗺️</div>
+                        <p style="font-size: 0.875rem;">위치 정보를 확인하는 중...</p>
+                      </div>
+                    </div>
+                  `
+                }
+              }}
+            />
           </div>
         </div>
       </div>

@@ -72,11 +72,19 @@ export default function ExplorationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-vintage-paper pb-32">
+    <div className="min-h-screen pb-32" style={{
+      background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
+    }}>
       {/* Header */}
-      <div className="bg-vintage-cream border-b-2 border-sepia-300 shadow-lg">
+      <div className="border-b-2 shadow-lg" style={{ 
+        backgroundColor: '#F5F5DC', 
+        borderColor: '#E8D5B7' 
+      }}>
         <div className="max-w-md mx-auto px-4 py-4">
-          <h1 className="font-vintage text-lg text-vintage-brown text-center leading-tight">
+          <h1 className="text-lg text-center leading-tight font-bold" style={{
+            color: '#8B4513',
+            fontFamily: 'Noto Serif KR, serif'
+          }}>
             {getCurrentMissionTitle()}
           </h1>
           
@@ -85,13 +93,20 @@ export default function ExplorationPage() {
             {mainMissions.map((mission, index) => (
               <div
                 key={mission.missionId}
-                className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
-                  completedMissions.includes(mission.missionId)
-                    ? 'bg-vintage-gold border-vintage-gold'
+                className="w-3 h-3 rounded-full border-2 transition-all duration-300"
+                style={{
+                  backgroundColor: completedMissions.includes(mission.missionId)
+                    ? '#DAA520'
                     : index === completedMissions.length
-                    ? 'bg-white border-vintage-brown animate-pulse'
-                    : 'bg-sepia-200 border-sepia-300'
-                }`}
+                    ? 'white'
+                    : '#F0E6D2',
+                  borderColor: completedMissions.includes(mission.missionId)
+                    ? '#DAA520'
+                    : index === completedMissions.length
+                    ? '#8B4513'
+                    : '#E8D5B7',
+                  animation: index === completedMissions.length ? 'pulse 2s infinite' : 'none'
+                }}
               />
             ))}
           </div>
@@ -112,26 +127,35 @@ export default function ExplorationPage() {
         </div>
 
         {/* Mission statistics */}
-        <div className="mt-6 bg-vintage-cream rounded-lg p-4 shadow-lg">
-          <h3 className="font-handwriting text-lg text-vintage-brown mb-3 text-center">
+        <div className="mt-6 rounded-lg p-4 shadow-lg" style={{ backgroundColor: '#F5F5DC' }}>
+          <h3 className="text-lg mb-3 text-center font-bold" style={{
+            color: '#8B4513',
+            fontFamily: 'Noto Sans KR, sans-serif'
+          }}>
             탐험 현황
           </h3>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-vintage-gold">
+              <div className="text-2xl font-bold" style={{ color: '#DAA520' }}>
                 {completedMissions.length}
               </div>
-              <div className="text-sm text-sepia-600 font-handwriting">
+              <div className="text-sm" style={{ 
+                color: '#A67C5A',
+                fontFamily: 'Noto Sans KR, sans-serif'
+              }}>
                 완료한 기억
               </div>
             </div>
             
             <div className="text-center">
-              <div className="text-2xl font-bold text-sepia-700">
+              <div className="text-2xl font-bold" style={{ color: '#856447' }}>
                 {5 - completedMissions.length}
               </div>
-              <div className="text-sm text-sepia-600 font-handwriting">
+              <div className="text-sm" style={{ 
+                color: '#A67C5A',
+                fontFamily: 'Noto Sans KR, sans-serif'
+              }}>
                 남은 기억
               </div>
             </div>
@@ -139,11 +163,17 @@ export default function ExplorationPage() {
 
           {/* Next mission hint */}
           {completedMissions.length < 5 && (
-            <div className="mt-4 p-3 bg-sepia-100 rounded-lg">
-              <h4 className="font-handwriting text-sm text-sepia-700 mb-1">
+            <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#F7F3E9' }}>
+              <h4 className="text-sm mb-1 font-bold" style={{
+                color: '#856447',
+                fontFamily: 'Noto Sans KR, sans-serif'
+              }}>
                 다음 기억을 찾으려면:
               </h4>
-              <p className="text-xs text-sepia-600 font-handwriting">
+              <p className="text-xs" style={{
+                color: '#A67C5A',
+                fontFamily: 'Noto Sans KR, sans-serif'
+              }}>
                 지도의 나침반 아이콘을 터치해보세요
               </p>
             </div>
@@ -151,11 +181,20 @@ export default function ExplorationPage() {
 
           {/* All completed message */}
           {completedMissions.length === 5 && (
-            <div className="mt-4 p-3 bg-vintage-gold/20 border border-vintage-gold rounded-lg">
-              <h4 className="font-handwriting text-sm text-vintage-brown mb-1">
+            <div className="mt-4 p-3 border rounded-lg" style={{
+              backgroundColor: 'rgba(218, 165, 32, 0.2)',
+              borderColor: '#DAA520'
+            }}>
+              <h4 className="text-sm mb-1 font-bold" style={{
+                color: '#8B4513',
+                fontFamily: 'Noto Sans KR, sans-serif'
+              }}>
                 🎉 모든 기억을 되찾았습니다!
               </h4>
-              <p className="text-xs text-sepia-600 font-handwriting">
+              <p className="text-xs" style={{
+                color: '#A67C5A',
+                fontFamily: 'Noto Sans KR, sans-serif'
+              }}>
                 이제 보물 페이지에서 숨겨진 보물들을 찾아보세요
               </p>
             </div>

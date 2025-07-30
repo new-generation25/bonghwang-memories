@@ -46,6 +46,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="봉황동 메모리즈" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#8B4513" />
+        {/* 네이버 지도 API */}
+        <script
+          type="text/javascript"
+          src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=YOUR_CLIENT_ID"
+        ></script>
         {/* CSS 강제 로드 */}
         <style dangerouslySetInnerHTML={{
           __html: `
