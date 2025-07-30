@@ -19,15 +19,6 @@ export default function IntroPage() {
   const handleStartJourney = async () => {
     setRequesting(true)
     
-    // PC Testing Mode - Skip permission requests
-    setTimeout(() => {
-      router.push('/story')
-      setRequesting(false)
-    }, 1000)
-
-    // Original permission request code (disabled for PC testing)
-    // TODO: Re-enable for mobile testing
-    /*
     try {
       // Request location permission
       if ('geolocation' in navigator) {
@@ -57,126 +48,106 @@ export default function IntroPage() {
     }
     
     setRequesting(false)
-    */
+  }
+
+  const handleImageClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    const relativeX = x / rect.width
+    const relativeY = y / rect.height
+    
+    // 시작하기 버튼 영역 좌표 (이미지 내에서의 상대적 위치)
+    // 버튼이 이미지 하단 중앙에 위치한다고 가정
+    // 필요시 실제 버튼 위치에 맞게 조정 가능
+    if (relativeX >= 0.2 && relativeX <= 0.8 && relativeY >= 0.75 && relativeY <= 0.95) {
+      handleStartJourney()
+    }
+    
+    // 디버깅용 - 클릭 위치 확인 (개발 시에만 사용)
+    console.log(`클릭 위치: x=${relativeX.toFixed(2)}, y=${relativeY.toFixed(2)}`)
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden" style={{
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{
       background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
     }}>
-      {/* Background elements */}
-      <div className="absolute inset-0 opacity-50" style={{
-        background: 'linear-gradient(to bottom, rgb(247, 243, 233), rgb(240, 230, 210))'
-      }}></div>
-      
-      {/* Vintage desk items */}
-      <div className="absolute top-20 left-10 w-16 h-16 opacity-30">
-        <div className="w-full h-full rounded-full shadow-lg" style={{ backgroundColor: '#8B4513' }}></div>
-      </div>
-      <div className="absolute top-32 right-16 w-12 h-8 opacity-30">
-        <div className="w-full h-full rounded shadow-lg" style={{ backgroundColor: '#A67C5A' }}></div>
-      </div>
-      <div className="absolute bottom-32 left-20 w-10 h-16 opacity-30">
-        <div className="w-full h-full rounded-sm shadow-lg" style={{ backgroundColor: '#DAA520' }}></div>
-      </div>
-
-      {/* Main content */}
-      <div className="z-10 text-center px-6 max-w-md">
-        {/* Title */}
-        <div className="mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{
-            color: '#8B4513',
-            fontFamily: 'Noto Serif KR, serif',
-            animation: 'fadeIn 0.5s ease-in-out'
-          }}>
-            봉황동 메모리즈
-          </h1>
-          <p className="text-xl" style={{
-            color: '#856447',
-            fontFamily: 'Noto Sans KR, sans-serif',
-            animation: 'fadeIn 0.5s ease-in-out'
-          }}>
-            아버지의 유산을 찾아서
-          </p>
-        </div>
-
-        {/* Hero Image */}
-        <div className="mb-12" style={{ animation: 'slideUp 0.3s ease-out' }}>
-          <div className="relative mx-auto max-w-sm">
-            <img 
-              src="/hero-image.png" 
-              alt="봉황동 메모리즈 - 아버지의 유산을 찾아서"
-              className="w-full h-auto rounded-lg shadow-xl"
-              style={{
-                filter: 'sepia(20%) contrast(1.1) brightness(1.05)',
-                border: '4px solid #D4B896'
-              }}
-              onError={(e) => {
-                // 이미지 로딩 실패 시 기본 일러스트로 대체
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const fallback = document.createElement('div');
-                fallback.className = 'relative mx-auto w-64 h-40 border-2 shadow-lg transform rotate-1';
-                fallback.style.cssText = 'background-color: #F5F5DC; border-color: #D4B896;';
-                fallback.innerHTML = `
-                  <div class="absolute top-4 left-4 right-4 bottom-4 p-2">
-                    <div class="w-full h-2 mb-2 rounded" style="background-color: #E8D5B7;"></div>
-                    <div class="w-3/4 h-2 mb-2 rounded" style="background-color: #E8D5B7;"></div>
-                    <div class="w-5/6 h-2 mb-2 rounded" style="background-color: #E8D5B7;"></div>
-                    <div class="w-1/2 h-2 rounded" style="background-color: #E8D5B7;"></div>
+      {/* Full Screen Hero Image with Clickable Area */}
+      <div className="w-full h-full relative">
+        <div 
+          className="w-full h-full cursor-pointer relative"
+          onClick={handleImageClick}
+          style={{ animation: 'fadeIn 0.8s ease-in-out' }}
+        >
+          <img 
+            src="/hero-image.png" 
+            alt="봉황동 메모리즈 - 아버지의 유산을 찾아서"
+            className="w-full h-full object-cover object-center"
+            style={{
+              filter: 'sepia(10%) contrast(1.05) brightness(1.02)'
+            }}
+            onError={(e) => {
+              // 이미지 로딩 실패 시 기본 배경으로 대체
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const parent = target.parentElement;
+              if (parent) {
+                parent.style.background = 'linear-gradient(145deg, rgba(139, 69, 19, 0.8), rgba(160, 82, 45, 0.6)), linear-gradient(to bottom, rgb(247, 243, 233), rgb(240, 230, 210))';
+                parent.innerHTML = `
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-center">
+                      <h1 class="text-6xl font-bold mb-4 text-white drop-shadow-lg" style="font-family: 'Noto Serif KR', serif;">
+                        봉황동 메모리즈
+                      </h1>
+                      <p class="text-2xl text-white drop-shadow-md" style="font-family: 'Noto Sans KR', sans-serif;">
+                        아버지의 유산을 찾아서
+                      </p>
+                    </div>
                   </div>
-                  <div class="absolute -top-2 -right-2 w-8 h-6 rounded shadow-lg" style="background-color: #8B4513;"></div>
                 `;
-                target.parentNode?.appendChild(fallback);
+              }
+            }}
+          />
+          
+          {/* 로딩 상태 오버레이 */}
+          {requesting && (
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+              <div className="text-white text-center">
+                <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-xl font-bold">시작하는 중...</p>
+                <p className="text-sm mt-2">권한 요청을 확인해주세요</p>
+              </div>
+            </div>
+          )}
+          
+          {/* 클릭 가이드 (처음 몇 초간만 표시) */}
+          {showButton && !requesting && (
+            <div 
+              className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-60 text-white px-4 py-2 rounded-full text-sm"
+              style={{ 
+                animation: 'slideUp 0.5s ease-out, fadeOut 3s ease-in-out 2s forwards'
               }}
-            />
-          </div>
-        </div>
-
-        {/* Start button */}
-        {showButton && (
-          <div style={{ animation: 'slideUp 0.3s ease-out' }}>
-            <button
-              onClick={handleStartJourney}
-              disabled={requesting}
-              className={`vintage-button text-lg font-bold py-4 px-8 rounded-xl shadow-xl ${
-                requesting ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-2xl'
-              }`}
             >
-              {requesting ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>시작하는 중...</span>
-                </div>
-              ) : (
-                '아버지의 유산 찾기'
-              )}
-            </button>
-            
-            <p className="text-sm mt-4" style={{
-              color: '#A67C5A',
-              fontFamily: 'Noto Sans KR, sans-serif'
-            }}>
-              💻 PC 테스트 모드 (모바일에서 모든 기능 체험 가능)
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Decorative elements */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-        <div className="flex space-x-2 opacity-40">
-          <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#DAA520' }}></div>
-          <div className="w-2 h-2 rounded-full animate-bounce" style={{ 
-            backgroundColor: '#DAA520',
-            animationDelay: '0.1s' 
-          }}></div>
-          <div className="w-2 h-2 rounded-full animate-bounce" style={{ 
-            backgroundColor: '#DAA520',
-            animationDelay: '0.2s' 
-          }}></div>
+              화면을 터치하여 시작하세요
+            </div>
+          )}
         </div>
       </div>
+
+      {/* CSS 애니메이션 추가 */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+          to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+          to { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+        }
+      `}</style>
     </div>
   )
 }
