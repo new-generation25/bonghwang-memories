@@ -20,14 +20,16 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
       const userAgent = navigator.userAgent.toLowerCase()
       const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
       setIsMobile(isMobileDevice)
+      console.log('카메라 디바이스 감지:', isMobileDevice ? '모바일' : 'PC')
     }
     checkMobile()
   }, [])
 
   // Initialize camera
   const initCamera = useCallback(async () => {
-    // PC에서는 테스트 모드로 진행
+    // PC에서는 즉시 테스트 모드로 진행
     if (!isMobile) {
+      console.log('PC 환경: 카메라 테스트 모드로 진행')
       setIsLoading(false)
       return
     }
@@ -58,12 +60,15 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
 
   // Initialize on mount
   useEffect(() => {
-    // PC에서는 카메라 초기화 건너뛰기
+    // PC에서는 즉시 테스트 모드로 설정
     if (!isMobile) {
+      console.log('PC 환경: 카메라 초기화 건너뛰기')
       setIsLoading(false)
       return
     }
     
+    // 모바일에서만 실제 카메라 초기화
+    console.log('모바일 환경: 실제 카메라 초기화')
     initCamera()
     
     // Cleanup on unmount

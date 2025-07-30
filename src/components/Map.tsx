@@ -31,13 +31,14 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
       const userAgent = navigator.userAgent.toLowerCase()
       const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
       setIsMobile(isMobileDevice)
+      console.log('디바이스 감지:', isMobileDevice ? '모바일' : 'PC')
     }
     checkDevice()
   }, [])
 
   // 네이버 지도 초기화
   useEffect(() => {
-    // PC에서는 모의 지도 사용
+    // PC에서는 즉시 모의 지도 사용
     if (!isMobile) {
       console.log('PC 환경: 모의 지도를 사용합니다.')
       showMockMap('PC 테스트 모드')
