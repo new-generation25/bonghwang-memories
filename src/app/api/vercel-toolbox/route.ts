@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  // 개발 환경에서만 Vercel Toolbox 활성화
-  if (process.env.NODE_ENV === 'production' && !process.env.VERCEL_TOOLBOX) {
-    return NextResponse.json({ error: 'Toolbox not available in production' }, { status: 404 });
+  // Vercel 환경에서만 활성화 (개발 및 프로덕션 모두)
+  if (!process.env.VERCEL_URL && process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Toolbox not available in this environment' }, { status: 404 });
   }
 
   const toolboxData = {
