@@ -151,6 +151,59 @@ export default function RootLayout({
           `
         }} />
         
+        {/* PWA Service Worker 등록 및 자동 업데이트 */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            // Service Worker 등록
+            if ('serviceWorker' in navigator) {
+              let refreshing = false;
+              
+              // 새로고침 중복 방지
+              navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                  refreshing = true;
+                  window.location.reload();
+                }
+              });
+              
+              // Service Worker 등록
+              navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                  console.log('Service Worker 등록 성공:', registration.scope);
+                  
+                  // 업데이트 확인
+                  registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    console.log('Service Worker 업데이트 발견');
+                    
+                    newWorker.addEventListener('statechange', () => {
+                      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        console.log('새로운 Service Worker 설치됨');
+                        
+                        // 사용자에게 업데이트 알림
+                        if (confirm('새로운 버전이 있습니다. 업데이트하시겠습니까?')) {
+                          newWorker.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                      }
+                    });
+                  });
+                })
+                .catch((error) => {
+                  console.error('Service Worker 등록 실패:', error);
+                });
+              
+              // 주기적 업데이트 확인 (1시간마다)
+              setInterval(() => {
+                navigator.serviceWorker.getRegistration().then((registration) => {
+                  if (registration) {
+                    registration.update();
+                  }
+                });
+              }, 60 * 60 * 1000); // 1시간
+            }
+          `
+        }} />
+        
         {/* CSS 강제 로드 */}
         <style dangerouslySetInnerHTML={{
           __html: `
