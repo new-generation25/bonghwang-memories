@@ -34,7 +34,7 @@ export default function StoryPage() {
     if (currentLine < storyText.length) {
       const timer = setTimeout(() => {
         setCurrentLine(prev => prev + 1)
-      }, 1500) // 1.5초마다 다음 줄
+      }, 800) // 0.8초마다 다음 줄 (더 빠르게)
 
       return () => clearTimeout(timer)
     } else {
@@ -52,6 +52,9 @@ export default function StoryPage() {
   const handleNext = () => {
     if (currentLine < storyText.length) {
       setCurrentLine(prev => prev + 1)
+    } else if (!showStartButton) {
+      setIsTyping(false)
+      setShowStartButton(true)
     }
   }
 
@@ -77,16 +80,19 @@ export default function StoryPage() {
       {/* Main content */}
       <div className="z-10 max-w-lg w-full">
         {/* Letter background */}
-        <div className="relative bg-vintage-cream border-2 border-sepia-300 shadow-2xl p-8 transform rotate-1 min-h-[500px]">
+        <div 
+          className="relative bg-vintage-cream border-2 border-sepia-300 shadow-2xl p-8 transform rotate-1 min-h-[500px] cursor-pointer"
+          onClick={handleNext}
+        >
           {/* Paper texture overlay */}
           <div className="absolute inset-0 bg-vintage-paper opacity-30 rounded"></div>
           
           {/* Letter content */}
-          <div className="relative z-10 space-y-4">
+          <div className="relative z-10 space-y-2">
             {storyText.slice(0, currentLine).map((line, index) => (
               <div key={index} className="animate-fade-in">
                 {line === "" ? (
-                  <div className="h-4"></div>
+                  <div className="h-2"></div>
                 ) : (
                   <p className={`font-handwriting text-lg text-sepia-800 leading-relaxed ${
                     index === currentLine - 1 && isTyping ? 'typing-effect' : ''
@@ -123,12 +129,9 @@ export default function StoryPage() {
         {/* Tap to continue (when typing) */}
         {isTyping && (
           <div className="mt-6 text-center animate-fade-in">
-            <button
-              onClick={handleNext}
-              className="text-sepia-600 hover:text-sepia-800 transition-colors duration-200 font-handwriting text-base"
-            >
-              화면을 터치하면 계속됩니다
-            </button>
+            <p className="text-sepia-600 font-handwriting text-base">
+              편지를 터치하면 다음 문장으로 넘어갑니다
+            </p>
           </div>
         )}
       </div>
