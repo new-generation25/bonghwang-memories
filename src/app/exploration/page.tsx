@@ -16,29 +16,27 @@ export default function ExplorationPage() {
   const [currentMissionStep, setCurrentMissionStep] = useState(1)
   const router = useRouter()
 
-  // Get user location (disabled for PC testing)
-  // TODO: Re-enable for mobile testing
-  // useEffect(() => {
-  //   if ('geolocation' in navigator) {
-  //     navigator.geolocation.getCurrentPosition(
-  //       (position) => {
-  //         setUserLocation({
-  //           latitude: position.coords.latitude,
-  //           longitude: position.coords.longitude,
-  //           accuracy: position.coords.accuracy
-  //         })
-  //       },
-  //       (error) => {
-  //         console.error('Location error:', error)
-  //       },
-  //       {
-  //         enableHighAccuracy: true,
-  //         timeout: 10000,
-  //         maximumAge: 600000
-  //       }
-  //     )
-  //   }
-  // }, [])
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          })
+        },
+        (error) => {
+          console.error('Location error:', error)
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 600000
+        }
+      )
+    }
+  }, [])
 
   // Load completed missions from localStorage
   useEffect(() => {

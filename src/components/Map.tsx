@@ -25,28 +25,9 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
   const [map, setMap] = useState<any>(null)
   const [markers, setMarkers] = useState<any[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-
-  // 디바이스 감지
-  useEffect(() => {
-    const checkDevice = () => {
-      const userAgent = navigator.userAgent.toLowerCase()
-      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
-      setIsMobile(isMobileDevice)
-      console.log('디바이스 감지:', isMobileDevice ? '모바일' : 'PC')
-    }
-    checkDevice()
-  }, [])
 
   // 네이버 지도 초기화
   useEffect(() => {
-    // PC에서는 즉시 모의 지도 사용
-    if (!isMobile) {
-      console.log('PC 환경: 모의 지도를 사용합니다.')
-      showMockMap('PC 테스트 모드')
-      return
-    }
-
     const initMap = () => {
       if (!mapRef.current) return
 
@@ -139,7 +120,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     }
 
     checkNaverMaps()
-  }, [isMobile, isLoaded])
+  }, [isLoaded])
 
   // 미션 마커 추가
   useEffect(() => {
@@ -262,50 +243,49 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     setMarkers(newMarkers)
   }, [map, completedMissions, onMissionSelect, isLoaded])
 
-  // 🚫 사용자 위치 마커 임시 비활성화 - 다른 오류 해결 후 재활성화 예정
+  // 사용자 위치 마커
   useEffect(() => {
     if (!map || !userLocation || !isLoaded) return
     
-    console.log('🚫 위치 마커가 임시로 비활성화되어 있습니다.')
-    // const userPosition = new window.naver.maps.LatLng(
-    //   userLocation.lat, 
-    //   userLocation.lng
-    // )
+    const userPosition = new window.naver.maps.LatLng(
+      userLocation.lat, 
+      userLocation.lng
+    )
 
-    // const userMarker = new window.naver.maps.Marker({
-    //   position: userPosition,
-    //   map: map,
-    //   icon: {
-    //     content: `
-    //       <div style="position: relative;">
-    //         <div style="
-    //           width: 16px; 
-    //           height: 16px; 
-    //           border-radius: 50%; 
-    //           background-color: #3B82F6; 
-    //           border: 3px solid white; 
-    //           box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    //         "></div>
-    //         <div style="
-    //           position: absolute;
-    //           top: 0;
-    //           left: 0;
-    //           width: 16px; 
-    //           height: 16px; 
-    //           border-radius: 50%; 
-    //           background-color: rgba(59, 130, 246, 0.3);
-    //           animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-    //         "></div>
-    //       </div>
-    //     `,
-    //     anchor: new window.naver.maps.Point(8, 8)
-    //   },
-    //   title: '현재 위치'
-    // })
+    const userMarker = new window.naver.maps.Marker({
+      position: userPosition,
+      map: map,
+      icon: {
+        content: `
+          <div style="position: relative;">
+            <div style="
+              width: 16px; 
+              height: 16px; 
+              border-radius: 50%; 
+              background-color: #3B82F6; 
+              border: 3px solid white; 
+              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            "></div>
+            <div style="
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 16px; 
+              height: 16px; 
+              border-radius: 50%; 
+              background-color: rgba(59, 130, 246, 0.3);
+              animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+            "></div>
+          </div>
+        `,
+        anchor: new window.naver.maps.Point(8, 8)
+      },
+      title: '현재 위치'
+    })
 
-    // return () => {
-    //   userMarker.setMap(null)
-    // }
+    return () => {
+      userMarker.setMap(null)
+    }
   }, [map, userLocation, isLoaded])
 
   // 폴백 Mock 지도 함수
@@ -499,31 +479,28 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
   }
 
   const moveToCurrentLocation = () => {
-    // 🚫 현재 위치 기능 임시 비활성화 - 다른 오류 해결 후 재활성화 예정
-    console.log('🚫 현재 위치 기능이 임시로 비활성화되어 있습니다.')
-    alert('🚫 현재 위치 기능이 임시로 비활성화되어 있습니다.')
-    
-    // if (map && userLocation) {
-    //   const position = new window.naver.maps.LatLng(userLocation.lat, userLocation.lng)
-    //   map.panTo(position)
-    // } else if (map) {
-    //   // 현재 위치 요청
-    //   if (navigator.geolocation) {
-    //     navigator.geolocation.getCurrentPosition(
-    //       (position) => {
-    //         const { latitude, longitude } = position.coords
-    //         const newPosition = new window.naver.maps.LatLng(latitude, longitude)
-    //         map.panTo(newPosition)
-    //       },
-    //       (error) => {
-    //         console.error('위치 정보를 가져올 수 없습니다:', error)
-    //         // 봉황동 중심으로 이동
-    //         const center = new window.naver.maps.LatLng(35.2285, 128.6815)
-    //         map.panTo(center)
-    //       }
-    //     )
-    //   }
-    // }
+    if (map && userLocation) {
+      const position = new window.naver.maps.LatLng(userLocation.lat, userLocation.lng)
+      map.panTo(position)
+    } else if (map) {
+      // 현재 위치 요청
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords
+            const newPosition = new window.naver.maps.LatLng(latitude, longitude)
+            map.panTo(newPosition)
+          },
+          (error) => {
+            console.error('위치 정보를 가져올 수 없습니다:', error)
+            alert('위치 정보를 가져오는 데 실패했습니다. 브라우저 설정을 확인해주세요.')
+            // 봉황동 중심으로 이동
+            const center = new window.naver.maps.LatLng(35.2285, 128.6815)
+            map.panTo(center)
+          }
+        )
+      }
+    }
   }
 
   return (
