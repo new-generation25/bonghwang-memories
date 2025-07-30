@@ -9,6 +9,15 @@ import MissionQuiz from '@/components/MissionQuiz'
 import MissionGPS from '@/components/MissionGPS'
 import QRScanner from '@/components/QRScanner'
 
+// Static params for all possible mission IDs
+export async function generateStaticParams() {
+  const allMissions = [...mainMissions, ...subMissions]
+  
+  return allMissions.map((mission) => ({
+    missionId: mission.missionId,
+  }))
+}
+
 export default function MissionPage() {
   const [mission, setMission] = useState<Mission | null>(null)
   const [currentStep, setCurrentStep] = useState<'intro' | 'mission' | 'complete'>('intro')
@@ -106,18 +115,29 @@ export default function MissionPage() {
   if (!mission) return null
 
   return (
-    <div className="min-h-screen bg-vintage-paper">
+    <div className="min-h-screen" style={{
+      background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
+    }}>
       {currentStep === 'intro' && (
         <div className="min-h-screen flex flex-col items-center justify-center p-6">
           {/* Mission intro */}
           <div className="max-w-md w-full">
-            <div className="bg-vintage-cream border-2 border-sepia-400 rounded-lg shadow-2xl p-6 mb-6">
-              <h1 className="font-vintage text-2xl text-vintage-brown mb-4 text-center">
+            <div className="border-2 rounded-lg shadow-2xl p-6 mb-6" style={{
+              backgroundColor: '#F5F5DC',
+              borderColor: '#D4B896'
+            }}>
+              <h1 className="text-2xl mb-4 text-center font-bold" style={{
+                color: '#8B4513',
+                fontFamily: 'Noto Serif KR, serif'
+              }}>
                 {mission.title}
               </h1>
               
               <div className="mb-4 text-center">
-                <span className="inline-block bg-sepia-200 text-sepia-700 px-4 py-2 rounded-full text-sm font-bold">
+                <span className="inline-block px-4 py-2 rounded-full text-sm font-bold" style={{
+                  backgroundColor: '#F0E6D2',
+                  color: '#856447'
+                }}>
                   {mission.type === 'PHOTO' && '📸 사진 촬영'}
                   {mission.type === 'QUIZ' && '🧩 퀴즈'}
                   {mission.type === 'GPS' && '📍 위치 인증'}
@@ -126,21 +146,29 @@ export default function MissionPage() {
                 </span>
               </div>
 
-              <div className="bg-white/80 p-4 rounded-lg mb-6">
-                <p className="font-handwriting text-base text-sepia-700 leading-relaxed">
+              <div className="p-4 rounded-lg mb-6" style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
+                <p className="text-base leading-relaxed" style={{
+                  color: '#856447',
+                  fontFamily: 'Noto Sans KR, sans-serif'
+                }}>
                   "{mission.story.intro}"
                 </p>
               </div>
 
-              <div className="text-center text-sm text-sepia-600 mb-6">
-                <p>보상: <span className="text-vintage-gold font-bold">{mission.points}점</span></p>
+              <div className="text-center text-sm mb-6" style={{ color: '#A67C5A' }}>
+                <p>보상: <span className="font-bold" style={{ color: '#DAA520' }}>{mission.points}점</span></p>
               </div>
 
               <div className="flex space-x-3">
                 <button
                   onClick={handleGoBack}
-                  className="flex-1 py-3 px-4 bg-sepia-200 text-sepia-700 rounded-lg 
-                           hover:bg-sepia-300 transition-colors duration-200"
+                  className="flex-1 py-3 px-4 rounded-lg transition-colors duration-200"
+                  style={{
+                    backgroundColor: '#F0E6D2',
+                    color: '#856447'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#E8D5B7'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#F0E6D2'}
                 >
                   뒤로가기
                 </button>
@@ -162,17 +190,26 @@ export default function MissionPage() {
             {/* Success animation */}
             <div className="text-8xl mb-6 animate-bounce">🎉</div>
             
-            <h1 className="font-vintage text-3xl text-vintage-brown mb-4">
+            <h1 className="text-3xl mb-4 font-bold" style={{
+              color: '#8B4513',
+              fontFamily: 'Noto Serif KR, serif'
+            }}>
               미션 완료!
             </h1>
             
-            <div className="bg-vintage-cream border-2 border-vintage-gold rounded-lg p-6 mb-6">
-              <p className="font-handwriting text-lg text-sepia-700 mb-4">
+            <div className="border-2 rounded-lg p-6 mb-6" style={{
+              backgroundColor: '#F5F5DC',
+              borderColor: '#DAA520'
+            }}>
+              <p className="text-lg mb-4" style={{
+                color: '#856447',
+                fontFamily: 'Noto Sans KR, sans-serif'
+              }}>
                 "{mission.story.outro}"
               </p>
               
-              <div className="bg-vintage-gold/20 p-4 rounded-lg">
-                <p className="text-vintage-brown font-bold text-xl">
+              <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(218, 165, 32, 0.2)' }}>
+                <p className="font-bold text-xl" style={{ color: '#8B4513' }}>
                   +{missionData?.usedHint ? mission.points - 20 : mission.points}점 획득!
                 </p>
               </div>
