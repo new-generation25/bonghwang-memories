@@ -154,6 +154,42 @@ export default function RootLayout({
         {/* PWA Service Worker 등록 및 자동 업데이트 */}
         <script dangerouslySetInnerHTML={{
           __html: `
+            // WebSocket을 통한 실시간 업데이트 알림
+            let updateWebSocket = null;
+            
+            function connectUpdateWebSocket() {
+              try {
+                // Vercel WebSocket 엔드포인트 (실제 구현 시 필요)
+                // updateWebSocket = new WebSocket('wss://your-update-server.com');
+                
+                // 현재는 로컬 테스트용
+                console.log('WebSocket 연결 준비 완료');
+                
+                // WebSocket 이벤트 핸들러
+                if (updateWebSocket) {
+                  updateWebSocket.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'UPDATE_AVAILABLE') {
+                      console.log('실시간 업데이트 알림 수신!');
+                      // 즉시 업데이트 확인
+                      navigator.serviceWorker.getRegistration().then((registration) => {
+                        if (registration) {
+                          registration.update();
+                        }
+                      });
+                    }
+                  };
+                  
+                  updateWebSocket.onclose = function() {
+                    console.log('WebSocket 연결 종료, 재연결 시도...');
+                    setTimeout(connectUpdateWebSocket, 5000);
+                  };
+                }
+              } catch (error) {
+                console.log('WebSocket 연결 실패, 폴링 방식으로 전환');
+              }
+            }
+            
             // Service Worker 등록
             if ('serviceWorker' in navigator) {
               let refreshing = false;
@@ -195,19 +231,29 @@ export default function RootLayout({
                   setInterval(() => {
                     registration.update();
                   }, 2 * 60 * 1000); // 2분마다 추가 확인
+                  
+                  // Push Notification 권한 요청 및 구독
+                  if ('PushManager' in window) {
+                    Notification.requestPermission().then((permission) => {
+                      if (permission === 'granted') {
+                        console.log('Push Notification 권한 허용됨');
+                        // 여기에 Push 서버 구독 로직 추가 가능
+                      }
+                    });
+                  }
                 })
                 .catch((error) => {
                   console.error('Service Worker 등록 실패:', error);
                 });
               
-              // 주기적 업데이트 확인 (5분마다)
+              // 주기적 업데이트 확인 (1분마다)
               setInterval(() => {
                 navigator.serviceWorker.getRegistration().then((registration) => {
                   if (registration) {
                     registration.update();
                   }
                 });
-              }, 5 * 60 * 1000); // 5분
+              }, 1 * 60 * 1000); // 1분
               
               // 페이지 포커스 시 즉시 업데이트 확인
               window.addEventListener('focus', () => {
@@ -226,6 +272,31 @@ export default function RootLayout({
                   }
                 });
               });
+              
+              // 네트워크 상태 변경 감지
+              window.addEventListener('online', () => {
+                console.log('네트워크 연결 복구 - 업데이트 확인');
+                navigator.serviceWorker.getRegistration().then((registration) => {
+                  if (registration) {
+                    registration.update();
+                  }
+                });
+              });
+              
+              // 페이지 가시성 변경 감지 (탭 전환 시)
+              document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                  console.log('페이지 가시성 복구 - 업데이트 확인');
+                  navigator.serviceWorker.getRegistration().then((registration) => {
+                    if (registration) {
+                      registration.update();
+                    }
+                  });
+                }
+              });
+              
+              // WebSocket 연결 시작
+              connectUpdateWebSocket();
             }
           `
         }} />
