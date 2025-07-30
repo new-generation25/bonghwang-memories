@@ -70,35 +70,38 @@ export default function IntroPage() {
           onClick={handleImageClick}
           style={{ animation: 'fadeIn 0.8s ease-in-out' }}
         >
-          <img 
-            src="/hero-image.png" 
-            alt="봉황 메모리즈 - 아버지의 유산을 찾아서"
-            className="w-full h-full object-cover object-center"
-            style={{
-              filter: 'sepia(10%) contrast(1.05) brightness(1.02)'
-            }}
-            onError={(e) => {
-              // 이미지 로딩 실패 시 기본 배경으로 대체
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const parent = target.parentElement;
-              if (parent) {
-                parent.style.background = 'linear-gradient(145deg, rgba(139, 69, 19, 0.8), rgba(160, 82, 45, 0.6)), linear-gradient(to bottom, rgb(247, 243, 233), rgb(240, 230, 210))';
-                parent.innerHTML = `
-                  <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="text-center">
-                      <h1 class="text-6xl font-bold mb-4 text-white drop-shadow-lg" style="font-family: 'Noto Serif KR', serif;">
-                        봉황 메모리즈
-                      </h1>
-                      <p class="text-2xl text-white drop-shadow-md" style="font-family: 'Noto Sans KR', sans-serif;">
-                        아버지의 유산을 찾아서
-                      </p>
+          <picture>
+            <source srcSet="/hero-image.webp" type="image/webp" />
+            <img 
+              src="/hero-image.png" 
+              alt="봉황 메모리즈 - 아버지의 유산을 찾아서"
+              className="w-full h-full object-cover object-center"
+              style={{
+                filter: 'sepia(10%) contrast(1.05) brightness(1.02)'
+              }}
+              onError={(e) => {
+                // 이미지 로딩 실패 시 기본 배경으로 대체
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.style.background = 'linear-gradient(145deg, rgba(139, 69, 19, 0.8), rgba(160, 82, 45, 0.6)), linear-gradient(to bottom, rgb(247, 243, 233), rgb(240, 230, 210))';
+                  parent.innerHTML = `
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <div class="text-center">
+                        <h1 class="text-6xl font-bold mb-4 text-white drop-shadow-lg" style="font-family: 'Noto Serif KR', serif;">
+                          봉황 메모리즈
+                        </h1>
+                        <p class="text-2xl text-white drop-shadow-md" style="font-family: 'Noto Sans KR', sans-serif;">
+                          아버지의 유산을 찾아서
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                `;
-              }
-            }}
-          />
+                  `;
+                }
+              }}
+            />
+          </picture>
           
           {/* 실제 반응형 버튼 오버레이 - 이미지 위에 배치 */}
           {showButton && !requesting && (
