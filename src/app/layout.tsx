@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -43,14 +44,9 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192x192.svg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="봉황동 메모리즈" />
+        <meta name="apple-mobile-web-app-title" content="봉황 메모리즈" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#8B4513" />
-        {/* 네이버 지도 API */}
-        <script
-          type="text/javascript"
-          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}`}
-        ></script>
         {/* 네이버 지도 오류 처리 */}
         <script dangerouslySetInnerHTML={{
           __html: `
@@ -84,6 +80,20 @@ export default function RootLayout({
         background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
       }}>
         {children}
+        
+        {/* 네이버 지도 API - next/script 사용 */}
+        <Script
+          strategy="afterInteractive"
+          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}`}
+          onLoad={() => {
+            console.log('네이버 지도 API 로딩 성공');
+            window.naverMapLoaded = true;
+          }}
+          onError={() => {
+            console.error('네이버 지도 API 로딩 실패');
+            window.naverMapLoadError = true;
+          }}
+        />
       </body>
     </html>
   )
