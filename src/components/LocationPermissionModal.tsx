@@ -17,6 +17,17 @@ export default function LocationPermissionModal({
 }: LocationPermissionModalProps) {
   const [isRequesting, setIsRequesting] = useState(false)
   const [permissionState, setPermissionState] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
+  const [isMobile, setIsMobile] = useState(false)
+
+  // 디바이스 감지
+  useEffect(() => {
+    const checkDevice = () => {
+      const userAgent = navigator.userAgent.toLowerCase()
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+      setIsMobile(isMobileDevice)
+    }
+    checkDevice()
+  }, [])
 
   // 권한 상태 확인
   useEffect(() => {
@@ -26,6 +37,13 @@ export default function LocationPermissionModal({
   }, [isOpen])
 
   const checkPermissionState = async () => {
+    // PC에서는 권한 확인 건너뛰기
+    if (!isMobile) {
+      console.log('PC 환경: 권한 요청을 건너뜁니다.')
+      onGranted()
+      return
+    }
+
     try {
       // 권한 API 지원 여부 확인
       if (navigator.permissions && navigator.permissions.query) {
@@ -155,11 +173,23 @@ export default function LocationPermissionModal({
   }
 
   const requestLocationPermission = async () => {
+    // PC에서는 권한 요청 건너뛰기
+    if (!isMobile) {
+      console.log('PC 환경: 권한 요청을 건너뜁니다.')
+      onGranted()
+      return
+    }
+
     // 위치와 카메라 권한을 동시에 요청
     await requestAllPermissions()
   }
 
   if (!isOpen) return null
+
+  // PC 환경에서는 모달을 표시하지 않고 바로 진행
+  if (!isMobile) {
+    return null
+  }
 
   // 이미 권한이 허용된 경우 로딩 화면만 표시
   if (permissionState === 'granted' && isRequesting) {

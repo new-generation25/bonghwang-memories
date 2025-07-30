@@ -23,9 +23,27 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
   const [map, setMap] = useState<any>(null)
   const [markers, setMarkers] = useState<any[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // 디바이스 감지
+  useEffect(() => {
+    const checkDevice = () => {
+      const userAgent = navigator.userAgent.toLowerCase()
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+      setIsMobile(isMobileDevice)
+    }
+    checkDevice()
+  }, [])
 
   // 네이버 지도 초기화
   useEffect(() => {
+    // PC에서는 모의 지도 사용
+    if (!isMobile) {
+      console.log('PC 환경: 모의 지도를 사용합니다.')
+      showMockMap('PC 테스트 모드')
+      return
+    }
+
     const initMap = () => {
       if (!mapRef.current) return
 
@@ -78,16 +96,16 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
           }
         }, 10000)
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('네이버 지도 초기화 실패:', error)
         
         // 상세한 오류 분석
         let errorType = '알 수 없는 오류'
-        if (error.message.includes('인증') || error.message.includes('auth')) {
+        if (error.message && error.message.includes('인증') || error.message && error.message.includes('auth')) {
           errorType = 'API 인증 실패'
-        } else if (error.message.includes('quota') || error.message.includes('limit')) {
+        } else if (error.message && error.message.includes('quota') || error.message && error.message.includes('limit')) {
           errorType = 'API 할당량 초과'
-        } else if (error.message.includes('domain') || error.message.includes('referer')) {
+        } else if (error.message && error.message.includes('domain') || error.message && error.message.includes('referer')) {
           errorType = '도메인 인증 실패'
         }
         
@@ -116,7 +134,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     }
 
     checkNaverMaps()
-  }, [])
+  }, [isMobile, isLoaded])
 
   // 미션 마커 추가
   useEffect(() => {
