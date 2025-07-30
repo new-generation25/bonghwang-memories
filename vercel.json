@@ -29,13 +29,5 @@
         }
       ]
     }
-  ],
-  "functions": {
-    "api/vercel-toolbox": {
-      "runtime": "nodejs18.x"
-    }
-  },
-  "env": {
-    "VERCEL_TOOLBOX": "true"
-  }
+  ]
 }
