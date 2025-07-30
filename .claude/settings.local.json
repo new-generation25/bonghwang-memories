@@ -9,7 +9,20 @@
       "mcp__desktop-commander__write_file",
       "Bash(ls:*)",
       "Bash(npm run dev:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm run build:*)",
+      "Bash(rm:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(rd:*)",
+      "mcp__desktop-commander__start_process",
+      "mcp__desktop-commander__interact_with_process",
+      "mcp__desktop-commander__read_process_output",
+      "mcp__desktop-commander__force_terminate",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(copy:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

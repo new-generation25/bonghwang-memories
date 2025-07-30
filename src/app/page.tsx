@@ -100,20 +100,36 @@ export default function IntroPage() {
           </p>
         </div>
 
-        {/* Vintage letter illustration */}
+        {/* Hero Image */}
         <div className="mb-12" style={{ animation: 'slideUp 0.3s ease-out' }}>
-          <div className="relative mx-auto w-64 h-40 border-2 shadow-lg transform rotate-1" style={{
-            backgroundColor: '#F5F5DC',
-            borderColor: '#D4B896'
-          }}>
-            <div className="absolute top-4 left-4 right-4 bottom-4 p-2">
-              <div className="w-full h-2 mb-2 rounded" style={{ backgroundColor: '#E8D5B7' }}></div>
-              <div className="w-3/4 h-2 mb-2 rounded" style={{ backgroundColor: '#E8D5B7' }}></div>
-              <div className="w-5/6 h-2 mb-2 rounded" style={{ backgroundColor: '#E8D5B7' }}></div>
-              <div className="w-1/2 h-2 rounded" style={{ backgroundColor: '#E8D5B7' }}></div>
-            </div>
-            {/* Vintage camera icon */}
-            <div className="absolute -top-2 -right-2 w-8 h-6 rounded shadow-lg" style={{ backgroundColor: '#8B4513' }}></div>
+          <div className="relative mx-auto max-w-sm">
+            <img 
+              src="/hero-image.png" 
+              alt="봉황동 메모리즈 - 아버지의 유산을 찾아서"
+              className="w-full h-auto rounded-lg shadow-xl"
+              style={{
+                filter: 'sepia(20%) contrast(1.1) brightness(1.05)',
+                border: '4px solid #D4B896'
+              }}
+              onError={(e) => {
+                // 이미지 로딩 실패 시 기본 일러스트로 대체
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.className = 'relative mx-auto w-64 h-40 border-2 shadow-lg transform rotate-1';
+                fallback.style.cssText = 'background-color: #F5F5DC; border-color: #D4B896;';
+                fallback.innerHTML = `
+                  <div class="absolute top-4 left-4 right-4 bottom-4 p-2">
+                    <div class="w-full h-2 mb-2 rounded" style="background-color: #E8D5B7;"></div>
+                    <div class="w-3/4 h-2 mb-2 rounded" style="background-color: #E8D5B7;"></div>
+                    <div class="w-5/6 h-2 mb-2 rounded" style="background-color: #E8D5B7;"></div>
+                    <div class="w-1/2 h-2 rounded" style="background-color: #E8D5B7;"></div>
+                  </div>
+                  <div class="absolute -top-2 -right-2 w-8 h-6 rounded shadow-lg" style="background-color: #8B4513;"></div>
+                `;
+                target.parentNode?.appendChild(fallback);
+              }}
+            />
           </div>
         </div>
 

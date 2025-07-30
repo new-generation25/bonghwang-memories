@@ -50,7 +50,30 @@ export default function RootLayout({
         <script
           type="text/javascript"
           src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}`}
+          onError="console.error('네이버 지도 API 로딩 실패'); window.naverMapLoadError = true;"
+          onLoad="console.log('네이버 지도 API 로딩 성공'); window.naverMapLoaded = true;"
         ></script>
+        {/* 네이버 지도 오류 처리 */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            window.naverMapLoadError = false;
+            window.naverMapLoaded = false;
+            
+            // API 키 검증
+            const clientId = '${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}';
+            if (!clientId || clientId === 'undefined') {
+              console.error('네이버 지도 API 키가 설정되지 않았습니다.');
+              window.naverMapLoadError = true;
+            }
+            
+            // 도메인 검증 (개발환경에서만)
+            if (typeof window !== 'undefined' && window.location) {
+              const currentDomain = window.location.hostname;
+              console.log('현재 도메인:', currentDomain);
+              console.log('네이버 지도 API 키:', clientId);
+            }
+          `
+        }} />
         {/* CSS 강제 로드 */}
         <style dangerouslySetInnerHTML={{
           __html: `
