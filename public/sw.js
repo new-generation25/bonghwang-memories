@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bonghwang-memories-v1.0.0';
+const CACHE_NAME = 'bonghwang-memories-v1.0.1';
 const urlsToCache = [
   '/',
   '/manifest.json',

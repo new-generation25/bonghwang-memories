@@ -171,6 +171,9 @@ export default function RootLayout({
                 .then((registration) => {
                   console.log('Service Worker 등록 성공:', registration.scope);
                   
+                  // 즉시 업데이트 확인
+                  registration.update();
+                  
                   // 업데이트 확인
                   registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
@@ -187,19 +190,42 @@ export default function RootLayout({
                       }
                     });
                   });
+                  
+                  // 더 적극적인 업데이트 감지
+                  setInterval(() => {
+                    registration.update();
+                  }, 2 * 60 * 1000); // 2분마다 추가 확인
                 })
                 .catch((error) => {
                   console.error('Service Worker 등록 실패:', error);
                 });
               
-              // 주기적 업데이트 확인 (1시간마다)
+              // 주기적 업데이트 확인 (5분마다)
               setInterval(() => {
                 navigator.serviceWorker.getRegistration().then((registration) => {
                   if (registration) {
                     registration.update();
                   }
                 });
-              }, 60 * 60 * 1000); // 1시간
+              }, 5 * 60 * 1000); // 5분
+              
+              // 페이지 포커스 시 즉시 업데이트 확인
+              window.addEventListener('focus', () => {
+                navigator.serviceWorker.getRegistration().then((registration) => {
+                  if (registration) {
+                    registration.update();
+                  }
+                });
+              });
+              
+              // 온라인 상태 복구 시 즉시 업데이트 확인
+              window.addEventListener('online', () => {
+                navigator.serviceWorker.getRegistration().then((registration) => {
+                  if (registration) {
+                    registration.update();
+                  }
+                });
+              });
             }
           `
         }} />
