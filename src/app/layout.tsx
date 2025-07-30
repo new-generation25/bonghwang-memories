@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import VercelToolbox from '@/components/VercelToolbox'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -206,7 +205,6 @@ export default function RootLayout({
         background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
       }}>
         {children}
-        <VercelToolbox />
       </body>
     </html>
   )
