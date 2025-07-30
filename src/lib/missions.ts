@@ -4,20 +4,15 @@ export const mainMissions: Mission[] = [
   {
     missionId: 'main-1',
     isMainMission: true,
-    title: '첫 번째 기억: 달콤한 우유 한 잔의 추억',
-    type: 'PHOTO',
+    title: '첫 번째 기억: 마을의 이야기가 흐르던 우물',
+    type: 'QR',
     story: {
-      intro: '세상의 때를 함께 씻어내던 그곳, 목욕 후 마셨던 시원한 우유 한 잔의 달콤함을 기억하니? 그 우유는 유난히 노란색이었지.',
-      outro: '바나나맛 우유의 달콤함이 그때의 기억을 되살려주는구나.'
+      intro: '마을의 모든 소식이 모이던 곳. 그곳에서 길어 올린 건 차가운 물만이 아니었단다. 귀 기울이면 지금도 그 시절의 소리가 들릴지 몰라.',
+      outro: '아버지의 목소리가 그 시절의 정겨운 이야기를 들려주는구나.'
     },
     location: {
       lat: 35.229116,
       lng: 128.878596
-    },
-    quiz: {
-      question: '아버지가 좋아했던 우유는?',
-      answer: '바나나맛 우유',
-      options: ['흰우유', '바나나맛 우유', '딸기맛 우유', '초콜릿 우유']
     },
     points: 100,
     order: 1
@@ -25,15 +20,20 @@ export const mainMissions: Mission[] = [
   {
     missionId: 'main-2',
     isMainMission: true,
-    title: '두 번째 기억: 마을의 이야기가 흐르던 우물',
-    type: 'QR',
+    title: '두 번째 기억: 달콤한 우유 한 잔의 추억',
+    type: 'PHOTO',
     story: {
-      intro: '마을의 모든 소식이 모이던 곳. 그곳에서 길어 올린 건 차가운 물만이 아니었단다. 귀 기울이면 지금도 그 시절의 소리가 들릴지 몰라.',
-      outro: '아버지의 목소리가 그 시절의 정겨운 이야기를 들려주는구나.'
+      intro: '세상의 때를 함께 씻어내던 그곳, 목욕 후 마셨던 시원한 우유 한 잔의 달콤함을 기억하니? 그 우유는 유난히 노란색이었지.',
+      outro: '바나나맛 우유의 달콤함이 그때의 기억을 되살려주는구나.'
     },
     location: {
       lat: 35.228483,
       lng: 128.876678
+    },
+    quiz: {
+      question: '아버지가 좋아했던 우유는?',
+      answer: '바나나맛 우유',
+      options: ['흰우유', '바나나맛 우유', '딸기맛 우유', '초콜릿 우유']
     },
     points: 100,
     order: 2
