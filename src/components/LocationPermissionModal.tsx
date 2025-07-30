@@ -32,10 +32,10 @@ export default function LocationPermissionModal({
         const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName })
         setPermissionState(permission.state)
         
-        // 이미 허용된 경우 바로 위치 가져오기
+        // 이미 허용된 경우 바로 위치와 카메라 권한 확인
         if (permission.state === 'granted') {
           console.log('이미 위치 권한이 허용되어 있습니다.')
-          getCurrentLocation()
+          await requestAllPermissions()
           return
         }
       } else {
@@ -45,6 +45,73 @@ export default function LocationPermissionModal({
     } catch (error) {
       console.log('권한 상태 확인 실패, 기본 요청으로 진행')
       setPermissionState('prompt')
+    }
+  }
+
+  const requestAllPermissions = async () => {
+    setIsRequesting(true)
+    
+    try {
+      // 1. 위치 권한 요청
+      if (!navigator.geolocation) {
+        alert('이 브라우저에서는 위치 서비스를 지원하지 않습니다.')
+        onDenied()
+        return
+      }
+
+      // 위치 권한 요청
+      await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 60000
+        })
+      })
+
+      // 2. 카메라 권한 요청
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('이 브라우저에서는 카메라 서비스를 지원하지 않습니다.')
+        onDenied()
+        return
+      }
+
+      // 카메라 권한 요청
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: {
+          facingMode: 'environment', // 후면 카메라 우선
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      })
+
+      // 스트림 즉시 정리 (권한만 확인)
+      stream.getTracks().forEach(track => track.stop())
+
+      console.log('위치와 카메라 권한이 모두 허용되었습니다.')
+      onGranted()
+
+    } catch (error: any) {
+      console.error('Permission error:', error)
+      
+      let errorMessage = '권한이 거부되었습니다.'
+      if (error.name === 'NotAllowedError') {
+        errorMessage = '위치 또는 카메라 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = '카메라에 접근할 수 없습니다. 다른 앱에서 카메라를 사용 중인지 확인해주세요.'
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = '카메라를 찾을 수 없습니다.'
+      } else if (error.code === 1) {
+        errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
+      } else if (error.code === 2) {
+        errorMessage = '위치 정보를 사용할 수 없습니다.'
+      } else if (error.code === 3) {
+        errorMessage = '위치 요청 시간이 초과되었습니다.'
+      }
+      
+      alert(errorMessage)
+      onDenied()
+    } finally {
+      setIsRequesting(false)
     }
   }
 
@@ -88,42 +155,8 @@ export default function LocationPermissionModal({
   }
 
   const requestLocationPermission = async () => {
-    setIsRequesting(true)
-    
-    try {
-      if (!navigator.geolocation) {
-        alert('이 브라우저에서는 위치 서비스를 지원하지 않습니다.')
-        onDenied()
-        return
-      }
-
-      // 권한 요청 (시스템 팝업 발생)
-      await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 60000
-        })
-      })
-
-      onGranted()
-    } catch (error: any) {
-      console.error('Location permission error:', error)
-      
-      let errorMessage = '위치 권한이 거부되었습니다.'
-      if (error.code === 1) {
-        errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
-      } else if (error.code === 2) {
-        errorMessage = '위치 정보를 사용할 수 없습니다.'
-      } else if (error.code === 3) {
-        errorMessage = '위치 요청 시간이 초과되었습니다.'
-      }
-      
-      alert(errorMessage)
-      onDenied()
-    } finally {
-      setIsRequesting(false)
-    }
+    // 위치와 카메라 권한을 동시에 요청
+    await requestAllPermissions()
   }
 
   if (!isOpen) return null
@@ -138,7 +171,7 @@ export default function LocationPermissionModal({
           </div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">봉황 메모리즈</h2>
           <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">위치 정보를 가져오는 중...</p>
+          <p className="text-gray-600">권한을 확인하는 중...</p>
         </div>
       </div>
     )
@@ -156,29 +189,47 @@ export default function LocationPermissionModal({
             봉황 메모리즈
           </h2>
           <p className="text-sm text-gray-600">
-            위치 정보 접근 권한 요청
+            위치 및 카메라 권한 요청
           </p>
         </div>
 
         {/* 권한 설명 */}
         <div className="mb-6">
-          <div className="flex items-start space-x-3 mb-4">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-blue-600">📍</span>
+          <div className="space-y-4">
+            {/* 위치 권한 */}
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-600">📍</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800 mb-1">
+                  내 위치 확인
+                </h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  미션 수행을 위한 현재 위치 정보가 필요합니다.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-1">
-                내 위치 확인
-              </h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                봉황 메모리즈가 현재 위치를 확인하여 미션 수행에 필요한 정보를 제공합니다.
-              </p>
+
+            {/* 카메라 권한 */}
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-green-600">📸</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800 mb-1">
+                  카메라 접근
+                </h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  사진 촬영 미션을 위한 카메라 접근이 필요합니다.
+                </p>
+              </div>
             </div>
           </div>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
             <p className="text-xs text-blue-700">
-              💡 위치 정보는 미션 수행과 지도 표시에만 사용되며, 다른 용도로 사용되지 않습니다.
+              💡 위치와 카메라 정보는 미션 수행에만 사용되며, 다른 용도로 사용되지 않습니다.
             </p>
           </div>
         </div>
@@ -200,7 +251,7 @@ export default function LocationPermissionModal({
                 <span>권한 요청 중...</span>
               </div>
             ) : (
-              '위치 권한 허용'
+              '위치 및 카메라 권한 허용'
             )}
           </button>
 

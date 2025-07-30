@@ -35,22 +35,8 @@ export default function IntroPage() {
   const handleLocationGranted = async () => {
     setShowLocationModal(false)
     
-    try {
-      // 카메라 권한 요청
-      if ('mediaDevices' in navigator) {
-        await navigator.mediaDevices.getUserMedia({ video: true })
-          .then(stream => {
-            // Stop the stream immediately after getting permission
-            stream.getTracks().forEach(track => track.stop())
-          })
-      }
-
-      // 스토리 페이지로 이동
-      router.push('/story')
-    } catch (error) {
-      console.error('Camera permission denied:', error)
-      alert('카메라 권한이 필요합니다. 브라우저 설정에서 권한을 허용해주세요.')
-    }
+    // 위치와 카메라 권한이 모두 허용되었으므로 바로 스토리 페이지로 이동
+    router.push('/story')
   }
 
   const handleLocationDenied = () => {
