@@ -2,11 +2,11 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '봉황동 메모리즈: 아버지의 유산을 찾아서',
+  title: '봉황 메모리즈: 아버지의 유산을 찾아서',
   description: '봉황동의 역사와 문화를 스토리텔링과 게임형 미션을 통해 체험하는 인터랙티브 투어 앱',
   keywords: '봉황동, 메모리즈, 투어, 가족, 추억, 문화체험',
   openGraph: {
-    title: '봉황동 메모리즈: 아버지의 유산을 찾아서',
+    title: '봉황 메모리즈: 아버지의 유산을 찾아서',
     description: '봉황동의 역사와 문화를 스토리텔링과 게임형 미션을 통해 체험하는 인터랙티브 투어 앱',
     type: 'website',
   },
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '봉황동 메모리즈',
+    title: '봉황 메모리즈',
   },
   formatDetection: {
     telephone: false,
@@ -50,8 +50,6 @@ export default function RootLayout({
         <script
           type="text/javascript"
           src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}`}
-          onError="console.error('네이버 지도 API 로딩 실패'); window.naverMapLoadError = true;"
-          onLoad="console.log('네이버 지도 API 로딩 성공'); window.naverMapLoaded = true;"
         ></script>
         {/* 네이버 지도 오류 처리 */}
         <script dangerouslySetInnerHTML={{

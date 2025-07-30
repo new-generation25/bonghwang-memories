@@ -50,6 +50,7 @@ export default function IntroPage() {
     setRequesting(false)
   }
 
+  // 디버깅용 - 클릭 위치 확인
   const handleImageClick = (event: React.MouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
     const x = event.clientX - rect.left
@@ -57,14 +58,6 @@ export default function IntroPage() {
     const relativeX = x / rect.width
     const relativeY = y / rect.height
     
-    // 시작하기 버튼 영역 좌표 (이미지 내에서의 상대적 위치)
-    // 버튼이 이미지 하단 중앙에 위치한다고 가정
-    // 필요시 실제 버튼 위치에 맞게 조정 가능
-    if (relativeX >= 0.2 && relativeX <= 0.8 && relativeY >= 0.75 && relativeY <= 0.95) {
-      handleStartJourney()
-    }
-    
-    // 디버깅용 - 클릭 위치 확인 (개발 시에만 사용)
     console.log(`클릭 위치: x=${relativeX.toFixed(2)}, y=${relativeY.toFixed(2)}`)
   }
 
@@ -109,9 +102,48 @@ export default function IntroPage() {
             }}
           />
           
+          {/* 실제 반응형 버튼 오버레이 - 이미지 위에 배치 */}
+          {showButton && !requesting && (
+            <button
+              onClick={handleStartJourney}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 z-20"
+              style={{
+                // 이미지 내 버튼 위치에 맞게 조정 (기본값: 중앙 하단)
+                left: '50%',
+                top: '85%',
+                // 반응형 크기
+                width: 'clamp(120px, 25vw, 200px)',
+                height: 'clamp(40px, 8vw, 60px)',
+                // 스타일링
+                background: 'linear-gradient(145deg, #DAA520, #B8860B)',
+                border: '3px solid #F4F1E8',
+                borderRadius: '25px',
+                color: '#FFFFFF',
+                fontFamily: 'Noto Sans KR, sans-serif',
+                fontWeight: 'bold',
+                fontSize: 'clamp(14px, 3vw, 18px)',
+                boxShadow: '0 8px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.3)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                animation: 'buttonPulse 2s infinite'
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = 'translateX(-50%) translateY(-50%) scale(0.95)'
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = 'translateX(-50%) translateY(-50%) scale(1)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateX(-50%) translateY(-50%) scale(1)'
+              }}
+            >
+              시작하기
+            </button>
+          )}
+          
           {/* 로딩 상태 오버레이 */}
           {requesting && (
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30">
               <div className="text-white text-center">
                 <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-xl font-bold">시작하는 중...</p>
@@ -120,17 +152,15 @@ export default function IntroPage() {
             </div>
           )}
           
-          {/* 클릭 가이드 (처음 몇 초간만 표시) */}
-          {showButton && !requesting && (
-            <div 
-              className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-60 text-white px-4 py-2 rounded-full text-sm"
-              style={{ 
-                animation: 'slideUp 0.5s ease-out, fadeOut 3s ease-in-out 2s forwards'
-              }}
-            >
-              화면을 터치하여 시작하세요
-            </div>
-          )}
+          {/* 개발용 좌표 확인 가이드 */}
+          <div 
+            className="absolute bottom-4 right-4 bg-black bg-opacity-60 text-white px-3 py-2 rounded text-xs z-10"
+            style={{ 
+              animation: 'fadeOut 5s ease-in-out 3s forwards'
+            }}
+          >
+            이미지를 클릭하여 버튼 위치 확인 (콘솔 로그)
+          </div>
         </div>
       </div>
 
@@ -145,7 +175,15 @@ export default function IntroPage() {
           to { transform: translateX(-50%) translateY(0); opacity: 1; }
         }
         @keyframes fadeOut {
-          to { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+          to { opacity: 0; }
+        }
+        @keyframes buttonPulse {
+          0%, 100% { 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.3), 0 0 0 0 rgba(218, 165, 32, 0.4);
+          }
+          50% { 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.4), 0 0 0 10px rgba(218, 165, 32, 0.1);
+          }
         }
       `}</style>
     </div>
