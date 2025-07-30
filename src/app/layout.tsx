@@ -81,18 +81,10 @@ export default function RootLayout({
       }}>
         {children}
         
-        {/* 네이버 지도 API - next/script 사용 */}
+        {/* 네이버 지도 API - 이벤트 핸들러 제거 */}
         <Script
           strategy="afterInteractive"
           src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}`}
-          onLoad={() => {
-            console.log('네이버 지도 API 로딩 성공');
-            window.naverMapLoaded = true;
-          }}
-          onError={() => {
-            console.error('네이버 지도 API 로딩 실패');
-            window.naverMapLoadError = true;
-          }}
         />
       </body>
     </html>
