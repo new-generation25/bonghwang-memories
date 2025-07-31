@@ -41,9 +41,9 @@ export default function IntroPage() {
     setRequesting(false)
   }
 
-  const handleUserSetupComplete = (userId: string) => {
+  const handleUserSetupComplete = (userId: string, gender: string) => {
     setShowUserSetup(false)
-    console.log('User setup complete:', userId)
+    console.log('User setup complete:', userId, 'Gender:', gender)
     router.push('/story')
   }
 

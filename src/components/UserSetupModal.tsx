@@ -5,11 +5,12 @@ import { createOrUpdateUser, migrateFromLocalStorage } from '@/lib/database'
 
 interface UserSetupModalProps {
   isOpen: boolean
-  onComplete: (userId: string) => void
+  onComplete: (userId: string, gender: string) => void
 }
 
 export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalProps) {
   const [userId, setUserId] = useState('')
+  const [gender, setGender] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   if (!isOpen) return null
@@ -17,7 +18,7 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!userId.trim()) return
+    if (!userId.trim() || !gender) return
 
     setIsLoading(true)
     
@@ -26,6 +27,7 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
       
       // Save to localStorage
       localStorage.setItem('userId', trimmedUserId)
+      localStorage.setItem('userGender', gender)
       
       // Create/update user in Firebase
       await createOrUpdateUser(trimmedUserId, trimmedUserId)
@@ -34,11 +36,11 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
       await migrateFromLocalStorage(trimmedUserId)
       
       // Complete setup
-      onComplete(trimmedUserId)
+      onComplete(trimmedUserId, gender)
     } catch (error) {
       console.error('Error setting up user:', error)
       // Fallback to localStorage only
-      onComplete(userId.trim())
+      onComplete(userId.trim(), gender)
     } finally {
       setIsLoading(false)
     }
@@ -77,10 +79,42 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
             />
           </div>
 
+          <div>
+            <label className="block font-handwriting text-sepia-800 mb-3">
+              성별을 선택해주세요
+            </label>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => setGender('male')}
+                disabled={isLoading}
+                className={`flex-1 py-3 px-4 rounded-lg border-2 font-handwriting text-lg
+                         transition-all duration-200 disabled:opacity-50
+                         ${gender === 'male' 
+                           ? 'border-vintage-gold bg-vintage-gold/20 text-vintage-brown' 
+                           : 'border-sepia-300 bg-white/90 text-sepia-700 hover:border-sepia-400'}`}
+              >
+                👦 남자아이
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender('female')}
+                disabled={isLoading}
+                className={`flex-1 py-3 px-4 rounded-lg border-2 font-handwriting text-lg
+                         transition-all duration-200 disabled:opacity-50
+                         ${gender === 'female' 
+                           ? 'border-vintage-gold bg-vintage-gold/20 text-vintage-brown' 
+                           : 'border-sepia-300 bg-white/90 text-sepia-700 hover:border-sepia-400'}`}
+              >
+                👧 여자아이
+              </button>
+            </div>
+          </div>
+
           <div className="text-center pt-4">
             <button
               type="submit"
-              disabled={!userId.trim() || isLoading}
+              disabled={!userId.trim() || !gender || isLoading}
               className="vintage-button w-full py-3 text-lg font-bold
                        disabled:opacity-50 disabled:cursor-not-allowed"
             >

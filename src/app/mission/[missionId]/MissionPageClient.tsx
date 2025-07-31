@@ -177,7 +177,10 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
       {showCamera && (
         <MissionCamera
           onCapture={handlePhotoCapture}
-          onClose={() => setShowCamera(false)}
+          onClose={() => {
+            setShowCamera(false)
+            router.push('/exploration')
+          }}
         />
       )}
 
@@ -185,7 +188,10 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
         <MissionQuiz
           mission={mission}
           onComplete={handleQuizComplete}
-          onClose={() => setShowQuiz(false)}
+          onClose={() => {
+            setShowQuiz(false)
+            router.push('/exploration')
+          }}
         />
       )}
 
@@ -193,14 +199,20 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
         <MissionGPS
           mission={mission}
           onComplete={handleGPSComplete}
-          onClose={() => setShowGPS(false)}
+          onClose={() => {
+            setShowGPS(false)
+            router.push('/exploration')
+          }}
         />
       )}
 
       {showQRScanner && (
         <QRScanner
           onScanSuccess={handleQRScanSuccess}
-          onClose={() => setShowQRScanner(false)}
+          onClose={() => {
+            setShowQRScanner(false)
+            router.push('/exploration')
+          }}
         />
       )}
     </div>
