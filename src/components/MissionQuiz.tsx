@@ -34,7 +34,7 @@ export default function MissionQuiz({ mission, onComplete, onClose }: MissionQui
   }
 
   return (
-    <div className="fixed inset-0 bg-vintage-paper z-50 flex flex-col">
+    <div className="fixed inset-0 bg-vintage-paper z-50 flex flex-col" style={{ touchAction: 'none' }}>
       {/* Header */}
       <div className="bg-vintage-cream border-b-2 border-sepia-300 shadow-lg">
         <div className="flex items-center justify-between p-4">

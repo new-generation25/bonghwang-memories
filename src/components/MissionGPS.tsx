@@ -128,7 +128,8 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{
-      background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
+      background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))',
+      touchAction: 'none'
     }}>
       {/* Header */}
       <div className="border-b-2 shadow-lg" style={{

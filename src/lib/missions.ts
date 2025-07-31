@@ -2,6 +2,22 @@ import { Mission } from './types'
 
 export const mainMissions: Mission[] = [
   {
+    missionId: 'main-1',
+    isMainMission: true,
+    title: '첫 번째 기억: 마을의 이야기가 흐르던 우물',
+    type: 'QR',
+    story: {
+      intro: '마을의 모든 소식이 모이던 곳. 그곳에서 길어 올린 건 차가운 물만이 아니었단다. 귀 기울이면 지금도 그 시절의 소리가 들릴지 몰라.',
+      outro: '아버지의 목소리가 그 시절의 정겨운 이야기를 들려주는구나.'
+    },
+    location: {
+      lat: 35.228483,
+      lng: 128.876678
+    },
+    points: 100,
+    order: 1
+  },
+  {
     missionId: 'main-2',
     isMainMission: true,
     title: '두 번째 기억: 달콤한 우유 한 잔의 추억',
@@ -21,22 +37,6 @@ export const mainMissions: Mission[] = [
     },
     points: 100,
     order: 2
-  },
-  {
-    missionId: 'main-1',
-    isMainMission: true,
-    title: '첫 번째 기억: 마을의 이야기가 흐르던 우물',
-    type: 'QR',
-    story: {
-      intro: '마을의 모든 소식이 모이던 곳. 그곳에서 길어 올린 건 차가운 물만이 아니었단다. 귀 기울이면 지금도 그 시절의 소리가 들릴지 몰라.',
-      outro: '아버지의 목소리가 그 시절의 정겨운 이야기를 들려주는구나.'
-    },
-    location: {
-      lat: 35.228483,
-      lng: 128.876678
-    },
-    points: 100,
-    order: 1
   },
   {
     missionId: 'main-3',

@@ -123,7 +123,7 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
   // PC Test Mode UI
   if (!isMobile) {
     return (
-      <div className="fixed inset-0 bg-vintage-paper z-50 flex flex-col items-center justify-center">
+      <div className="fixed inset-0 bg-vintage-paper z-50 flex flex-col items-center justify-center" style={{ touchAction: 'none' }}>
         <div className="max-w-md w-full text-center p-6">
           <div className="bg-vintage-cream border-2 border-sepia-400 rounded-lg shadow-2xl p-8">
             <div className="text-6xl mb-6">📸</div>
@@ -167,7 +167,7 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
 
   // Mobile Camera UI
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+    <div className="fixed inset-0 bg-black z-50 flex flex-col" style={{ touchAction: 'none' }}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-black/80 text-white">
         <button

@@ -154,18 +154,6 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
           ">
             ${isCompleted ? '✓' : index + 1}
           </div>
-          ${!isCompleted ? `
-            <div style="
-              position: absolute;
-              top: -8px;
-              right: -8px;
-              width: 12px;
-              height: 12px;
-              background-color: #FCD34D;
-              border-radius: 50%;
-              animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-            "></div>
-          ` : ''}
         </div>
       `
 
@@ -405,18 +393,6 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
           ">
             ${isCompleted ? '✓' : index + 1}
           </div>
-          ${!isCompleted ? `
-            <div style="
-              position: absolute;
-              top: -8px;
-              right: -8px;
-              width: 12px;
-              height: 12px;
-              background-color: #FCD34D;
-              border-radius: 50%;
-              animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-            "></div>
-          ` : ''}
         </div>
       `
       

@@ -136,7 +136,7 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+    <div className="fixed inset-0 bg-black z-50 flex flex-col" style={{ touchAction: 'none' }}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-black/80 text-white">
         <button

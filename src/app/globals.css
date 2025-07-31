@@ -127,8 +127,8 @@ a {
 .bingo-cell {
   @apply relative overflow-hidden rounded-lg border-2 border-sepia-400 bg-sepia-100;
   transition: all 0.3s ease;
-  min-height: 80px;
-  aspect-ratio: 1;
+  min-height: 70px;
+  width: 100%;
 }
 
 .bingo-cell.completed {

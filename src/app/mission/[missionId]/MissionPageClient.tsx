@@ -24,40 +24,36 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
   const [showQRScanner, setShowQRScanner] = useState(false)
   const router = useRouter()
 
-  // Find mission by ID
+  // Find mission by ID and start immediately
   useEffect(() => {
     const foundMission = [...mainMissions, ...subMissions].find(m => m.missionId === missionId)
     if (foundMission) {
       setMission(foundMission)
+      // Start mission immediately
+      setCurrentStep('mission')
+      
+      switch (foundMission.type) {
+        case 'PHOTO':
+          setShowCamera(true)
+          break
+        case 'QUIZ':
+          setShowQuiz(true)
+          break
+        case 'GPS':
+          setShowGPS(true)
+          break
+        case 'QR':
+          setShowQRScanner(true)
+          break
+        case 'AR':
+          alert('AR 기능은 준비 중입니다!')
+          break
+      }
     } else {
       router.push('/exploration')
     }
   }, [missionId, router])
 
-  const handleStartMission = () => {
-    if (!mission) return
-
-    setCurrentStep('mission')
-
-    switch (mission.type) {
-      case 'PHOTO':
-        setShowCamera(true)
-        break
-      case 'QUIZ':
-        setShowQuiz(true)
-        break
-      case 'GPS':
-        setShowGPS(true)
-        break
-      case 'QR':
-        setShowQRScanner(true)
-        break
-      case 'AR':
-        // AR implementation would go here
-        alert('AR 기능은 준비 중입니다!')
-        break
-    }
-  }
 
   const handleMissionComplete = async (success: boolean, data?: any) => {
     if (success) {
@@ -122,70 +118,6 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
     <div className="min-h-screen" style={{
       background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
     }}>
-      {currentStep === 'intro' && (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6">
-          {/* Mission intro */}
-          <div className="max-w-md w-full">
-            <div className="border-2 rounded-lg shadow-2xl p-6 mb-6" style={{
-              backgroundColor: '#F5F5DC',
-              borderColor: '#D4B896'
-            }}>
-              <h1 className="text-2xl mb-4 text-center font-bold" style={{
-                color: '#8B4513',
-                fontFamily: 'Noto Serif KR, serif'
-              }}>
-                {mission.title}
-              </h1>
-              
-              <div className="mb-4 text-center">
-                <span className="inline-block px-4 py-2 rounded-full text-sm font-bold" style={{
-                  backgroundColor: '#F0E6D2',
-                  color: '#856447'
-                }}>
-                  {mission.type === 'PHOTO' && '📸 사진 촬영'}
-                  {mission.type === 'QUIZ' && '🧩 퀴즈'}
-                  {mission.type === 'GPS' && '📍 위치 인증'}
-                  {mission.type === 'QR' && '📱 QR 스캔'}
-                  {mission.type === 'AR' && '🔍 AR 체험'}
-                </span>
-              </div>
-
-              <div className="p-4 rounded-lg mb-6" style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
-                <p className="text-base leading-relaxed" style={{
-                  color: '#856447',
-                  fontFamily: 'Noto Sans KR, sans-serif'
-                }}>
-                  "{mission.story.intro}"
-                </p>
-              </div>
-
-              <div className="text-center text-sm mb-6" style={{ color: '#A67C5A' }}>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleGoBack}
-                  className="flex-1 py-3 px-4 rounded-lg transition-colors duration-200"
-                  style={{
-                    backgroundColor: '#F0E6D2',
-                    color: '#856447'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#E8D5B7'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#F0E6D2'}
-                >
-                  뒤로가기
-                </button>
-                <button
-                  onClick={handleStartMission}
-                  className="flex-1 vintage-button py-3 text-lg font-bold"
-                >
-                  시작하기
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {currentStep === 'complete' && (
         <div className="min-h-screen flex flex-col items-center justify-center p-6">
