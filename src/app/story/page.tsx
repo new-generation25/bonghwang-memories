@@ -30,7 +30,7 @@ export default function StoryPage() {
       const timer = setTimeout(() => {
         setDisplayedText(storyText.slice(0, currentIndex + 1))
         setCurrentIndex(prev => prev + 1)
-      }, 50) // 50ms마다 한 글자씩 일정한 속도로 타이핑
+      }, 35) // 35ms마다 한 글자씩 일정한 속도로 타이핑
 
       return () => clearTimeout(timer)
     } else {
@@ -89,7 +89,7 @@ export default function StoryPage() {
           <div className="absolute inset-0 bg-vintage-paper opacity-30 rounded"></div>
           
           {/* Letter content */}
-          <div className="relative z-10 h-full overflow-hidden flex flex-col justify-center">
+          <div className="relative z-10 h-full overflow-y-auto flex flex-col justify-start pt-4">
             <div className="font-handwriting text-lg text-sepia-800 leading-relaxed whitespace-pre-line">
               {displayedText}
               {/* Typing cursor */}
@@ -109,8 +109,8 @@ export default function StoryPage() {
           <div className="mt-8 text-center animate-slide-up">
             <button
               onClick={handleStartExploration}
-              className="vintage-button text-2xl font-bold py-6 px-12 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-              style={{ fontSize: '1.75rem', padding: '1.5rem 3rem' }}
+              className="vintage-button text-xl font-bold py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              style={{ fontSize: '1.25rem', padding: '1rem 2rem' }}
             >
               탐험 시작하기
             </button>

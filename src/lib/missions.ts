@@ -11,8 +11,8 @@ export const mainMissions: Mission[] = [
       outro: '바나나맛 우유의 달콤함이 그때의 기억을 되살려주는구나.'
     },
     location: {
-      lat: 35.228483,
-      lng: 128.876678
+      lat: 35.229116,
+      lng: 128.878596
     },
     quiz: {
       question: '아버지가 좋아했던 우유는?',
@@ -32,8 +32,8 @@ export const mainMissions: Mission[] = [
       outro: '아버지의 목소리가 그 시절의 정겨운 이야기를 들려주는구나.'
     },
     location: {
-      lat: 35.229116,
-      lng: 128.878596
+      lat: 35.228483,
+      lng: 128.876678
     },
     points: 100,
     order: 2
