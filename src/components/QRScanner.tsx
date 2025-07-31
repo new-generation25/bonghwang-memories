@@ -27,8 +27,8 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: 'environment',
-            width: { min: 640, ideal: 1280, max: 1920 },
-            height: { min: 480, ideal: 720, max: 1080 }
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           }
         })
       } catch (envError) {
@@ -38,8 +38,8 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
           mediaStream = await navigator.mediaDevices.getUserMedia({
             video: { 
               facingMode: 'user',
-              width: { min: 640, ideal: 1280 },
-              height: { min: 480, ideal: 720 }
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
             }
           })
         } catch (userError) {
@@ -51,19 +51,37 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
         }
       }
       
-      setStream(mediaStream)
-      
-      if (videoRef.current && mediaStream) {
-        videoRef.current.srcObject = mediaStream
-        videoRef.current.onloadedmetadata = () => {
-          setIsLoading(false)
-          startScanning()
-        }
+      if (mediaStream) {
+        setStream(mediaStream)
         
-        // Additional play attempt for mobile browsers
-        videoRef.current.play().catch(playError => {
-          console.log('Video play error:', playError)
-        })
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream
+          
+          // Wait for video to be ready
+          const playVideo = async () => {
+            try {
+              await videoRef.current?.play()
+              setIsLoading(false)
+              // Start scanning after a short delay to ensure video is stable
+              setTimeout(() => {
+                startScanning()
+              }, 500)
+            } catch (playError) {
+              console.log('Video play error:', playError)
+              setError('카메라 재생에 실패했습니다. 다시 시도해주세요.')
+              setIsLoading(false)
+            }
+          }
+          
+          videoRef.current.onloadedmetadata = () => {
+            playVideo()
+          }
+          
+          // Ensure video is properly loaded
+          if (videoRef.current.readyState >= 2) {
+            playVideo()
+          }
+        }
       }
     } catch (err) {
       console.error('Camera access error:', err)
@@ -116,16 +134,20 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
 
   // Initialize on mount
   useEffect(() => {
-    initCamera()
+    // Small delay to ensure component is fully mounted
+    const timer = setTimeout(() => {
+      initCamera()
+    }, 100)
     
     // Cleanup on unmount
     return () => {
+      clearTimeout(timer)
       scanningRef.current = false
       if (stream) {
         stream.getTracks().forEach(track => track.stop())
       }
     }
-  }, [initCamera, stream])
+  }, [initCamera])
 
   const handleClose = () => {
     scanningRef.current = false
@@ -181,24 +203,32 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
           autoPlay
           playsInline
           muted
+          controls={false}
+          preload="metadata"
           className="w-full h-full object-cover"
+          style={{ background: '#000' }}
         />
 
         {/* Scanning overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Corners */}
+          {/* Dark overlay with hole in center */}
+          <div className="absolute inset-0 bg-black bg-opacity-50">
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-white rounded-lg"></div>
+          </div>
+          
+          {/* Scanning corners */}
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64">
             {/* Top-left corner */}
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white"></div>
+            <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-green-400 rounded-tl-lg"></div>
             {/* Top-right corner */}
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white"></div>
+            <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-green-400 rounded-tr-lg"></div>
             {/* Bottom-left corner */}
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white"></div>
+            <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-green-400 rounded-bl-lg"></div>
             {/* Bottom-right corner */}
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white"></div>
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-green-400 rounded-br-lg"></div>
             
             {/* Scanning line */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-red-500 animate-bounce"></div>
+            <div className="absolute top-0 left-2 right-2 h-0.5 bg-green-400 animate-pulse"></div>
           </div>
 
           {/* Instructions */}
