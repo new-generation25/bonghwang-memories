@@ -7,6 +7,7 @@ import { mainMissions } from '@/lib/missions'
 import Map from '@/components/Map'
 import MissionModal from '@/components/MissionModal'
 import Navigation from '@/components/Navigation'
+import { syncToLocalStorage } from '@/lib/database'
 
 export default function ExplorationPage() {
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null)
@@ -38,12 +39,28 @@ export default function ExplorationPage() {
     }
   }, [])
 
-  // Load completed missions from localStorage
+  // Load completed missions from localStorage and sync with Firebase
   useEffect(() => {
-    const saved = localStorage.getItem('completedMissions')
-    if (saved) {
-      setCompletedMissions(JSON.parse(saved))
+    const loadMissions = async () => {
+      const userId = localStorage.getItem('userId')
+      
+      if (userId) {
+        try {
+          // Sync Firebase data to localStorage
+          await syncToLocalStorage(userId)
+        } catch (error) {
+          console.error('Error syncing from Firebase:', error)
+        }
+      }
+      
+      // Load from localStorage (either original or synced data)
+      const saved = localStorage.getItem('completedMissions')
+      if (saved) {
+        setCompletedMissions(JSON.parse(saved))
+      }
     }
+    
+    loadMissions()
   }, [])
 
   const handleMissionSelect = (mission: Mission) => {
@@ -86,26 +103,23 @@ export default function ExplorationPage() {
             {getCurrentMissionTitle()}
           </h1>
           
-          {/* Progress indicator */}
-          <div className="mt-3 flex items-center justify-center space-x-2">
+          {/* Progress indicator - Star system */}
+          <div className="mt-3 flex items-center justify-center space-x-3">
             {mainMissions.map((mission, index) => (
               <div
                 key={mission.missionId}
-                className="w-3 h-3 rounded-full border-2 transition-all duration-300"
-                style={{
-                  backgroundColor: completedMissions.includes(mission.missionId)
-                    ? '#DAA520'
-                    : index === completedMissions.length
-                    ? 'white'
-                    : '#F0E6D2',
-                  borderColor: completedMissions.includes(mission.missionId)
-                    ? '#DAA520'
-                    : index === completedMissions.length
-                    ? '#8B4513'
-                    : '#E8D5B7',
-                  animation: index === completedMissions.length ? 'pulse 2s infinite' : 'none'
-                }}
-              />
+                className="relative w-6 h-6 flex items-center justify-center"
+              >
+                {completedMissions.includes(mission.missionId) ? (
+                  <div className="text-yellow-400 text-xl animate-pulse">
+                    ⭐
+                  </div>
+                ) : index === completedMissions.length ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-vintage-brown bg-white animate-pulse"></div>
+                ) : (
+                  <div className="w-4 h-4 rounded-full border-2 border-sepia-300 bg-sepia-100"></div>
+                )}
+              </div>
             ))}
           </div>
         </div>

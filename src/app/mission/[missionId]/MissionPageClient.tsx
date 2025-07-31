@@ -8,6 +8,7 @@ import MissionCamera from '@/components/MissionCamera'
 import MissionQuiz from '@/components/MissionQuiz'
 import MissionGPS from '@/components/MissionGPS'
 import QRScanner from '@/components/QRScanner'
+import { completeMission } from '@/lib/database'
 
 interface MissionPageClientProps {
   missionId: string
@@ -58,22 +59,31 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
     }
   }
 
-  const handleMissionComplete = (success: boolean, data?: any) => {
+  const handleMissionComplete = async (success: boolean, data?: any) => {
     if (success) {
       setMissionData(data)
       setCurrentStep('complete')
       
-      // Save to localStorage
+      const userId = localStorage.getItem('userId')
+      const points = data?.usedHint ? mission!.points - 20 : mission!.points
+      
+      // Save to localStorage (fallback)
       const completedMissions = JSON.parse(localStorage.getItem('completedMissions') || '[]')
       if (!completedMissions.includes(mission!.missionId)) {
         completedMissions.push(mission!.missionId)
         localStorage.setItem('completedMissions', JSON.stringify(completedMissions))
       }
-
-      // Save score
       const currentScore = parseInt(localStorage.getItem('totalScore') || '0')
-      const points = data?.usedHint ? mission!.points - 20 : mission!.points
       localStorage.setItem('totalScore', (currentScore + points).toString())
+
+      // Save to Firebase
+      if (userId) {
+        try {
+          await completeMission(userId, mission.missionId, points)
+        } catch (error) {
+          console.error('Error saving mission to Firebase:', error)
+        }
+      }
     }
     
     // Close all modals
@@ -149,7 +159,6 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
               </div>
 
               <div className="text-center text-sm mb-6" style={{ color: '#A67C5A' }}>
-                <p>보상: <span className="font-bold" style={{ color: '#DAA520' }}>{mission.points}점</span></p>
               </div>
 
               <div className="flex space-x-3">
@@ -203,7 +212,7 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
               
               <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(218, 165, 32, 0.2)' }}>
                 <p className="font-bold text-xl" style={{ color: '#8B4513' }}>
-                  +{missionData?.usedHint ? mission.points - 20 : mission.points}점 획득!
+미션 완료!
                 </p>
               </div>
             </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 const storyText = `이 편지를 쓰는 지금, 나의 기억은 하나둘 흐려져가고 있구나.
@@ -24,12 +24,18 @@ export default function StoryPage() {
   const [showStartButton, setShowStartButton] = useState(false)
   const [isTyping, setIsTyping] = useState(true)
   const router = useRouter()
+  const textContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (currentIndex < storyText.length) {
       const timer = setTimeout(() => {
         setDisplayedText(storyText.slice(0, currentIndex + 1))
         setCurrentIndex(prev => prev + 1)
+        
+        // 자동 스크롤
+        if (textContainerRef.current) {
+          textContainerRef.current.scrollTop = textContainerRef.current.scrollHeight
+        }
       }, 35) // 35ms마다 한 글자씩 일정한 속도로 타이핑
 
       return () => clearTimeout(timer)
@@ -89,7 +95,7 @@ export default function StoryPage() {
           <div className="absolute inset-0 bg-vintage-paper opacity-30 rounded"></div>
           
           {/* Letter content */}
-          <div className="relative z-10 h-full overflow-y-auto flex flex-col justify-start pt-4">
+          <div ref={textContainerRef} className="relative z-10 h-full overflow-y-auto flex flex-col justify-start pt-4">
             <div className="font-handwriting text-lg text-sepia-800 leading-relaxed whitespace-pre-line">
               {displayedText}
               {/* Typing cursor */}

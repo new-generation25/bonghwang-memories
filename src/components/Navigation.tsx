@@ -53,13 +53,41 @@ export default function Navigation({ completedMainMissions }: NavigationProps) {
               key={item.key}
               onClick={() => !isDisabled && router.push(item.path)}
               disabled={isDisabled}
-              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all duration-200 ${
+              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all duration-200 transform active:scale-95 ${
                 isDisabled
                   ? 'opacity-40 cursor-not-allowed'
                   : isActive
                   ? 'bg-vintage-brown text-white shadow-md'
-                  : 'text-sepia-700 hover:bg-sepia-100'
+                  : 'text-sepia-700 hover:bg-sepia-100 hover:scale-105'
               }`}
+              style={{
+                transition: 'all 0.15s ease-in-out'
+              }}
+              onMouseDown={(e) => {
+                if (!isDisabled) {
+                  e.currentTarget.style.transform = 'scale(0.95)'
+                }
+              }}
+              onMouseUp={(e) => {
+                if (!isDisabled) {
+                  e.currentTarget.style.transform = 'scale(1)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isDisabled) {
+                  e.currentTarget.style.transform = 'scale(1)'
+                }
+              }}
+              onTouchStart={(e) => {
+                if (!isDisabled) {
+                  e.currentTarget.style.transform = 'scale(0.95)'
+                }
+              }}
+              onTouchEnd={(e) => {
+                if (!isDisabled) {
+                  e.currentTarget.style.transform = 'scale(1)'
+                }
+              }}
             >
               <span className="text-xl mb-1">{item.icon}</span>
               <span className="text-xs font-handwriting font-bold">

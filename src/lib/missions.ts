@@ -4,7 +4,7 @@ export const mainMissions: Mission[] = [
   {
     missionId: 'main-1',
     isMainMission: true,
-    title: '첫 번째 기억: 달콤한 우유 한 잔의 추억',
+    title: '두 번째 기억: 달콤한 우유 한 잔의 추억',
     type: 'PHOTO',
     story: {
       intro: '세상의 때를 함께 씻어내던 그곳, 목욕 후 마셨던 시원한 우유 한 잔의 달콤함을 기억하니? 그 우유는 유난히 노란색이었지.',
@@ -20,12 +20,12 @@ export const mainMissions: Mission[] = [
       options: ['흰우유', '바나나맛 우유', '딸기맛 우유', '초콜릿 우유']
     },
     points: 100,
-    order: 1
+    order: 2
   },
   {
     missionId: 'main-2',
     isMainMission: true,
-    title: '두 번째 기억: 마을의 이야기가 흐르던 우물',
+    title: '첫 번째 기억: 마을의 이야기가 흐르던 우물',
     type: 'QR',
     story: {
       intro: '마을의 모든 소식이 모이던 곳. 그곳에서 길어 올린 건 차가운 물만이 아니었단다. 귀 기울이면 지금도 그 시절의 소리가 들릴지 몰라.',
@@ -36,7 +36,7 @@ export const mainMissions: Mission[] = [
       lng: 128.876678
     },
     points: 100,
-    order: 2
+    order: 1
   },
   {
     missionId: 'main-3',

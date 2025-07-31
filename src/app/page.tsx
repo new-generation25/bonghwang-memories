@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import UserSetupModal from '@/components/UserSetupModal'
 
 export default function IntroPage() {
   const [showButton, setShowButton] = useState(false)
   const [requesting, setRequesting] = useState(false)
+  const [showUserSetup, setShowUserSetup] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -19,6 +21,15 @@ export default function IntroPage() {
   const handleStartJourney = async () => {
     setRequesting(true)
     
+    // Check if user has set up their ID
+    const userId = localStorage.getItem('userId')
+    
+    if (!userId) {
+      setRequesting(false)
+      setShowUserSetup(true)
+      return
+    }
+    
     try {
       // 🚫 위치 기능 임시 비활성화 - 다른 오류 해결 후 재활성화 예정
       console.log('🚫 위치 기능이 임시로 비활성화되어 있습니다.')
@@ -28,6 +39,12 @@ export default function IntroPage() {
     }
     
     setRequesting(false)
+  }
+
+  const handleUserSetupComplete = (userId: string) => {
+    setShowUserSetup(false)
+    console.log('User setup complete:', userId)
+    router.push('/story')
   }
 
 
@@ -153,6 +170,12 @@ export default function IntroPage() {
 
         </div>
       </div>
+
+      {/* User Setup Modal */}
+      <UserSetupModal 
+        isOpen={showUserSetup}
+        onComplete={handleUserSetupComplete}
+      />
 
       {/* CSS 애니메이션 추가 */}
       <style jsx>{`

@@ -31,7 +31,12 @@ export default function MissionModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+      style={{ touchAction: 'none' }}
+      onTouchMove={(e) => e.preventDefault()}
+      onWheel={(e) => e.preventDefault()}
+    >
       <div className="bg-vintage-cream border-2 border-sepia-400 rounded-lg shadow-2xl max-w-md w-full max-h-90vh overflow-y-auto">
         {/* Header */}
         <div className="relative p-6 border-b border-sepia-300">
@@ -85,10 +90,6 @@ export default function MissionModal({
                 <span className="text-sepia-800 font-medium">
                   {getMissionTypeLabel(mission.type)}
                 </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sepia-600">보상 점수:</span>
-                <span className="text-vintage-gold font-bold">{mission.points}점</span>
               </div>
               {mission.quiz && (
                 <div className="flex justify-between">
