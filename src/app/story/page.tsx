@@ -3,55 +3,59 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-const storyText = [
-  "이 편지를 쓰는 지금, 나의 기억은 하나둘 흐려져가고 있구나.",
-  "",
-  "지금 내가 가지고 있는 기억은 어느 사이엔가 멈추어 버렸지만",
-  "",
-  "너와 작은 손을 잡고 봉황동 골목길을 함께 거닐던 그 순간은 잊지 못할거야",
-  "",
-  "너를 보내고 난 후, 아빠는 줄곧 이 동네에 남아 매일 너와의 추억을 되새겼단다.",
-  "",
-  "네가 떠난 후에도 발견한 특별한 것들이 있어. 우리가 함께 다니던 그 장소들에 숨어있던 이야기들과 네가 몰랐던 봉황동의 비밀들...",
-  "",
-  "아빠의 기억이 완전히 사라지기 전에, 너에게 보여주고 싶었던 것들이 있단다.",
-  "",
-  "어른이 된 네 눈으로 다시 보면, 아빠가 왜 이곳을 떠나지 못했는지 알게 될 거야.",
-  "",
-  "나의 기억의 마지막을 따라 다시 걸어보렴.",
-  "",
-  "다시 돌아와줘서 고맙다, 사랑한다."
-]
+const storyText = `이 편지를 쓰는 지금, 나의 기억은 하나둘 흐려져가고 있구나.
+
+지금 내가 가지고 있는 기억은 어느 사이엔가 멈추어 버렸지만
+
+너와 작은 손을 잡고 봉황동 골목길을 함께 거닐던 그 순간은 잊지 못할거야
+
+너를 보내고 난 후, 아빠는 줄곧 이 동네에 남아 매일 너와의 추억을 되새겼단다.
+
+네가 떠난 후에도 발견한 특별한 것들이 있어. 우리가 함께 다니던 그 장소들에 숨어있던 이야기들과 네가 몰랐던 봉황동의 비밀들...
+
+아빠의 기억이 완전히 사라지기 전에, 너에게 보여주고 싶었던 것들이 있단다.
+
+어른이 된 네 눈으로 다시 보면, 아빠가 왜 이곳을 떠나지 못했는지 알게 될 거야.
+
+나의 기억의 마지막을 따라 다시 걸어보렴.
+
+다시 돌아와줘서 고맙다, 사랑한다.`
 
 export default function StoryPage() {
-  const [currentLine, setCurrentLine] = useState(0)
+  const [displayedText, setDisplayedText] = useState('')
+  const [currentIndex, setCurrentIndex] = useState(0)
   const [showSkip, setShowSkip] = useState(true)
   const [showStartButton, setShowStartButton] = useState(false)
   const [isTyping, setIsTyping] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    if (currentLine < storyText.length) {
+    if (currentIndex < storyText.length) {
       const timer = setTimeout(() => {
-        setCurrentLine(prev => prev + 1)
-      }, 800) // 0.8초마다 다음 줄 (더 빠르게)
+        setDisplayedText(storyText.slice(0, currentIndex + 1))
+        setCurrentIndex(prev => prev + 1)
+      }, 50) // 50ms마다 한 글자씩 일정한 속도로 타이핑
 
       return () => clearTimeout(timer)
     } else {
       setIsTyping(false)
       setShowStartButton(true)
     }
-  }, [currentLine])
+  }, [currentIndex])
 
   const handleSkip = () => {
-    setCurrentLine(storyText.length)
+    setDisplayedText(storyText)
+    setCurrentIndex(storyText.length)
     setIsTyping(false)
     setShowStartButton(true)
   }
 
   const handleNext = () => {
-    if (currentLine < storyText.length) {
-      setCurrentLine(prev => prev + 1)
+    if (currentIndex < storyText.length) {
+      // 빠른 타이핑을 위해 여러 글자씩 건너뛰기
+      const skipAmount = Math.min(20, storyText.length - currentIndex)
+      setCurrentIndex(prev => prev + skipAmount)
+      setDisplayedText(storyText.slice(0, currentIndex + skipAmount))
     } else if (!showStartButton) {
       setIsTyping(false)
       setShowStartButton(true)
@@ -78,35 +82,25 @@ export default function StoryPage() {
       )}
 
       {/* Main content */}
-      <div className="z-10 max-w-lg w-full">
+      <div className="z-10 max-w-2xl w-full">
         {/* Letter background */}
         <div 
-          className="relative bg-vintage-cream border-2 border-sepia-300 shadow-2xl p-8 transform rotate-1 min-h-[500px] cursor-pointer"
+          className="relative bg-vintage-cream border-2 border-sepia-300 shadow-2xl p-8 transform rotate-1 cursor-pointer"
+          style={{ height: 'calc(100vh - 200px)', minHeight: '500px', maxHeight: '700px' }}
           onClick={handleNext}
         >
           {/* Paper texture overlay */}
           <div className="absolute inset-0 bg-vintage-paper opacity-30 rounded"></div>
           
           {/* Letter content */}
-          <div className="relative z-10 space-y-2">
-            {storyText.slice(0, currentLine).map((line, index) => (
-              <div key={index} className="animate-fade-in">
-                {line === "" ? (
-                  <div className="h-2"></div>
-                ) : (
-                  <p className={`font-handwriting text-lg text-sepia-800 leading-relaxed ${
-                    index === currentLine - 1 && isTyping ? 'typing-effect' : ''
-                  }`}>
-                    {line}
-                  </p>
-                )}
-              </div>
-            ))}
-            
-            {/* Typing cursor */}
-            {isTyping && currentLine < storyText.length && (
-              <span className="inline-block w-0.5 h-6 bg-sepia-800 animate-blink ml-1"></span>
-            )}
+          <div className="relative z-10 h-full overflow-hidden flex flex-col justify-center">
+            <div className="font-handwriting text-lg text-sepia-800 leading-relaxed whitespace-pre-line">
+              {displayedText}
+              {/* Typing cursor */}
+              {isTyping && (
+                <span className="inline-block w-0.5 h-6 bg-sepia-800 animate-blink ml-1"></span>
+              )}
+            </div>
           </div>
 
           {/* Vintage elements */}
@@ -119,7 +113,8 @@ export default function StoryPage() {
           <div className="mt-8 text-center animate-slide-up">
             <button
               onClick={handleStartExploration}
-              className="vintage-button text-xl font-bold py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="vintage-button text-2xl font-bold py-6 px-12 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              style={{ fontSize: '1.75rem', padding: '1.5rem 3rem' }}
             >
               탐험 시작하기
             </button>
