@@ -125,8 +125,10 @@ a {
 
 /* Bingo cell styles */
 .bingo-cell {
-  @apply aspect-square relative overflow-hidden rounded-lg border-2 border-sepia-400 bg-sepia-100;
+  @apply relative overflow-hidden rounded-lg border-2 border-sepia-400 bg-sepia-100;
   transition: all 0.3s ease;
+  min-height: 80px;
+  aspect-ratio: 1;
 }
 
 .bingo-cell.completed {

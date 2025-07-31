@@ -19,26 +19,55 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
   // Initialize camera and start scanning
   const initCamera = useCallback(async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', // Use back camera
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+      // Try different camera configurations for better compatibility
+      let mediaStream: MediaStream | null = null
+      
+      // First try with environment camera (back camera)
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: 'environment',
+            width: { min: 640, ideal: 1280, max: 1920 },
+            height: { min: 480, ideal: 720, max: 1080 }
+          }
+        })
+      } catch (envError) {
+        console.log('Environment camera failed, trying user camera:', envError)
+        // Fallback to user camera (front camera)
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+              facingMode: 'user',
+              width: { min: 640, ideal: 1280 },
+              height: { min: 480, ideal: 720 }
+            }
+          })
+        } catch (userError) {
+          console.log('User camera failed, trying basic video:', userError)
+          // Final fallback - basic video request
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: true
+          })
         }
-      })
+      }
       
       setStream(mediaStream)
       
-      if (videoRef.current) {
+      if (videoRef.current && mediaStream) {
         videoRef.current.srcObject = mediaStream
         videoRef.current.onloadedmetadata = () => {
           setIsLoading(false)
           startScanning()
         }
+        
+        // Additional play attempt for mobile browsers
+        videoRef.current.play().catch(playError => {
+          console.log('Video play error:', playError)
+        })
       }
     } catch (err) {
       console.error('Camera access error:', err)
-      setError('카메라 접근이 거부되었습니다. 브라우저 설정을 확인해주세요.')
+      setError('카메라에 접근할 수 없습니다. 카메라 권한을 허용해주세요.')
       setIsLoading(false)
     }
   }, [])
@@ -64,9 +93,11 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-        const code = jsQR(imageData.data, imageData.width, imageData.height)
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert"
+        })
 
-        if (code) {
+        if (code && code.data) {
           scanningRef.current = false
           // Stop camera stream
           if (stream) {
@@ -174,9 +205,17 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
           <div className="absolute bottom-32 left-4 right-4">
             <div className="bg-black/60 text-white p-4 rounded-lg text-center">
               <p className="text-lg font-bold mb-2">QR 코드를 찾아주세요</p>
-              <p className="text-sm opacity-80">
+              <p className="text-sm opacity-80 mb-3">
                 QR 코드를 화면 중앙의 사각형 안에 맞춰주세요
               </p>
+              
+              {/* Test button for development */}
+              <button 
+                onClick={() => onScanSuccess('test-qr-code-data')}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold"
+              >
+                🧪 테스트용 QR 스캔
+              </button>
             </div>
           </div>
         </div>

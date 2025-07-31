@@ -177,10 +177,11 @@ export default function TreasurePage() {
                 key={index}
                 onClick={() => handleTreasureClick(treasure)}
                 className={`bingo-cell ${treasure.isCompleted ? 'completed' : ''} 
-                          p-2 transition-all duration-300 hover:scale-105`}
+                          p-1.5 transition-all duration-300 hover:scale-105 flex flex-col justify-between`}
+                style={{ minHeight: '80px' }}
               >
-                <div className="text-2xl mb-1">{treasure.emoji}</div>
-                <div className="text-xs font-handwriting leading-tight">
+                <div className="text-xl">{treasure.emoji}</div>
+                <div className="text-xs font-handwriting leading-tight text-center mt-1">
                   {treasure.title.split(' ')[0]}
                 </div>
                 

@@ -106,9 +106,10 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
   }
 
   const handleQRScanSuccess = (data: string) => {
-    // Verify QR code data (you can implement validation logic here)
-    const isValidQR = data.includes('bonghwang-memories') // Example validation
-    handleMissionComplete(isValidQR, { qrData: data })
+    // Accept any valid QR code for demo purposes
+    // You can add specific validation logic here if needed
+    console.log('QR Code scanned:', data)
+    handleMissionComplete(true, { qrData: data })
   }
 
   const handleGoBack = () => {

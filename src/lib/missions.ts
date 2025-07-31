@@ -2,7 +2,7 @@ import { Mission } from './types'
 
 export const mainMissions: Mission[] = [
   {
-    missionId: 'main-1',
+    missionId: 'main-2',
     isMainMission: true,
     title: '두 번째 기억: 달콤한 우유 한 잔의 추억',
     type: 'PHOTO',
@@ -23,7 +23,7 @@ export const mainMissions: Mission[] = [
     order: 2
   },
   {
-    missionId: 'main-2',
+    missionId: 'main-1',
     isMainMission: true,
     title: '첫 번째 기억: 마을의 이야기가 흐르던 우물',
     type: 'QR',
