@@ -21,10 +21,11 @@ export default function IntroPage() {
   const handleStartJourney = async () => {
     setRequesting(true)
     
-    // Check if user has set up their ID
+    // Check if user has set up their ID and gender
     const userId = localStorage.getItem('userId')
+    const userGender = localStorage.getItem('userGender')
     
-    if (!userId) {
+    if (!userId || !userGender) {
       setRequesting(false)
       setShowUserSetup(true)
       return
