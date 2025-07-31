@@ -35,24 +35,77 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
     }
 
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+      // Check for existing permissions first
+      const permissionStatus = await navigator.permissions?.query({ name: 'camera' as PermissionName })
+      console.log('Camera permission status:', permissionStatus?.state)
+      
+      // Try different camera configurations for better compatibility
+      let mediaStream: MediaStream | null = null
+      
+      // First try with environment camera (back camera)
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        })
+        // Save permission granted state
+        localStorage.setItem('cameraPermissionGranted', 'true')
+      } catch (envError) {
+        console.log('Environment camera failed, trying user camera:', envError)
+        // Fallback to user camera (front camera)
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+              facingMode: 'user',
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          })
+          localStorage.setItem('cameraPermissionGranted', 'true')
+        } catch (userError) {
+          console.log('User camera failed, trying basic video:', userError)
+          // Final fallback - basic video request
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: true
+          })
+          localStorage.setItem('cameraPermissionGranted', 'true')
         }
-      })
+      }
       
-      setStream(mediaStream)
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream
-        videoRef.current.onloadedmetadata = () => {
-          setIsLoading(false)
+      if (mediaStream) {
+        setStream(mediaStream)
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream
+          
+          // Wait for video to be ready
+          const playVideo = async () => {
+            try {
+              await videoRef.current?.play()
+              setIsLoading(false)
+            } catch (playError) {
+              console.log('Video play error:', playError)
+              // Try without play() call
+              setIsLoading(false)
+            }
+          }
+          
+          videoRef.current.onloadedmetadata = () => {
+            playVideo()
+          }
+          
+          // Ensure video is properly loaded
+          if (videoRef.current.readyState >= 2) {
+            playVideo()
+          }
         }
       }
     } catch (error) {
       console.error('Camera access denied:', error)
+      localStorage.setItem('cameraPermissionGranted', 'false')
       alert('카메라 접근이 거부되었습니다. 브라우저 설정을 확인해주세요.')
       onClose()
     }
@@ -67,17 +120,20 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
       return
     }
     
-    // 모바일에서만 실제 카메라 초기화
-    console.log('모바일 환경: 실제 카메라 초기화')
-    initCamera()
+    // Small delay to ensure component is fully mounted
+    const timer = setTimeout(() => {
+      console.log('모바일 환경: 실제 카메라 초기화')
+      initCamera()
+    }, 100)
     
     // Cleanup on unmount
     return () => {
+      clearTimeout(timer)
       if (stream) {
         stream.getTracks().forEach(track => track.stop())
       }
     }
-  }, [initCamera, stream, isMobile])
+  }, [initCamera, isMobile])
 
   const capturePhoto = () => {
     if (isMobile) {
@@ -114,9 +170,24 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
   }
 
   const handleClose = () => {
+    // Stop all camera tracks
     if (stream) {
-      stream.getTracks().forEach(track => track.stop())
+      stream.getTracks().forEach(track => {
+        track.stop()
+        console.log('Camera track stopped:', track.kind)
+      })
     }
+    
+    // Clear video source
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+    
+    // Reset states
+    setStream(null)
+    setIsLoading(true)
+    
+    // Close the component
     onClose()
   }
 
@@ -197,7 +268,10 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
           autoPlay
           playsInline
           muted
+          controls={false}
+          preload="metadata"
           className="w-full h-full object-cover"
+          style={{ background: '#000' }}
         />
 
         {/* Guide overlay */}

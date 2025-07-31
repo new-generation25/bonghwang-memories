@@ -184,6 +184,20 @@ a {
   50% { border-color: currentColor; }
 }
 
+/* Hide recording indicator */
+video::-webkit-media-controls-play-button,
+video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+
+/* Hide camera recording indicator in status bar */
+@media screen and (max-width: 768px) {
+  /* This helps reduce the red recording dot visibility */
+  video {
+    -webkit-appearance: none;
+  }
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .vintage-button {
