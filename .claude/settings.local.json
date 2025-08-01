@@ -37,7 +37,8 @@
       "Bash(powershell:*)",
       "Bash(curl:*)",
       "Bash(mkdir:*)",
-      "Bash(npx playwright:*)"
+      "Bash(npx playwright:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

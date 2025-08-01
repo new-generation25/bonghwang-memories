@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  // CSP 헤더 추가로 document.write 경고 방지
+  // CSP 헤더 추가로 document.write 경고 방지 (unsafe-eval 추가)
   other: {
-    'Content-Security-Policy': "script-src 'self' 'unsafe-inline' https://oapi.map.naver.com https://*.naver.com; object-src 'none';",
+    'Content-Security-Policy': "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://oapi.map.naver.com https://*.naver.com https://*.pstatic.net; object-src 'none';",
     'vercel-toolbar': 'true'
   }
 }
@@ -64,8 +64,9 @@ export default function RootLayout({
             if (!clientId || clientId === 'undefined') {
               console.warn('네이버 지도 API 키가 설정되지 않았습니다. 지도 기능이 비활성화됩니다.');
               window.naverMapLoadError = true;
-              return; // API 키가 없으면 로딩 중단
-            }
+              // API 키가 없으면 지도 로딩 함수 실행하지 않음
+            } else {
+              // API 키가 있을 때만 지도 로딩 로직 실행
             
             // 도메인 검증 (개발환경에서만)
             if (typeof window !== 'undefined' && window.location) {
@@ -148,15 +149,16 @@ export default function RootLayout({
               document.head.appendChild(script);
             };
             
-            // 페이지 로드 완료 후 API 로딩 시작 (지연 로딩)
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', function() {
-                // 약간의 지연을 두어 페이지 렌더링 최적화
+              // 페이지 로드 완료 후 API 로딩 시작 (지연 로딩)
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                  // 약간의 지연을 두어 페이지 렌더링 최적화
+                  setTimeout(window.loadNaverMapAPI, 100);
+                });
+              } else {
                 setTimeout(window.loadNaverMapAPI, 100);
-              });
-            } else {
-              setTimeout(window.loadNaverMapAPI, 100);
-            }
+              }
+            } // API 키 검증 else 블록 종료
           `
         }} />
         
