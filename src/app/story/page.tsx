@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-const storyText = `이 편지를 쓰는 지금, 나의 기억은 하나둘 흐려져가고 있구나.
+const storyText = `이 편지를 쓰는 지금, 
+나의 기억은 하나둘 흐려져가고 있구나.
 지금 내가 가지고 있는 기억은 어느 사이엔가 멈추어 버렸지만
 너와 작은 손을 잡고 봉황동 골목길을 함께 거닐던 그 순간은 잊지 못할거야
 너를 보내고 난 후, 아빠는 줄곧 이 동네에 남아 매일 너와의 추억을 되새겼단다.
@@ -24,19 +25,13 @@ export default function StoryPage() {
   const [showStartButton, setShowStartButton] = useState(false)
   const [isTyping, setIsTyping] = useState(true)
   const router = useRouter()
-  const textContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (currentIndex < storyText.length) {
       const timer = setTimeout(() => {
         setDisplayedText(storyText.slice(0, currentIndex + 1))
         setCurrentIndex(prev => prev + 1)
-        
-        // 자동 스크롤
-        if (textContainerRef.current) {
-          textContainerRef.current.scrollTop = textContainerRef.current.scrollHeight
-        }
-      }, 35) // 35ms마다 한 글자씩 일정한 속도로 타이핑
+      }, 50) // 50ms마다 한 글자씩 일정한 속도로 타이핑
 
       return () => clearTimeout(timer)
     } else {
@@ -95,7 +90,7 @@ export default function StoryPage() {
           <div className="absolute inset-0 bg-vintage-paper opacity-30 rounded"></div>
           
           {/* Letter content */}
-          <div ref={textContainerRef} className="relative z-10 h-full overflow-y-auto flex flex-col justify-start pt-4">
+          <div className="relative z-10 h-full overflow-hidden flex flex-col justify-center">
             <div className="font-handwriting text-lg text-sepia-800 leading-relaxed whitespace-pre-line">
               {displayedText}
               {/* Typing cursor */}
@@ -115,8 +110,8 @@ export default function StoryPage() {
           <div className="mt-8 text-center animate-slide-up">
             <button
               onClick={handleStartExploration}
-              className="vintage-button text-xl font-bold py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-              style={{ fontSize: '1.25rem', padding: '1rem 2rem' }}
+              className="vintage-button text-2xl font-bold py-6 px-12 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              style={{ fontSize: '1.75rem', padding: '1.5rem 3rem' }}
             >
               탐험 시작하기
             </button>

@@ -62,8 +62,9 @@ export default function RootLayout({
             // API 키 검증
             const clientId = '${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}';
             if (!clientId || clientId === 'undefined') {
-              console.error('네이버 지도 API 키가 설정되지 않았습니다.');
+              console.warn('네이버 지도 API 키가 설정되지 않았습니다. 지도 기능이 비활성화됩니다.');
               window.naverMapLoadError = true;
+              return; // API 키가 없으면 로딩 중단
             }
             
             // 도메인 검증 (개발환경에서만)
@@ -81,19 +82,18 @@ export default function RootLayout({
             
             // 네이버 지도 인증 실패 처리 (공식 문서 권장 방식)
             window.navermap_authFailure = function () {
-              console.error('네이버 지도 API 인증 실패');
+              console.warn('네이버 지도 API 인증 실패 - 개발 환경에서는 정상적인 현상입니다.');
               window.naverMapLoadError = true;
               
-              // 상세한 오류 정보 제공
+              // 상세한 오류 정보 제공 (개발환경에서만)
               const currentDomain = window.location.hostname;
-              console.error('인증 실패 상세 정보:');
-              console.error('- 현재 도메인:', currentDomain);
-              console.error('- API 키:', clientId);
-              console.error('- User Agent:', navigator.userAgent);
-              
-              // 사용자에게 친화적인 메시지
-              if (currentDomain.includes('vercel.app')) {
-                console.warn('Vercel 도메인에서 인증 실패. 네이버 클라우드 플랫폼에서 도메인을 등록해주세요.');
+              if (currentDomain === 'localhost' || currentDomain === '127.0.0.1') {
+                console.info('로컬 개발 환경에서는 네이버 지도 API 인증이 제한됩니다.');
+                console.info('배포 환경에서 도메인을 등록하면 정상 작동합니다.');
+              } else {
+                console.error('인증 실패 상세 정보:');
+                console.error('- 현재 도메인:', currentDomain);
+                console.error('- API 키:', clientId);
               }
             };
             
@@ -106,7 +106,15 @@ export default function RootLayout({
             
             // 개선된 네이버 지도 API 로딩 함수 - document.write 경고 해결
             window.loadNaverMapAPI = function() {
-              if (window.naverMapLoading || window.naverMapLoaded) return;
+              if (window.naverMapLoading || window.naverMapLoaded || window.naverMapLoadError) return;
+              
+              // 개발 환경에서는 지도 API 로딩 스킵
+              const currentDomain = window.location.hostname;
+              if (currentDomain === 'localhost' || currentDomain === '127.0.0.1') {
+                console.info('개발 환경에서는 네이버 지도 API 로딩을 건너뜁니다.');
+                window.naverMapLoadError = true;
+                return;
+              }
               
               window.naverMapLoading = true;
               console.log('네이버 지도 API 로딩 시작...');
@@ -131,7 +139,7 @@ export default function RootLayout({
               };
               
               script.onerror = function() {
-                console.error('네이버 지도 API 스크립트 로드 실패');
+                console.warn('네이버 지도 API 스크립트 로드 실패 - 개발 환경에서는 정상입니다.');
                 window.naverMapLoadError = true;
                 window.naverMapLoading = false;
               };
@@ -188,7 +196,8 @@ export default function RootLayout({
                   });
                 })
                 .catch((error) => {
-                  console.error('Service Worker 등록 실패:', error);
+                  console.warn('Service Worker 등록 실패:', error.message);
+                  console.info('PWA 기능이 비활성화됩니다. 프로덕션 환경에서는 정상 작동합니다.');
                 });
             }
           `

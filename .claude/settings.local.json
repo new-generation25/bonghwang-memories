@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(npx create-next-app:*)",
@@ -23,7 +24,20 @@
       "Bash(git push:*)",
       "Bash(copy:*)",
       "Bash(cp:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "mcp__desktop-commander__get_config",
+      "mcp__TalkToFigma__get_document_info",
+      "mcp__TalkToFigma__join_channel",
+      "mcp__desktop-commander__read_file",
+      "mcp__desktop-commander__search_files",
+      "WebFetch(domain:github.com)",
+      "Bash(claude mcp add:*)",
+      "Bash(Get-ChildItem -Path \"$env:APPDATA\\Claude\" -Recurse -Name \"*config*\" -ErrorAction SilentlyContinue)",
+      "Bash(taskkill:*)",
+      "Bash(powershell:*)",
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx playwright:*)"
     ],
     "deny": []
   }
