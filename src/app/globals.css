@@ -30,6 +30,8 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  height: 100%;
+  height: 100dvh; /* 모바일 뷰포트 높이 지원 */
 }
 
 body {
@@ -41,6 +43,8 @@ body {
   )
   rgb(var(--sepia-100));
   font-family: 'Noto Sans KR', sans-serif;
+  min-height: 100vh;
+  min-height: 100dvh; /* 모바일 뷰포트 높이 지원 */
 }
 
 a {

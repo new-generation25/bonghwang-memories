@@ -91,7 +91,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
 
       // 전역 오류 상태 확인
       if (window.naverMapLoadError) {
-        console.error('네이버 지도 API 로딩 오류 감지')
+        console.warn('네이버 지도 API 로딩 오류 감지 - Mock 지도로 대체')
         showMockMap('API 로딩 실패')
         return
       }
@@ -111,7 +111,12 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     // API 로딩이 시작되지 않았다면 수동으로 시작
     if (typeof window.loadNaverMapAPI === 'function' && !window.naverMapLoading && !window.naverMapLoaded) {
       console.log('네이버 지도 API 수동 로딩 시작')
-      window.loadNaverMapAPI()
+      try {
+        window.loadNaverMapAPI()
+      } catch (error) {
+        console.warn('네이버 지도 API 수동 로딩 실패:', error)
+        showMockMap('수동 로딩 실패')
+      }
     }
 
     checkNaverMaps()

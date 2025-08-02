@@ -8,9 +8,11 @@ export default function IntroPage() {
   const [showButton, setShowButton] = useState(false)
   const [requesting, setRequesting] = useState(false)
   const [showUserSetup, setShowUserSetup] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
+    setIsClient(true)
     const timer = setTimeout(() => {
       setShowButton(true)
     }, 2000)
@@ -25,11 +27,21 @@ export default function IntroPage() {
     const userId = localStorage.getItem('userId')
     const userGender = localStorage.getItem('userGender')
     
+    // 🐛 임시 디버깅 코드
+    console.log('=== 디버깅 정보 ===')
+    console.log('userId:', userId)
+    console.log('userGender:', userGender)
+    console.log('조건 확인:', !userId || !userGender)
+    
     if (!userId || !userGender) {
+      console.log('✅ 사용자 설정 모달을 표시합니다')
       setRequesting(false)
       setShowUserSetup(true)
+      console.log('showUserSetup 상태:', true)
       return
     }
+    
+    console.log('❌ 사용자 정보가 있어서 스토리 페이지로 이동합니다')
     
     try {
       // 🚫 위치 기능 임시 비활성화 - 다른 오류 해결 후 재활성화 예정
@@ -48,8 +60,6 @@ export default function IntroPage() {
     router.push('/story')
   }
 
-
-
   // 디버깅용 - 클릭 위치 확인
   const handleImageClick = (event: React.MouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -61,10 +71,16 @@ export default function IntroPage() {
     console.log(`클릭 위치: x=${relativeX.toFixed(2)}, y=${relativeY.toFixed(2)}`)
   }
 
+  // 서버 사이드 렌더링 시 기본 스타일
+  const containerStyle = isClient ? {
+    background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))',
+    minHeight: '100dvh'
+  } : {
+    background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{
-      background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
-    }}>
+    <div className={`${isClient ? 'h-screen w-screen' : 'min-h-screen'} flex items-center justify-center relative overflow-hidden`} style={containerStyle}>
       {/* Full Screen Hero Image with Clickable Area */}
       <div className="w-full h-full relative">
         <div 

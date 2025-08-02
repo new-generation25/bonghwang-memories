@@ -19,9 +19,22 @@ export interface UserData {
   lastUpdated: any
 }
 
+// Firebase가 사용 가능한지 확인
+const isFirebaseAvailable = () => {
+  return db !== null
+}
+
 // 사용자 데이터 생성/업데이트
 export async function createOrUpdateUser(userId: string, nickname: string): Promise<void> {
   try {
+    if (!isFirebaseAvailable()) {
+      console.warn('⚠️ Firebase가 사용 불가능하여 localStorage를 사용합니다.')
+      // localStorage에 사용자 정보 저장
+      localStorage.setItem('userId', userId)
+      localStorage.setItem('nickname', nickname)
+      return
+    }
+
     const userRef = doc(db, 'users', userId)
     const userSnap = await getDoc(userRef)
     
@@ -44,13 +57,32 @@ export async function createOrUpdateUser(userId: string, nickname: string): Prom
     }
   } catch (error) {
     console.error('Error creating/updating user:', error)
-    throw error
+    // Firebase 실패 시 localStorage 사용
+    localStorage.setItem('userId', userId)
+    localStorage.setItem('nickname', nickname)
   }
 }
 
 // 사용자 데이터 조회
 export async function getUserData(userId: string): Promise<UserData | null> {
   try {
+    if (!isFirebaseAvailable()) {
+      console.warn('⚠️ Firebase가 사용 불가능하여 localStorage를 사용합니다.')
+      // localStorage에서 사용자 데이터 조회
+      const nickname = localStorage.getItem('nickname') || ''
+      const completedMissions = JSON.parse(localStorage.getItem('completedMissions') || '[]')
+      const totalScore = parseInt(localStorage.getItem('totalScore') || '0')
+      
+      return {
+        userId,
+        nickname,
+        completedMissions,
+        totalScore,
+        createdAt: null,
+        lastUpdated: null
+      }
+    }
+
     const userRef = doc(db, 'users', userId)
     const userSnap = await getDoc(userRef)
     
@@ -60,13 +92,39 @@ export async function getUserData(userId: string): Promise<UserData | null> {
     return null
   } catch (error) {
     console.error('Error getting user data:', error)
-    return null
+    // Firebase 실패 시 localStorage 사용
+    const nickname = localStorage.getItem('nickname') || ''
+    const completedMissions = JSON.parse(localStorage.getItem('completedMissions') || '[]')
+    const totalScore = parseInt(localStorage.getItem('totalScore') || '0')
+    
+    return {
+      userId,
+      nickname,
+      completedMissions,
+      totalScore,
+      createdAt: null,
+      lastUpdated: null
+    }
   }
 }
 
 // 미션 완료 처리
 export async function completeMission(userId: string, missionId: string, points: number): Promise<void> {
   try {
+    if (!isFirebaseAvailable()) {
+      console.warn('⚠️ Firebase가 사용 불가능하여 localStorage를 사용합니다.')
+      // localStorage에 미션 완료 정보 저장
+      const completedMissions = JSON.parse(localStorage.getItem('completedMissions') || '[]')
+      if (!completedMissions.includes(missionId)) {
+        completedMissions.push(missionId)
+        localStorage.setItem('completedMissions', JSON.stringify(completedMissions))
+      }
+      
+      const totalScore = parseInt(localStorage.getItem('totalScore') || '0') + points
+      localStorage.setItem('totalScore', totalScore.toString())
+      return
+    }
+
     const userRef = doc(db, 'users', userId)
     
     await updateDoc(userRef, {
@@ -76,13 +134,26 @@ export async function completeMission(userId: string, missionId: string, points:
     })
   } catch (error) {
     console.error('Error completing mission:', error)
-    throw error
+    // Firebase 실패 시 localStorage 사용
+    const completedMissions = JSON.parse(localStorage.getItem('completedMissions') || '[]')
+    if (!completedMissions.includes(missionId)) {
+      completedMissions.push(missionId)
+      localStorage.setItem('completedMissions', JSON.stringify(completedMissions))
+    }
+    
+    const totalScore = parseInt(localStorage.getItem('totalScore') || '0') + points
+    localStorage.setItem('totalScore', totalScore.toString())
   }
 }
 
 // localStorage에서 Firebase로 마이그레이션
 export async function migrateFromLocalStorage(userId: string): Promise<void> {
   try {
+    if (!isFirebaseAvailable()) {
+      console.warn('⚠️ Firebase가 사용 불가능하여 마이그레이션을 건너뜁니다.')
+      return
+    }
+
     const completedMissions = JSON.parse(localStorage.getItem('completedMissions') || '[]')
     const totalScore = parseInt(localStorage.getItem('totalScore') || '0')
     
@@ -105,6 +176,11 @@ export async function migrateFromLocalStorage(userId: string): Promise<void> {
 // Firebase에서 localStorage로 동기화
 export async function syncToLocalStorage(userId: string): Promise<void> {
   try {
+    if (!isFirebaseAvailable()) {
+      console.warn('⚠️ Firebase가 사용 불가능하여 동기화를 건너뜁니다.')
+      return
+    }
+
     const userData = await getUserData(userId)
     
     if (userData) {

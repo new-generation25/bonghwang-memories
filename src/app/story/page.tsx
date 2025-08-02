@@ -24,6 +24,8 @@ export default function StoryPage() {
   const [showSkip, setShowSkip] = useState(true)
   const [showStartButton, setShowStartButton] = useState(false)
   const [isTyping, setIsTyping] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userGender, setUserGender] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
