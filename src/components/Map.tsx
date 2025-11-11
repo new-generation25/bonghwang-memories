@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Mission } from '@/lib/types'
+import { Mission, NaverMapWindow, NaverMap, NaverMarker } from '@/lib/types'
 import { mainMissions } from '@/lib/missions'
 
 interface MapProps {
@@ -11,19 +11,15 @@ interface MapProps {
 }
 
 declare global {
-  interface Window {
-    naver: any
-    naverMapLoadError: boolean
-    naverMapLoaded: boolean
-    naverMapLoading: boolean
-    loadNaverMapAPI: () => void
+  interface Window extends NaverMapWindow {
+    selectMission?: (missionId: string) => void
   }
 }
 
 export default function Map({ onMissionSelect, completedMissions, userLocation }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const [map, setMap] = useState<any>(null)
-  const [markers, setMarkers] = useState<any[]>([])
+  const [map, setMap] = useState<NaverMap | null>(null)
+  const [markers, setMarkers] = useState<NaverMarker[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
 
   // 네이버 지도 초기화
@@ -69,16 +65,18 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
         // 지도 로드 실패 처리 (타임아웃을 제거하여 충돌 방지)
         // setTimeout 제거 - checkNaverMaps에서 타임아웃 처리
 
-      } catch (error: any) {
+      } catch (error) {
         console.error('네이버 지도 초기화 실패:', error)
         
         // 상세한 오류 분석
         let errorType = '알 수 없는 오류'
-        if (error.message && error.message.includes('인증') || error.message && error.message.includes('auth')) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        
+        if (errorMessage.includes('인증') || errorMessage.includes('auth')) {
           errorType = 'API 인증 실패'
-        } else if (error.message && error.message.includes('quota') || error.message && error.message.includes('limit')) {
+        } else if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
           errorType = 'API 할당량 초과'
-        } else if (error.message && error.message.includes('domain') || error.message && error.message.includes('referer')) {
+        } else if (errorMessage.includes('domain') || errorMessage.includes('referer')) {
           errorType = '도메인 인증 실패'
         }
         
@@ -129,7 +127,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     // 기존 마커 제거
     markers.forEach(marker => marker.setMap(null))
     
-    const newMarkers: any[] = []
+    const newMarkers: NaverMarker[] = []
 
     mainMissions.forEach((mission, index) => {
       const isCompleted = completedMissions.includes(mission.missionId)
@@ -221,7 +219,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
     })
 
     // 전역 미션 선택 함수
-    ;(window as any).selectMission = (missionId: string) => {
+    window.selectMission = (missionId: string) => {
       const mission = mainMissions.find(m => m.missionId === missionId)
       if (mission) {
         onMissionSelect(mission)

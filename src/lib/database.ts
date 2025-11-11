@@ -1,13 +1,13 @@
 import { db } from './firebase'
 import { 
-  collection, 
   doc, 
   setDoc, 
   getDoc, 
   updateDoc, 
   increment,
   serverTimestamp,
-  arrayUnion
+  arrayUnion,
+  Timestamp
 } from 'firebase/firestore'
 
 export interface UserData {
@@ -15,8 +15,8 @@ export interface UserData {
   nickname: string
   completedMissions: string[]
   totalScore: number
-  createdAt: any
-  lastUpdated: any
+  createdAt: Timestamp | null
+  lastUpdated: Timestamp | null
 }
 
 // Firebase가 사용 가능한지 확인
@@ -27,7 +27,7 @@ const isFirebaseAvailable = () => {
 // 사용자 데이터 생성/업데이트
 export async function createOrUpdateUser(userId: string, nickname: string): Promise<void> {
   try {
-    if (!isFirebaseAvailable()) {
+    if (!isFirebaseAvailable() || !db) {
       console.warn('⚠️ Firebase가 사용 불가능하여 localStorage를 사용합니다.')
       // localStorage에 사용자 정보 저장
       localStorage.setItem('userId', userId)
@@ -66,7 +66,7 @@ export async function createOrUpdateUser(userId: string, nickname: string): Prom
 // 사용자 데이터 조회
 export async function getUserData(userId: string): Promise<UserData | null> {
   try {
-    if (!isFirebaseAvailable()) {
+    if (!isFirebaseAvailable() || !db) {
       console.warn('⚠️ Firebase가 사용 불가능하여 localStorage를 사용합니다.')
       // localStorage에서 사용자 데이터 조회
       const nickname = localStorage.getItem('nickname') || ''
@@ -111,7 +111,7 @@ export async function getUserData(userId: string): Promise<UserData | null> {
 // 미션 완료 처리
 export async function completeMission(userId: string, missionId: string, points: number): Promise<void> {
   try {
-    if (!isFirebaseAvailable()) {
+    if (!isFirebaseAvailable() || !db) {
       console.warn('⚠️ Firebase가 사용 불가능하여 localStorage를 사용합니다.')
       // localStorage에 미션 완료 정보 저장
       const completedMissions = JSON.parse(localStorage.getItem('completedMissions') || '[]')
@@ -149,7 +149,7 @@ export async function completeMission(userId: string, missionId: string, points:
 // localStorage에서 Firebase로 마이그레이션
 export async function migrateFromLocalStorage(userId: string): Promise<void> {
   try {
-    if (!isFirebaseAvailable()) {
+    if (!isFirebaseAvailable() || !db) {
       console.warn('⚠️ Firebase가 사용 불가능하여 마이그레이션을 건너뜁니다.')
       return
     }

@@ -14,10 +14,17 @@ interface MissionPageClientProps {
   missionId: string
 }
 
+interface MissionCompletionData {
+  photo?: string
+  usedHint?: boolean
+  location?: { lat: number; lng: number }
+  qrCode?: string
+}
+
 export default function MissionPageClient({ missionId }: MissionPageClientProps) {
   const [mission, setMission] = useState<Mission | null>(null)
   const [currentStep, setCurrentStep] = useState<'intro' | 'mission' | 'complete'>('intro')
-  const [missionData, setMissionData] = useState<any>(null)
+  const [missionData, setMissionData] = useState<MissionCompletionData | null>(null)
   const [showCamera, setShowCamera] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
   const [showGPS, setShowGPS] = useState(false)
@@ -55,9 +62,9 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
   }, [missionId, router])
 
 
-  const handleMissionComplete = async (success: boolean, data?: any) => {
+  const handleMissionComplete = async (success: boolean, data?: MissionCompletionData) => {
     if (success) {
-      setMissionData(data)
+      setMissionData(data || null)
       setCurrentStep('complete')
       
       const userId = localStorage.getItem('userId')

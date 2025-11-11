@@ -1,7 +1,7 @@
-import { initializeApp, getApps } from 'firebase/app'
-// import { getFirestore } from 'firebase/firestore' // Firestore 비활성화
-// import { getAuth } from 'firebase/auth' // Authentication 비활성화
-import { getStorage } from 'firebase/storage'
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
+// import { getFirestore, Firestore } from 'firebase/firestore' // Firestore 비활성화
+// import { getAuth, Auth } from 'firebase/auth' // Authentication 비활성화
+import { getStorage, FirebaseStorage } from 'firebase/storage'
 
 // Firebase 설정이 완전한지 확인하는 함수
 const isFirebaseConfigComplete = () => {
@@ -25,10 +25,10 @@ const firebaseConfig = {
 }
 
 // Firebase 설정이 완전한 경우에만 초기화
-let app: any = null
-let db: any = null // Firestore 비활성화
-let auth: any = null // Authentication 비활성화
-let storage: any = null
+let app: FirebaseApp | null = null
+const db: null = null // Firestore 비활성화
+const auth: null = null // Authentication 비활성화
+let storage: FirebaseStorage | null = null
 
 if (isFirebaseConfigComplete()) {
   try {

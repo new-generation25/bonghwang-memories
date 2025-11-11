@@ -16,10 +16,18 @@ interface Post {
   rotation: number
 }
 
+interface RankingData {
+  rank: number
+  userId: string
+  nickname: string
+  score: number
+  completedMissions: number
+}
+
 export default function CommunityPage() {
   const [activeTab, setActiveTab] = useState<'memories' | 'ranking'>('memories')
   const [posts, setPosts] = useState<Post[]>([])
-  const [rankings, setRankings] = useState<any[]>([])
+  const [rankings, setRankings] = useState<RankingData[]>([])
   const [completedMainMissions, setCompletedMainMissions] = useState(0)
   const [myRank, setMyRank] = useState({ rank: 0, score: 0, percentage: 0 })
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)

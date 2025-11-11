@@ -103,7 +103,14 @@ export default function TreasurePage() {
 
   const bingoBoard = generateBingoBoard()
 
-  const handleTreasureClick = (treasure: any) => {
+  interface TreasureCell {
+    id: string
+    title: string
+    isCompleted: boolean
+    isMainMission: boolean
+  }
+
+  const handleTreasureClick = (treasure: TreasureCell) => {
     if (treasure.isCompleted) {
       // Show completed treasure info
       alert(`이미 완료한 보물입니다: ${treasure.title}`)

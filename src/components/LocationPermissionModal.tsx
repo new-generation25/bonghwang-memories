@@ -106,22 +106,27 @@ export default function LocationPermissionModal({
       console.log('위치와 카메라 권한이 모두 허용되었습니다.')
       onGranted()
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Permission error:', error)
       
       let errorMessage = '권한이 거부되었습니다.'
-      if (error.name === 'NotAllowedError') {
-        errorMessage = '위치 또는 카메라 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
-      } else if (error.name === 'NotReadableError') {
-        errorMessage = '카메라에 접근할 수 없습니다. 다른 앱에서 카메라를 사용 중인지 확인해주세요.'
-      } else if (error.name === 'NotFoundError') {
-        errorMessage = '카메라를 찾을 수 없습니다.'
-      } else if (error.code === 1) {
-        errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
-      } else if (error.code === 2) {
-        errorMessage = '위치 정보를 사용할 수 없습니다.'
-      } else if (error.code === 3) {
-        errorMessage = '위치 요청 시간이 초과되었습니다.'
+      
+      if (error instanceof DOMException) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = '위치 또는 카메라 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = '카메라에 접근할 수 없습니다. 다른 앱에서 카메라를 사용 중인지 확인해주세요.'
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = '카메라를 찾을 수 없습니다.'
+        }
+      } else if (error instanceof GeolocationPositionError) {
+        if (error.code === 1) {
+          errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
+        } else if (error.code === 2) {
+          errorMessage = '위치 정보를 사용할 수 없습니다.'
+        } else if (error.code === 3) {
+          errorMessage = '위치 요청 시간이 초과되었습니다.'
+        }
       }
       
       alert(errorMessage)
@@ -151,16 +156,18 @@ export default function LocationPermissionModal({
       })
 
       onGranted()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Location error:', error)
       
       let errorMessage = '위치를 가져올 수 없습니다.'
-      if (error.code === 1) {
-        errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
-      } else if (error.code === 2) {
-        errorMessage = '위치 정보를 사용할 수 없습니다.'
-      } else if (error.code === 3) {
-        errorMessage = '위치 요청 시간이 초과되었습니다.'
+      if (error instanceof GeolocationPositionError) {
+        if (error.code === 1) {
+          errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.'
+        } else if (error.code === 2) {
+          errorMessage = '위치 정보를 사용할 수 없습니다.'
+        } else if (error.code === 3) {
+          errorMessage = '위치 요청 시간이 초과되었습니다.'
+        }
       }
       
       alert(errorMessage)
