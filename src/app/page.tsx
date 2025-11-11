@@ -89,9 +89,9 @@ export default function IntroPage() {
           style={{ animation: 'fadeIn 0.8s ease-in-out' }}
         >
           <picture>
-            <source srcSet="/hero-image.webp" type="image/webp" />
+            <source srcSet="/title.png" type="image/png" />
             <img 
-              src="/hero-image.png" 
+              src="/title.png" 
               alt="봉황 메모리즈 - 아버지의 유산을 찾아서"
               className="w-full h-full object-cover object-center"
               style={{
