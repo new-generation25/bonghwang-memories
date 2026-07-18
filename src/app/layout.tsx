@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   // CSP 헤더 추가로 document.write 경고 방지 (unsafe-eval 추가)
   other: {
-    'Content-Security-Policy': "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://oapi.map.naver.com https://*.naver.com https://*.pstatic.net; object-src 'none';",
+    'Content-Security-Policy': "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.naver.com http://*.naver.com https://*.naver.net http://*.naver.net https://*.pstatic.net http://*.pstatic.net; object-src 'none';",
     'vercel-toolbar': 'true'
   }
 }
@@ -108,15 +108,7 @@ export default function RootLayout({
             // 개선된 네이버 지도 API 로딩 함수 - document.write 경고 해결
             window.loadNaverMapAPI = function() {
               if (window.naverMapLoading || window.naverMapLoaded || window.naverMapLoadError) return;
-              
-              // 개발 환경에서는 지도 API 로딩 스킵
-              const currentDomain = window.location.hostname;
-              if (currentDomain === 'localhost' || currentDomain === '127.0.0.1') {
-                console.info('개발 환경에서는 네이버 지도 API 로딩을 건너뜁니다.');
-                window.naverMapLoadError = true;
-                return;
-              }
-              
+
               window.naverMapLoading = true;
               console.log('네이버 지도 API 로딩 시작...');
               
@@ -167,8 +159,21 @@ export default function RootLayout({
           __html: `
             // Service Worker 등록
             if ('serviceWorker' in navigator) {
+              const swHost = window.location.hostname;
+              const isLocalhost = swHost === 'localhost' || swHost === '127.0.0.1';
+
+              if (isLocalhost) {
+                // 개발 환경: 서비스 워커가 오래된 페이지/CSP를 캐시하면 서버 변경이
+                // 반영되지 않으므로, 등록을 건너뛰고 기존 워커와 캐시를 정리한다.
+                navigator.serviceWorker.getRegistrations().then((regs) => {
+                  regs.forEach((reg) => reg.unregister());
+                });
+                if (window.caches && caches.keys) {
+                  caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+                }
+              } else {
               let refreshing = false;
-              
+
               // 새로고침 중복 방지
               navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (!refreshing) {
@@ -176,7 +181,7 @@ export default function RootLayout({
                   window.location.reload();
                 }
               });
-              
+
               // Service Worker 등록
               navigator.serviceWorker.register('/sw.js')
                 .then((registration) => {
@@ -201,6 +206,7 @@ export default function RootLayout({
                   console.warn('Service Worker 등록 실패:', error.message);
                   console.info('PWA 기능이 비활성화됩니다. 프로덕션 환경에서는 정상 작동합니다.');
                 });
+              }
             }
           `
         }} />
