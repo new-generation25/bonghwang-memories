@@ -48,13 +48,13 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
-      <div className="bg-vintage-cream border-2 border-sepia-400 rounded-lg shadow-2xl max-w-md w-full p-6">
+      <div className="bg-cream border-2 border-line rounded-lg shadow-2xl max-w-md w-full p-6">
         {/* Header */}
         <div className="text-center mb-6">
-          <h2 className="font-vintage text-2xl text-vintage-brown mb-2">
+          <h2 className="font-vintage text-2xl text-teal-dk mb-2">
             봉황동에 오신 것을 환영합니다
           </h2>
-          <p className="font-handwriting text-base text-sepia-700">
+          <p className="font-handwriting text-base text-ink">
             아버지의 추억을 따라가기 전에, 당신을 어떻게 불러드릴까요?
           </p>
         </div>
@@ -62,7 +62,7 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block font-handwriting text-sepia-800 mb-2">
+            <label className="block font-handwriting text-ink mb-2">
               닉네임을 입력해주세요
             </label>
             <input
@@ -70,17 +70,17 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               placeholder="예: 철수, 영희, 봉황이 등"
-              className="w-full px-4 py-3 rounded-lg border-2 border-sepia-300 
-                       bg-white/90 font-handwriting text-sepia-800
-                       focus:border-vintage-gold focus:outline-none
-                       placeholder:text-sepia-400"
+              className="w-full px-4 py-3 rounded-lg border-2 border-line 
+                       bg-white/90 font-handwriting text-ink
+                       focus:border-sunset focus:outline-none
+                       placeholder:text-ink-60"
               maxLength={20}
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label className="block font-handwriting text-sepia-800 mb-3">
+            <label className="block font-handwriting text-ink mb-3">
               성별을 선택해주세요
             </label>
             <div className="flex space-x-3">
@@ -91,8 +91,8 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
                 className={`flex-1 py-3 px-4 rounded-lg border-2 font-handwriting text-lg
                          transition-all duration-200 disabled:opacity-50
                          ${gender === 'male' 
-                           ? 'border-vintage-gold bg-vintage-gold/20 text-vintage-brown' 
-                           : 'border-sepia-300 bg-white/90 text-sepia-700 hover:border-sepia-400'}`}
+                           ? 'border-sunset bg-sunset/20 text-teal-dk' 
+                           : 'border-line bg-white/90 text-ink hover:border-line'}`}
               >
                 👦 남자아이
               </button>
@@ -103,8 +103,8 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
                 className={`flex-1 py-3 px-4 rounded-lg border-2 font-handwriting text-lg
                          transition-all duration-200 disabled:opacity-50
                          ${gender === 'female' 
-                           ? 'border-vintage-gold bg-vintage-gold/20 text-vintage-brown' 
-                           : 'border-sepia-300 bg-white/90 text-sepia-700 hover:border-sepia-400'}`}
+                           ? 'border-sunset bg-sunset/20 text-teal-dk' 
+                           : 'border-line bg-white/90 text-ink hover:border-line'}`}
               >
                 👧 여자아이
               </button>
@@ -125,7 +125,7 @@ export default function UserSetupModal({ isOpen, onComplete }: UserSetupModalPro
 
         {/* Info */}
         <div className="mt-4 text-center">
-          <p className="text-xs text-sepia-600 font-handwriting">
+          <p className="text-xs text-ink-60 font-handwriting">
             * 닉네임은 커뮤니티에서 다른 사용자들에게 표시됩니다
           </p>
         </div>

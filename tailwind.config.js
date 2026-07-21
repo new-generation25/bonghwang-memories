@@ -24,14 +24,37 @@ module.exports = {
           brown: 'rgb(var(--vintage-brown) / <alpha-value>)',
           gold: 'rgb(var(--vintage-gold) / <alpha-value>)',
           cream: 'rgb(var(--vintage-cream) / <alpha-value>)',
-        }
+        },
+        // ── P3 「선셋 90」 ──
+        cream: {
+          DEFAULT: 'rgb(var(--cream) / <alpha-value>)',
+          dp: 'rgb(var(--cream-dp) / <alpha-value>)',
+        },
+        teal: {
+          DEFAULT: 'rgb(var(--teal) / <alpha-value>)',
+          dk: 'rgb(var(--teal-dk) / <alpha-value>)',
+        },
+        sunset: 'rgb(var(--sunset-yellow) / <alpha-value>)',
+        retro: 'rgb(var(--retro-orange) / <alpha-value>)',
+        shell: 'rgb(var(--shell) / <alpha-value>)',
+        rec: 'rgb(var(--rec-red) / <alpha-value>)',
+        paper: 'rgb(var(--paper) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
+        ink: {
+          DEFAULT: 'rgb(var(--ink) / <alpha-value>)',
+          60: 'rgb(var(--ink60) / <alpha-value>)',
+        },
       },
       fontFamily: {
         handwriting: ['Noto Sans KR', 'sans-serif'],
         vintage: ['Noto Serif KR', 'serif'],
+        display: ['Black Han Sans', 'sans-serif'],
+        pen: ['Nanum Pen Script', 'cursive'],
+        retro: ['Nanum Gothic Coding', 'monospace'],
       },
       backgroundImage: {
-        'vintage-paper': 'linear-gradient(145deg, rgb(244 241 232), rgb(240 230 210))',
+        'vintage-paper': 'linear-gradient(145deg, rgb(243 234 211), rgb(234 224 196))',
+        'sunset': 'linear-gradient(180deg, rgb(232 114 44), rgb(242 179 61))',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

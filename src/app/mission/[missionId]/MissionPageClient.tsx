@@ -133,25 +133,25 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
             <div className="text-8xl mb-6 animate-bounce">🎉</div>
             
             <h1 className="text-3xl mb-4 font-bold" style={{
-              color: '#8B4513',
+              color: '#1F625C',
               fontFamily: 'Noto Serif KR, serif'
             }}>
               미션 완료!
             </h1>
             
             <div className="border-2 rounded-lg p-6 mb-6" style={{
-              backgroundColor: '#F5F5DC',
-              borderColor: '#DAA520'
+              backgroundColor: '#F3EAD3',
+              borderColor: '#F2B33D'
             }}>
               <p className="text-lg mb-4" style={{
-                color: '#856447',
+                color: '#6B6259',
                 fontFamily: 'Noto Sans KR, sans-serif'
               }}>
                 "{mission.story.outro}"
               </p>
               
               <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(218, 165, 32, 0.2)' }}>
-                <p className="font-bold text-xl" style={{ color: '#8B4513' }}>
+                <p className="font-bold text-xl" style={{ color: '#1F625C' }}>
 미션 완료!
                 </p>
               </div>

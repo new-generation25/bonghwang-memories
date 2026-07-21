@@ -194,16 +194,16 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
   // PC Test Mode UI
   if (!isMobile) {
     return (
-      <div className="fixed inset-0 bg-vintage-paper z-50 flex flex-col items-center justify-center" style={{ touchAction: 'none' }}>
+      <div className="fixed inset-0 bg-cream-base z-50 flex flex-col items-center justify-center" style={{ touchAction: 'none' }}>
         <div className="max-w-md w-full text-center p-6">
-          <div className="bg-vintage-cream border-2 border-sepia-400 rounded-lg shadow-2xl p-8">
+          <div className="bg-cream border-2 border-line rounded-lg shadow-2xl p-8">
             <div className="text-6xl mb-6">📸</div>
             
-            <h2 className="font-vintage text-2xl text-vintage-brown mb-4">
+            <h2 className="font-vintage text-2xl text-teal-dk mb-4">
               카메라 미션
             </h2>
             
-            <p className="font-handwriting text-lg text-sepia-700 mb-6 leading-relaxed">
+            <p className="font-handwriting text-lg text-ink mb-6 leading-relaxed">
               PC 테스트 모드에서는 카메라 기능이 비활성화되어 있습니다.<br/>
               모바일에서 접속하시면 실제 카메라를 사용할 수 있습니다.
             </p>
@@ -218,15 +218,15 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
               
               <button
                 onClick={handleClose}
-                className="w-full py-3 px-4 bg-sepia-200 text-sepia-700 rounded-lg 
-                         hover:bg-sepia-300 transition-colors duration-200"
+                className="w-full py-3 px-4 bg-cream-dp text-ink rounded-lg 
+                         hover:bg-line transition-colors duration-200"
               >
                 뒤로가기
               </button>
             </div>
             
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-300 rounded-lg">
-              <p className="text-xs text-blue-700 font-handwriting">
+            <div className="mt-4 p-3 bg-cream border border-line rounded-lg">
+              <p className="text-xs text-ink-60 font-handwriting">
                 💡 실제 앱에서는 카메라로 사진을 촬영할 수 있습니다
               </p>
             </div>
@@ -238,12 +238,12 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
 
   // Mobile Camera UI
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col" style={{ touchAction: 'none' }}>
+    <div className="fixed inset-0 bg-shell z-50 flex flex-col" style={{ touchAction: 'none' }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-black/80 text-white">
+      <div className="flex items-center justify-between p-4 bg-shell/85 text-cream">
         <button
           onClick={handleClose}
-          className="flex items-center space-x-2 text-white hover:text-gray-300"
+          className="flex items-center space-x-2 text-cream hover:text-cream"
         >
           <span className="text-xl">←</span>
           <span>뒤로</span>
@@ -255,8 +255,8 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
       {/* Camera view */}
       <div className="flex-1 relative">
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black">
-            <div className="text-white text-center">
+          <div className="absolute inset-0 flex items-center justify-center bg-shell">
+            <div className="text-cream text-center">
               <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               <p>카메라를 준비하는 중...</p>
             </div>
@@ -278,7 +278,7 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-4 border-2 border-white/50 border-dashed rounded-lg"></div>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="bg-black/60 text-white px-4 py-2 rounded-lg text-center">
+            <div className="bg-shell/70 text-cream px-4 py-2 rounded-lg text-center">
               <p className="text-sm">피사체를 가이드 라인 안에 맞춰주세요</p>
             </div>
           </div>
@@ -286,12 +286,12 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
       </div>
 
       {/* Controls */}
-      <div className="bg-black/80 p-6 flex items-center justify-center">
+      <div className="bg-shell/85 p-6 flex items-center justify-center">
         <button
           onClick={capturePhoto}
           disabled={isLoading}
-          className="w-16 h-16 bg-white rounded-full border-4 border-gray-300 
-                   hover:bg-gray-100 active:scale-95 transition-all duration-200
+          className="w-16 h-16 bg-white rounded-full border-4 border-line 
+                   hover:bg-cream active:scale-95 transition-all duration-200
                    disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <div className="w-full h-full bg-white rounded-full"></div>

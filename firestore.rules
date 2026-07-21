@@ -1,0 +1,100 @@
+rules_version = '2';
+
+// 봉황 메모리즈 — Firestore 보안 규칙
+//
+// 원칙
+//  · 읽기는 공개 (커뮤니티·랭킹은 비로그인도 볼 수 있어야 한다)
+//  · 쓰기는 로그인 사용자만
+//  · 수정·삭제는 작성자 본인만 — 클라이언트 검사는 우회 가능하므로 여기서 강제한다
+//  · 좋아요·댓글수는 남의 글에도 써야 하므로, 바뀔 수 있는 필드를 정확히 한정한다
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // 이번 수정으로 실제 바뀐 필드 집합
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ───────── 사용자 프로필 ─────────
+    // 닉네임을 게시글·랭킹에 표시해야 하므로 읽기는 공개.
+    // 문서 ID가 곧 uid이므로 본인만 만들고 고칠 수 있다.
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isOwner(userId)
+                    && request.resource.data.uid == userId;
+      allow update: if isOwner(userId)
+                    && request.resource.data.uid == resource.data.uid;
+      allow delete: if false;
+    }
+
+    // ───────── 게시글 ─────────
+    match /posts/{postId} {
+
+      // 작성자 본인의 본문 수정 — 본문과 수정 표시만 건드릴 수 있다
+      function isAuthorEdit() {
+        return isOwner(resource.data.authorUid)
+               && changedKeys().hasOnly(['comment', 'edited']);
+      }
+
+      // 좋아요 토글 — 자기 uid만 넣거나 뺄 수 있고, 카운트도 그에 맞아야 한다
+      function isLikeToggle() {
+        let before = resource.data.likedBy;
+        let after = request.resource.data.likedBy;
+        let me = [request.auth.uid].toSet();
+
+        return isSignedIn()
+               && changedKeys().hasOnly(['likes', 'likedBy'])
+               && (
+                 // 좋아요 누르기
+                 (!(request.auth.uid in before)
+                  && after.toSet() == before.toSet().union(me)
+                  && request.resource.data.likes == resource.data.likes + 1)
+                 ||
+                 // 좋아요 취소
+                 ((request.auth.uid in before)
+                  && after.toSet() == before.toSet().difference(me)
+                  && request.resource.data.likes == resource.data.likes - 1)
+               );
+      }
+
+      // 댓글 작성·삭제에 따른 카운트 보정 — 1씩만 움직일 수 있다
+      function isCommentCountChange() {
+        return isSignedIn()
+               && changedKeys().hasOnly(['commentCount'])
+               && (request.resource.data.commentCount == resource.data.commentCount + 1
+                   || request.resource.data.commentCount == resource.data.commentCount - 1);
+      }
+
+      allow read: if true;
+
+      // 남의 이름으로 글을 쓰거나, 좋아요를 부풀린 채 시작할 수 없다
+      allow create: if isSignedIn()
+                    && request.resource.data.authorUid == request.auth.uid
+                    && request.resource.data.likes == 0
+                    && request.resource.data.likedBy.size() == 0
+                    && request.resource.data.commentCount == 0;
+
+      allow update: if isAuthorEdit() || isLikeToggle() || isCommentCountChange();
+
+      allow delete: if isOwner(resource.data.authorUid);
+
+      // ───────── 댓글 ─────────
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn()
+                      && request.resource.data.authorUid == request.auth.uid;
+        allow update: if false;
+        allow delete: if isOwner(resource.data.authorUid);
+      }
+    }
+  }
+}
