@@ -86,48 +86,66 @@ export default function ExplorationPage() {
     return completedMissions.length === 5 ? '모든 기억을 되찾았습니다!' : '아버지의 첫 번째 기억을 찾아서'
   }
 
+  const progressPct = Math.round((completedMissions.length / 5) * 100)
+
   return (
-    <div className="min-h-screen pb-32" style={{
-      background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
-    }}>
-      {/* Header */}
-      <div className="border-b-2 shadow-lg" style={{ 
-        backgroundColor: '#F5F5DC', 
-        borderColor: '#E8D5B7' 
-      }}>
-        <div className="max-w-md mx-auto px-4 py-4">
-          <h1 className="text-lg text-center leading-tight font-bold" style={{
-            color: '#8B4513',
-            fontFamily: 'Noto Serif KR, serif'
-          }}>
+    <div className="min-h-screen pb-32 bg-cream-base">
+      {/* 앱바 — 티얼 구조색 */}
+      <header className="appbar px-4 pt-3 pb-3">
+        <div className="max-w-md mx-auto">
+          <span className="appbar-badge">SIDE A · 아버지의 타임캡슐</span>
+          <h1 className="appbar-title mt-1 text-[17px] leading-tight">
             {getCurrentMissionTitle()}
           </h1>
-          
-          {/* Progress indicator - Star system */}
-          <div className="mt-3 flex items-center justify-center space-x-3">
-            {mainMissions.map((mission, index) => (
-              <div
-                key={mission.missionId}
-                className="relative w-6 h-6 flex items-center justify-center"
-              >
-                {completedMissions.includes(mission.missionId) ? (
-                  <div className="text-yellow-400 text-xl animate-pulse">
-                    ⭐
-                  </div>
-                ) : index === completedMissions.length ? (
-                  <div className="w-4 h-4 rounded-full border-2 border-vintage-brown bg-white animate-pulse"></div>
-                ) : (
-                  <div className="w-4 h-4 rounded-full border-2 border-sepia-300 bg-sepia-100"></div>
-                )}
-              </div>
-            ))}
+        </div>
+      </header>
+
+      {/* 트랙바 — 테이프 감김으로 진행률 표시 */}
+      <div className="trackbar px-4 py-3">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between font-mono-retro text-[10px] text-sunset">
+            <span>TRACK {Math.min(completedMissions.length + 1, 5)} / 5</span>
+            <span className="rec-dot">REC</span>
+          </div>
+          <div className="tape-prog mt-2">
+            <div className={completedMissions.length < 5 ? 'reel spin' : 'reel'}>
+              <span className="hub" />
+            </div>
+            <div className="bar">
+              <i style={{ width: `${progressPct}%` }} />
+            </div>
+            <div className="reel">
+              <span className="hub" />
+            </div>
+          </div>
+
+          {/* 트랙 단위 진행 표기 — 완료는 티얼, 현재는 레드 */}
+          <div className="mt-3 flex items-center justify-center gap-2">
+            {mainMissions.map((mission, index) => {
+              const done = completedMissions.includes(mission.missionId)
+              const current = index === completedMissions.length
+              return (
+                <span
+                  key={mission.missionId}
+                  className={`flex h-6 w-6 items-center justify-center rounded text-[9px] font-black ${
+                    done
+                      ? 'bg-teal text-cream'
+                      : current
+                      ? 'bg-cream text-shell outline outline-2 outline-rec'
+                      : 'bg-white/10 text-cream/40'
+                  }`}
+                >
+                  {done ? '✓' : index + 1}
+                </span>
+              )
+            })}
           </div>
         </div>
       </div>
 
       {/* Map container */}
       <div className="max-w-md mx-auto px-4 py-6">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="card-paper shadow-lg overflow-hidden">
           <Map
             onMissionSelect={handleMissionSelect}
             completedMissions={completedMissions}
@@ -138,76 +156,44 @@ export default function ExplorationPage() {
           />
         </div>
 
-        {/* Mission statistics */}
-        <div className="mt-6 rounded-lg p-4 shadow-lg" style={{ backgroundColor: '#F5F5DC' }}>
-          <h3 className="text-lg mb-3 text-center font-bold" style={{
-            color: '#8B4513',
-            fontFamily: 'Noto Sans KR, sans-serif'
-          }}>
-            탐험 현황
+        {/* 녹음 현황 */}
+        <div className="card-paper mt-6 p-4 shadow-lg">
+          <h3 className="mb-3 text-center font-vintage text-base font-black text-teal-dk">
+            녹음 현황
           </h3>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: '#DAA520' }}>
+              <div className="text-2xl font-black text-teal-dk">
                 {completedMissions.length}
               </div>
-              <div className="text-sm" style={{ 
-                color: '#A67C5A',
-                fontFamily: 'Noto Sans KR, sans-serif'
-              }}>
-                완료한 기억
-              </div>
+              <div className="text-xs text-ink-60">기록한 트랙</div>
             </div>
-            
+
             <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: '#856447' }}>
+              <div className="text-2xl font-black text-ink-60">
                 {5 - completedMissions.length}
               </div>
-              <div className="text-sm" style={{ 
-                color: '#A67C5A',
-                fontFamily: 'Noto Sans KR, sans-serif'
-              }}>
-                남은 기억
-              </div>
+              <div className="text-xs text-ink-60">남은 트랙</div>
             </div>
           </div>
 
-          {/* Next mission hint */}
+          {/* 다음 트랙 안내 */}
           {completedMissions.length < 5 && (
-            <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#F7F3E9' }}>
-              <h4 className="text-sm mb-1 font-bold" style={{
-                color: '#856447',
-                fontFamily: 'Noto Sans KR, sans-serif'
-              }}>
-                다음 기억을 찾으려면:
-              </h4>
-              <p className="text-xs" style={{
-                color: '#A67C5A',
-                fontFamily: 'Noto Sans KR, sans-serif'
-              }}>
-                지도의 나침반 아이콘을 터치해보세요
+            <div className="story-card mt-4 px-3 py-2.5">
+              <div className="font-mono-retro text-[9px] text-rec">NEXT TRACK</div>
+              <p className="mt-1 text-xs text-ink-60">
+                지도의 나침반 아이콘을 터치해 다음 이야기를 찾아보세요
               </p>
             </div>
           )}
 
-          {/* All completed message */}
+          {/* 완주 — 노을 그라데이션은 축하 지면에만 */}
           {completedMissions.length === 5 && (
-            <div className="mt-4 p-3 border rounded-lg" style={{
-              backgroundColor: 'rgba(218, 165, 32, 0.2)',
-              borderColor: '#DAA520'
-            }}>
-              <h4 className="text-sm mb-1 font-bold" style={{
-                color: '#8B4513',
-                fontFamily: 'Noto Sans KR, sans-serif'
-              }}>
-                🎉 모든 기억을 되찾았습니다!
-              </h4>
-              <p className="text-xs" style={{
-                color: '#A67C5A',
-                fontFamily: 'Noto Sans KR, sans-serif'
-              }}>
-                이제 보물 페이지에서 숨겨진 보물들을 찾아보세요
+            <div className="sunset-head mt-4 rounded-lg px-3 py-3 text-center">
+              <div className="font-display text-base">SIDE A 녹음 완료!</div>
+              <p className="mt-1 text-[11px] font-bold">
+                보물 페이지에서 남은 트랙을 수집하세요
               </p>
             </div>
           )}

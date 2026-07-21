@@ -2,214 +2,154 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import UserSetupModal from '@/components/UserSetupModal'
+import AuthModal from '@/components/AuthModal'
+import Cassette from '@/components/Cassette'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function IntroPage() {
   const [showButton, setShowButton] = useState(false)
-  const [requesting, setRequesting] = useState(false)
-  const [showUserSetup, setShowUserSetup] = useState(false)
-  const [isClient, setIsClient] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
+  const { profile, loading, logout } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    setIsClient(true)
-    const timer = setTimeout(() => {
-      setShowButton(true)
-    }, 2000)
-
+    const timer = setTimeout(() => setShowButton(true), 1200)
     return () => clearTimeout(timer)
   }, [])
 
-  const handleStartJourney = async () => {
-    setRequesting(true)
-    
-    // Check if user has set up their ID and gender
-    const userId = localStorage.getItem('userId')
-    const userGender = localStorage.getItem('userGender')
-    
-    // 🐛 임시 디버깅 코드
-    console.log('=== 디버깅 정보 ===')
-    console.log('userId:', userId)
-    console.log('userGender:', userGender)
-    console.log('조건 확인:', !userId || !userGender)
-    
-    if (!userId || !userGender) {
-      console.log('✅ 사용자 설정 모달을 표시합니다')
-      setRequesting(false)
-      setShowUserSetup(true)
-      console.log('showUserSetup 상태:', true)
+  // 로그인은 커뮤니티 참여 조건일 뿐, 투어 자체는 로그인 없이도 진행할 수 있다.
+  const handleStartJourney = () => {
+    if (profile) {
+      router.push('/story')
       return
     }
-    
-    console.log('❌ 사용자 정보가 있어서 스토리 페이지로 이동합니다')
-    
-    try {
-      // 🚫 위치 기능 임시 비활성화 - 다른 오류 해결 후 재활성화 예정
-      console.log('🚫 위치 기능이 임시로 비활성화되어 있습니다.')
-      router.push('/story')
-    } catch (error) {
-      console.error('Error:', error)
-    }
-    
-    setRequesting(false)
+    setShowAuth(true)
   }
 
-  const handleUserSetupComplete = (userId: string, gender: string) => {
-    setShowUserSetup(false)
-    console.log('User setup complete:', userId, 'Gender:', gender)
+  const handleAuthSuccess = () => {
+    setShowAuth(false)
     router.push('/story')
   }
 
-  // 디버깅용 - 클릭 위치 확인
-  const handleImageClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const y = event.clientY - rect.top
-    const relativeX = x / rect.width
-    const relativeY = y / rect.height
-    
-    console.log(`클릭 위치: x=${relativeX.toFixed(2)}, y=${relativeY.toFixed(2)}`)
-  }
-
-  // 서버 사이드 렌더링 시 기본 스타일
-  const containerStyle = isClient ? {
-    background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))',
-    minHeight: '100dvh'
-  } : {
-    background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
+  // '나중에 하기' — 비로그인 상태로 둘러보기
+  const handleAuthSkip = () => {
+    setShowAuth(false)
+    router.push('/story')
   }
 
   return (
-    <div className={`${isClient ? 'h-screen w-screen' : 'min-h-screen'} flex items-center justify-center relative overflow-hidden`} style={containerStyle}>
-      {/* Full Screen Hero Image with Clickable Area */}
-      <div className="w-full h-full relative">
-        <div 
-          className="w-full h-full cursor-pointer relative"
-          onClick={handleImageClick}
-          style={{ animation: 'fadeIn 0.8s ease-in-out' }}
-        >
-          <picture>
-            <source srcSet="/title.png" type="image/png" />
-            <img 
-              src="/title.png" 
-              alt="봉황 메모리즈 - 아버지의 유산을 찾아서"
-              className="w-full h-full object-cover object-center"
-              style={{
-                filter: 'sepia(10%) contrast(1.05) brightness(1.02)'
-              }}
-              onError={(e) => {
-                // 이미지 로딩 실패 시 기본 배경으로 대체
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.style.background = 'linear-gradient(145deg, rgba(139, 69, 19, 0.8), rgba(160, 82, 45, 0.6)), linear-gradient(to bottom, rgb(247, 243, 233), rgb(240, 230, 210))';
-                  parent.innerHTML = `
-                    <div class="absolute inset-0 flex items-center justify-center">
-                      <div class="text-center">
-                        <h1 class="text-6xl font-bold mb-4 text-white drop-shadow-lg" style="font-family: 'Noto Serif KR', serif;">
-                          봉황 메모리즈
-                        </h1>
-                        <p class="text-2xl text-white drop-shadow-md" style="font-family: 'Noto Sans KR', sans-serif;">
-                          아버지의 유산을 찾아서
-                        </p>
-                      </div>
-                    </div>
-                  `;
-                }
-              }}
-            />
-          </picture>
-          
-          {/* 실제 반응형 버튼 오버레이 - 이미지 위에 배치 */}
-          {showButton && !requesting && (
-            <button
-              onClick={handleStartJourney}
-              className="absolute z-20"
-              style={{
-                // 좌표 기반 위치 설정 (X=0.21~0.79, Y=0.88~0.94)
-                left: '21%',
-                top: '88%',
-                width: '58%', // 79% - 21% = 58%
-                height: '6%',  // 94% - 88% = 6%
-                // 스타일링 - 네모랗고 회색 배경에 흰색 글씨
-                background: '#6B7280', // 회색 배경
-                border: '2px solid #4B5563',
-                borderRadius: '8px', // 살짝 둥근 모서리
-                color: '#FFFFFF',
-                fontFamily: 'Noto Sans KR, sans-serif',
-                fontWeight: 'bold',
-                fontSize: 'clamp(12px, 2.5vw, 16px)',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                // 텍스트 중앙 정렬
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              onMouseDown={(e) => {
-                e.currentTarget.style.background = '#4B5563'
-                e.currentTarget.style.transform = 'scale(0.98)'
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.background = '#6B7280'
-                e.currentTarget.style.transform = 'scale(1)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#6B7280'
-                e.currentTarget.style.transform = 'scale(1)'
-              }}
-              onTouchStart={(e) => {
-                e.currentTarget.style.background = '#4B5563'
-                e.currentTarget.style.transform = 'scale(0.98)'
-              }}
-              onTouchEnd={(e) => {
-                e.currentTarget.style.background = '#6B7280'
-                e.currentTarget.style.transform = 'scale(1)'
-              }}
-            >
-              시작하기
-            </button>
-          )}
-          
-          {/* 로딩 상태 오버레이 */}
-          {requesting && (
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30">
-              <div className="text-white text-center">
-                <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-xl font-bold">시작하는 중...</p>
-                <p className="text-sm mt-2">권한 요청을 확인해주세요</p>
-              </div>
-            </div>
-          )}
-          
+    <div className="min-h-screen flex flex-col bg-cream-base">
+      {/* 앱바 — 티얼 구조색 + 3색 스트라이프 */}
+      <header className="appbar px-4 pt-4 pb-3">
+        <div className="max-w-md mx-auto">
+          <span className="appbar-badge">김해 봉황동 · BONGHWANG MEMORIES</span>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <h1 className="appbar-title text-2xl">봉황 메모리즈</h1>
 
+            {/* 로그인 상태 — 확인이 끝나기 전에는 아무것도 확정하지 않는다 */}
+            {!loading &&
+              (profile ? (
+                <div className="shrink-0 pb-1 text-right">
+                  <div className="text-[11px] font-bold leading-tight">
+                    {profile.nickname} 기록자
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="font-mono-retro text-[9px] text-cream/70 underline"
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="shrink-0 rounded-full bg-cream/20 px-3 py-1 pb-1 text-[11px] font-bold"
+                >
+                  로그인
+                </button>
+              ))}
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* User Setup Modal */}
-      <UserSetupModal 
-        isOpen={showUserSetup}
-        onComplete={handleUserSetupComplete}
+      <main className="flex-1 max-w-md w-full mx-auto px-5 pb-10">
+        {/* 후킹 — 위, 정보 — 아래 */}
+        <section className="pt-6" style={{ animation: 'fadeIn 0.8s ease-in-out' }}>
+          <h2 className="font-display text-[26px] leading-[1.3] text-teal-dk">
+            아버지가 남긴 기억,
+            <br />
+            <span className="mark-yellow">오늘 다시 재생합니다</span>
+          </h2>
+          <p className="mt-3 text-[13px] text-ink-60 leading-relaxed">
+            봉황동 골목에 남겨진 이야기를 따라가는 미션 투어.
+            <br />
+            예약도 설치도 없습니다.
+          </p>
+        </section>
+
+        {/* 카세트 오브제 — 지면당 1개 */}
+        <section className="flex justify-center mt-6 mb-2">
+          <Cassette
+            title="아버지의 타임캡슐"
+            headLeft="LOCAL MEMORIES"
+            headRight="SIDE A"
+            side="A"
+            progress={95}
+            spin="none"
+            scale={0.92}
+          />
+        </section>
+
+        {/* 3대 약속 */}
+        <section className="grid grid-cols-3 gap-2 mt-8">
+          {[
+            { icon: '⚡', label: '예약·설치\n없음' },
+            { icon: '▦', label: '25칸\n빙고 미션' },
+            { icon: '◉', label: '완주 인증\n+ 기록 보관' },
+          ].map((item) => (
+            <div key={item.icon} className="text-center">
+              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-teal bg-paper text-base">
+                {item.icon}
+              </span>
+              <span className="block whitespace-pre-line text-[10px] font-bold leading-snug text-teal-dk">
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </section>
+
+        {/* 신뢰 지표 */}
+        <div className="mt-6 rounded-lg border border-dashed border-teal bg-paper px-3 py-2 text-center text-[10px] text-ink-60">
+          시범 운영 12팀 · 만족도 5.0/5.0 · 재방문 의향 100%
+        </div>
+
+        {/* 주 CTA — 티얼 구조색 */}
+        {showButton && (
+          <button
+            onClick={handleStartJourney}
+            className="btn-teal mt-5 w-full text-center text-[15px]"
+            style={{ animation: 'slideUp 0.4s ease-out' }}
+          >
+            ▶ PLAY — 이야기 열기
+            <small className="mt-0.5 block text-[10px] font-normal opacity-85">
+              {profile ? `${profile.nickname} 기록자로 이어가기` : '기록자 등록 후 바로 시작'}
+            </small>
+          </button>
+        )}
+
+        <p className="mt-4 text-center font-pen text-[17px] leading-snug text-ink-60">
+          &ldquo;이 골목엔 아직 열지 않은 이야기가 있다&rdquo;
+        </p>
+      </main>
+
+      {/* 하단 3색 밴드 — 브랜드 식별 장치 */}
+      <div className="stripe-band" />
+
+      <AuthModal
+        isOpen={showAuth}
+        onClose={handleAuthSkip}
+        onSuccess={handleAuthSuccess}
       />
-
-      {/* CSS 애니메이션 추가 */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateX(-50%) translateY(20px); opacity: 0; }
-          to { transform: translateX(-50%) translateY(0); opacity: 1; }
-        }
-        @keyframes fadeOut {
-          to { opacity: 0; }
-        }
-      `}</style>
-
-
     </div>
   )
 }

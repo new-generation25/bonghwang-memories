@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 export const metadata: Metadata = {
   title: '봉황 메모리즈: 아버지의 유산을 찾아서',
@@ -31,7 +32,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#8B4513',
+  themeColor: '#2E8A80', // P3 딥 티얼 — 구조색
 }
 
 export default function RootLayout({
@@ -50,7 +51,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="봉황 메모리즈" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#8B4513" />
+        <meta name="theme-color" content="#2E8A80" />
         
         {/* 네이버 지도 API 개선된 로딩 방식 - document.write 경고 해결 */}
         <script dangerouslySetInnerHTML={{
@@ -214,15 +215,13 @@ export default function RootLayout({
         {/* CSS 강제 로드 */}
         <style dangerouslySetInnerHTML={{
           __html: `
-            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Serif+KR:wght@600;900&family=Nanum+Gothic+Coding&display=swap');
             body { font-family: 'Noto Sans KR', sans-serif; }
           `
         }} />
       </head>
-      <body className="min-h-screen" style={{
-        background: 'linear-gradient(145deg, rgb(244, 241, 232), rgb(240, 230, 210))'
-      }}>
-        {children}
+      <body className="min-h-screen bg-cream-base">
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   )

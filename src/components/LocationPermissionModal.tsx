@@ -201,12 +201,12 @@ export default function LocationPermissionModal({
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 text-center">
-          <div className="w-16 h-16 bg-vintage-brown rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-teal rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">🏛️</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">봉황 메모리즈</h2>
-          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">권한을 확인하는 중...</p>
+          <h2 className="text-xl font-bold text-ink mb-2">봉황 메모리즈</h2>
+          <div className="animate-spin w-8 h-8 border-2 border-teal border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-ink-60">권한을 확인하는 중...</p>
         </div>
       </div>
     )
@@ -217,13 +217,13 @@ export default function LocationPermissionModal({
       <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
         {/* 앱 아이콘과 이름 */}
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-vintage-brown rounded-full flex items-center justify-center mx-auto mb-3">
+          <div className="w-16 h-16 bg-teal rounded-full flex items-center justify-center mx-auto mb-3">
             <span className="text-2xl">🏛️</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-1">
+          <h2 className="text-xl font-bold text-ink mb-1">
             봉황 메모리즈
           </h2>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-ink-60">
             위치 및 카메라 권한 요청
           </p>
         </div>
@@ -233,14 +233,14 @@ export default function LocationPermissionModal({
           <div className="space-y-4">
             {/* 위치 권한 */}
             <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-600">📍</span>
+              <div className="w-8 h-8 bg-teal/15 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-teal-dk">📍</span>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800 mb-1">
+                <h3 className="font-semibold text-ink mb-1">
                   내 위치 확인
                 </h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
+                <p className="text-sm text-ink-60 leading-relaxed">
                   미션 수행을 위한 현재 위치 정보가 필요합니다.
                 </p>
               </div>
@@ -248,22 +248,22 @@ export default function LocationPermissionModal({
 
             {/* 카메라 권한 */}
             <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-green-600">📸</span>
+              <div className="w-8 h-8 bg-teal/15 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-teal-dk">📸</span>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800 mb-1">
+                <h3 className="font-semibold text-ink mb-1">
                   카메라 접근
                 </h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
+                <p className="text-sm text-ink-60 leading-relaxed">
                   사진 촬영 미션을 위한 카메라 접근이 필요합니다.
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-            <p className="text-xs text-blue-700">
+          <div className="bg-cream border border-line rounded-lg p-3 mt-4">
+            <p className="text-xs text-ink-60">
               💡 위치와 카메라 정보는 미션 수행에만 사용되며, 다른 용도로 사용되지 않습니다.
             </p>
           </div>
@@ -276,8 +276,8 @@ export default function LocationPermissionModal({
             disabled={isRequesting}
             className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
               isRequesting 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-line text-ink-60 cursor-not-allowed' 
+                : 'bg-teal text-white hover:bg-teal-dk'
             }`}
           >
             {isRequesting ? (
@@ -293,7 +293,7 @@ export default function LocationPermissionModal({
           <button
             onClick={onDenied}
             disabled={isRequesting}
-            className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            className="w-full py-3 px-4 bg-cream text-ink rounded-lg font-medium hover:bg-cream-dp transition-colors"
           >
             거부
           </button>
@@ -301,7 +301,7 @@ export default function LocationPermissionModal({
           <button
             onClick={onClose}
             disabled={isRequesting}
-            className="w-full py-2 px-4 text-gray-500 text-sm hover:text-gray-700 transition-colors"
+            className="w-full py-2 px-4 text-ink-60 text-sm hover:text-ink transition-colors"
           >
             나중에
           </button>
@@ -310,7 +310,7 @@ export default function LocationPermissionModal({
         {/* 닫기 버튼 */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute top-4 right-4 text-ink-60 hover:text-ink transition-colors"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

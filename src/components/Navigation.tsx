@@ -42,7 +42,9 @@ export default function Navigation({ completedMainMissions }: NavigationProps) {
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-vintage-cream border-t-2 border-sepia-300 shadow-lg z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-cream shadow-[0_-4px_14px_rgba(43,36,32,0.12)] z-40">
+      {/* 상단 3색 밴드 — 브랜드 식별 장치 */}
+      <div className="stripe-band" />
       <div className="flex items-center justify-around py-2 px-4 max-w-md mx-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.path
@@ -57,8 +59,8 @@ export default function Navigation({ completedMainMissions }: NavigationProps) {
                 isDisabled
                   ? 'opacity-40 cursor-not-allowed'
                   : isActive
-                  ? 'bg-vintage-brown text-white shadow-md'
-                  : 'text-sepia-700 hover:bg-sepia-100 hover:scale-105'
+                  ? 'bg-teal text-cream shadow-md'
+                  : 'text-ink-60 hover:bg-cream-dp hover:scale-105'
               }`}
               style={{
                 transition: 'all 0.15s ease-in-out'
@@ -96,8 +98,8 @@ export default function Navigation({ completedMainMissions }: NavigationProps) {
               
               {/* Lock icon for disabled items */}
               {isDisabled && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">🔒</span>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-rec rounded-full flex items-center justify-center">
+                  <span className="text-cream text-xs">🔒</span>
                 </div>
               )}
             </button>

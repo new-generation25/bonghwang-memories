@@ -144,7 +144,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
             width: 48px; 
             height: 48px; 
             border-radius: 50%; 
-            background-color: ${isCompleted ? '#DAA520' : '#8B4513'}; 
+            background-color: ${isCompleted ? '#2E8A80' : '#262422'}; 
             border: 3px solid white; 
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             display: flex;
@@ -179,19 +179,19 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
       const infoWindow = new window.naver.maps.InfoWindow({
         content: `
           <div style="padding: 10px; min-width: 200px;">
-            <h4 style="margin: 0 0 8px 0; color: #8B4513; font-weight: bold;">
+            <h4 style="margin: 0 0 8px 0; color: #1F625C; font-weight: bold;">
               ${mission.title}
             </h4>
-            <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">
+            <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B6259;">
               ${mission.story.intro.substring(0, 50)}...
             </p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 12px; color: #DAA520; font-weight: bold;">
+              <span style="font-size: 12px; color: #1F625C; font-weight: bold;">
                 ${mission.points}점
               </span>
               <button onclick="window.selectMission && window.selectMission('${mission.missionId}')" 
                       style="
-                        background: #8B4513; 
+                        background: #2E8A80; 
                         color: white; 
                         border: none; 
                         padding: 4px 8px; 
@@ -248,7 +248,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
               width: 16px; 
               height: 16px; 
               border-radius: 50%; 
-              background-color: #3B82F6; 
+              background-color: #E8722C; 
               border: 3px solid white; 
               box-shadow: 0 2px 4px rgba(0,0,0,0.3);
             "></div>
@@ -339,16 +339,16 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
 
     // 상태 메시지
     const statusDiv = document.createElement('div')
-    statusDiv.className = 'absolute top-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg border-l-4 border-yellow-500'
+    statusDiv.className = 'absolute top-4 left-4 right-4 bg-paper/95 backdrop-blur-sm rounded-lg p-4 shadow-lg border-l-4 border-retro'
     statusDiv.innerHTML = `
       <div class="text-center">
         <div class="text-2xl mb-2">${errorInfo.icon}</div>
-        <h3 class="text-sm font-bold text-gray-800 mb-1">${errorInfo.title}</h3>
-        <p class="text-xs text-gray-600 mb-2">${errorInfo.message}</p>
-        <p class="text-xs text-blue-600 font-medium">${errorInfo.suggestion}</p>
+        <h3 class="text-sm font-bold text-teal-dk mb-1">${errorInfo.title}</h3>
+        <p class="text-xs text-ink-60 mb-2">${errorInfo.message}</p>
+        <p class="text-xs text-teal-dk font-medium">${errorInfo.suggestion}</p>
         ${errorType === 'API 인증 실패' ? `
-          <div class="mt-3 p-2 bg-blue-50 rounded text-xs">
-            <p class="text-blue-700">
+          <div class="mt-3 p-2 bg-cream rounded text-xs">
+            <p class="text-ink-60">
               <strong>개발자 정보:</strong><br>
               현재 도메인이 네이버 클라우드 플랫폼에<br>
               등록되지 않았을 수 있습니다.
@@ -384,7 +384,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
             width: 48px; 
             height: 48px; 
             border-radius: 50%; 
-            background-color: ${isCompleted ? '#DAA520' : '#8B4513'}; 
+            background-color: ${isCompleted ? '#2E8A80' : '#262422'}; 
             border: 3px solid white; 
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             display: flex;
@@ -416,7 +416,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
             width: 16px; 
             height: 16px; 
             border-radius: 50%; 
-            background-color: #3B82F6; 
+            background-color: #E8722C; 
             border: 2px solid white; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
           "></div>
@@ -489,21 +489,21 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
       <div className="absolute top-4 right-4 space-y-2">
         <button 
           onClick={moveToCurrentLocation}
-          className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+          className="w-10 h-10 bg-paper text-teal-dk rounded-full shadow-lg flex items-center justify-center hover:bg-cream transition-colors"
           title="현재 위치"
         >
           📍
         </button>
         <button 
           onClick={zoomIn}
-          className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+          className="w-10 h-10 bg-paper text-teal-dk rounded-full shadow-lg flex items-center justify-center hover:bg-cream transition-colors"
           title="확대"
         >
           <span style={{ fontSize: '16px' }}>+</span>
         </button>
         <button 
           onClick={zoomOut}
-          className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+          className="w-10 h-10 bg-paper text-teal-dk rounded-full shadow-lg flex items-center justify-center hover:bg-cream transition-colors"
           title="축소"
         >
           <span style={{ fontSize: '18px' }}>-</span>
@@ -511,18 +511,18 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
       </div>
 
       {/* 지도 범례 */}
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-        <div className="text-sm text-gray-700">
+      <div className="absolute bottom-4 left-4 bg-paper/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+        <div className="text-xs text-ink-60">
           <div className="flex items-center space-x-2 mb-1">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8B4513' }}></div>
-            <span>미완료 미션</span>
+            <div className="w-3 h-3 rounded-full bg-shell"></div>
+            <span>미녹음 트랙</span>
           </div>
           <div className="flex items-center space-x-2 mb-1">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#DAA520' }}></div>
-            <span>완료된 미션</span>
+            <div className="w-3 h-3 rounded-full bg-teal"></div>
+            <span>기록된 트랙</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+            <div className="w-3 h-3 rounded-full bg-retro"></div>
             <span>현재 위치</span>
           </div>
         </div>

@@ -130,11 +130,11 @@ export default function TreasurePage() {
   // 테스트 모드에서는 잠금 화면을 보여주지 않음
   // if (!isUnlocked) {
   //   return (
-  //     <div className="min-h-screen bg-vintage-paper pb-32">
+  //     <div className="min-h-screen bg-cream-base pb-32">
   //       {/* Header */}
-  //       <div className="bg-vintage-cream border-b-2 border-sepia-300 shadow-lg">
+  //       <div className="bg-cream border-b-2 border-line shadow-lg">
   //         <div className="max-w-md mx-auto px-4 py-4 text-center">
-  //           <h1 className="font-vintage text-xl text-vintage-brown">
+  //           <h1 className="font-vintage text-xl text-teal-dk">
   //             🔒 숨겨진 보물들
   //           </h1>
   //         </div>
@@ -142,25 +142,25 @@ export default function TreasurePage() {
 
   //       {/* Locked content */}
   //       <div className="max-w-md mx-auto px-4 py-12 text-center">
-  //         <div className="bg-vintage-cream border-2 border-sepia-400 rounded-lg p-8 shadow-lg">
+  //         <div className="bg-cream border-2 border-line rounded-lg p-8 shadow-lg">
   //           <div className="text-6xl mb-6">🔐</div>
             
-  //           <h2 className="font-vintage text-2xl text-vintage-brown mb-4">
+  //           <h2 className="font-vintage text-2xl text-teal-dk mb-4">
   //             보물 지도가 잠겨있습니다
   //           </h2>
             
-  //           <p className="font-handwriting text-lg text-sepia-700 mb-6 leading-relaxed">
+  //           <p className="font-handwriting text-lg text-ink mb-6 leading-relaxed">
   //             "아버지의 기억을 모두 모으면<br/>
   //             숨겨진 보물 지도가 나타납니다."
   //           </p>
             
-  //           <div className="bg-sepia-100 p-4 rounded-lg mb-6">
-  //             <p className="text-sepia-600 font-handwriting">
+  //           <div className="bg-cream p-4 rounded-lg mb-6">
+  //             <p className="text-ink-60 font-handwriting">
   //               진행률: {completedMainMissions}/5
   //             </p>
-  //             <div className="w-full bg-sepia-200 rounded-full h-3 mt-2">
+  //             <div className="w-full bg-cream-dp rounded-full h-3 mt-2">
   //               <div 
-  //                 className="bg-vintage-gold h-3 rounded-full transition-all duration-500"
+  //                 className="bg-sunset h-3 rounded-full transition-all duration-500"
   //                 style={{ width: `${(completedMainMissions / 5) * 100}%` }}
   //               />
   //             </div>
@@ -180,129 +180,151 @@ export default function TreasurePage() {
   //   )
   // }
 
+  const progressPct = Math.round((completedSubMissions.length / 25) * 100)
+
   return (
-    <div className="min-h-screen bg-vintage-paper pb-32">
-      {/* Header */}
-      <div className="bg-vintage-cream border-b-2 border-sepia-300 shadow-lg">
-        <div className="max-w-md mx-auto px-4 py-4">
-          <h1 className="font-vintage text-xl text-vintage-brown text-center mb-2">
-            💎 봉황동에 숨겨진 25개의 보물
-          </h1>
-          
-          {/* Progress */}
-          <div className="flex items-center justify-center space-x-4 text-sm">
-            <span className="text-sepia-600">
-              진행률: {completedSubMissions.length}/25
+    <div className="min-h-screen bg-cream-base pb-32">
+      {/* 앱바 — 티얼 구조색 */}
+      <header className="appbar px-4 pt-3 pb-3">
+        <div className="max-w-md mx-auto">
+          <span className="appbar-badge">SIDE A · 봉황동 25 트랙</span>
+          <h1 className="appbar-title mt-1 text-[19px]">트랙 리스트</h1>
+        </div>
+      </header>
+
+      {/* 트랙바 — 수집 진행률 */}
+      <div className="trackbar px-4 py-3">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between font-mono-retro text-[10px] text-sunset">
+            <span>
+              TRACK {completedSubMissions.length} / 25 · 빙고 {bingoLines}줄
             </span>
-            <span className="text-vintage-gold">
-              빙고: {bingoLines}줄
-            </span>
+            <span className="rec-dot">REC</span>
+          </div>
+          <div className="tape-prog mt-2">
+            <div className="reel spin">
+              <span className="hub" />
+            </div>
+            <div className="bar">
+              <i style={{ width: `${progressPct}%` }} />
+            </div>
+            <div className="reel">
+              <span className="hub" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Bingo board */}
       <div className="max-w-md mx-auto px-4 py-6">
-        <div className="bg-vintage-cream rounded-lg p-4 shadow-lg mb-6">
-          <div className="grid grid-cols-5 gap-2">
-            {bingoBoard.map((treasure, index) => (
-              <button
-                key={index}
-                onClick={() => handleTreasureClick(treasure)}
-                className={`bingo-cell ${treasure.isCompleted ? 'completed' : ''} 
-                          p-2 transition-all duration-300 hover:scale-105 flex flex-col justify-center items-center`}
-              >
-                <div className="text-xl">{treasure.emoji}</div>
-                <div className="text-xs font-handwriting leading-tight text-center mt-1">
-                  {treasure.title.split(' ')[0]}
-                </div>
-                
-                {treasure.isCompleted && (
-                  <div className="absolute inset-0 flex items-center justify-center 
-                                bg-vintage-gold/80 rounded-lg">
-                    <div className="bg-white rounded-full p-1">
-                      <span className="text-vintage-gold font-bold text-sm">✓</span>
-                    </div>
-                  </div>
-                )}
-                
-                {treasure.type === 'SPECIAL' && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 
-                                rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs">★</span>
-                  </div>
-                )}
-              </button>
-            ))}
+        <div className="card-paper mb-6 p-3 shadow-lg">
+          <div className="grid grid-cols-5 gap-1.5">
+            {bingoBoard.map((treasure, index) => {
+              // 메인 미션 = 다음 목표 트랙이면 옐로로 유도
+              const isNext = !treasure.isCompleted && treasure.isMainMission
+              return (
+                <button
+                  key={index}
+                  onClick={() => handleTreasureClick(treasure)}
+                  className={`bingo-cell flex flex-col items-center justify-center p-1 ${
+                    treasure.isCompleted ? 'completed' : isNext ? 'next' : ''
+                  }`}
+                >
+                  {treasure.isCompleted ? (
+                    <>
+                      <span className="text-base font-black">✓</span>
+                      <span className="mt-0.5 font-mono-retro text-[7px] opacity-90">
+                        REC
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-lg">{treasure.emoji}</span>
+                      <span className="mt-0.5 text-center text-[8px] font-bold leading-tight">
+                        {treasure.title.split(' ')[0]}
+                      </span>
+                    </>
+                  )}
+
+                  {/* 트랙 번호 — 좌상단 */}
+                  <span
+                    className={`absolute left-0.5 top-0.5 font-mono-retro text-[6px] ${
+                      treasure.isCompleted ? 'text-cream/70' : 'text-ink-60/70'
+                    }`}
+                  >
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="bg-white rounded-lg p-4 shadow-lg mb-6">
-          <h3 className="font-handwriting text-lg text-vintage-brown mb-3">
-            보물 지도 설명
+        {/* 범례 */}
+        <div className="card-paper mb-6 p-4 shadow-lg">
+          <h3 className="mb-3 font-vintage text-base font-black text-teal-dk">
+            트랙 범례
           </h3>
-          
+
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="flex items-center space-x-2">
-              <span>📸</span>
-              <span className="text-sepia-600">사진 촬영</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>🧩</span>
-              <span className="text-sepia-600">퀴즈</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>📍</span>
-              <span className="text-sepia-600">위치 인증</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>📱</span>
-              <span className="text-sepia-600">QR 스캔</span>
-            </div>
+            {[
+              ['📸', '사진 촬영'],
+              ['🧩', '퀴즈'],
+              ['📍', '위치 인증'],
+              ['📱', 'QR 스캔'],
+            ].map(([icon, label]) => (
+              <div key={label} className="flex items-center gap-2">
+                <span>{icon}</span>
+                <span className="text-ink-60">{label}</span>
+              </div>
+            ))}
           </div>
-          
-          <div className="mt-3 p-2 bg-vintage-gold/20 rounded border border-vintage-gold">
-            <p className="text-xs font-handwriting text-vintage-brown">
-              💡 가로, 세로, 대각선으로 5개를 연속으로 완료하면 빙고! 보너스 점수를 획득합니다.
+
+          {/* 상태 색 규칙 */}
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3 text-[10px] text-ink-60">
+            <span className="flex items-center gap-1.5">
+              <i className="h-3 w-3 rounded-sm bg-teal" /> 기록됨
+            </span>
+            <span className="flex items-center gap-1.5">
+              <i className="h-3 w-3 rounded-sm bg-sunset" /> 다음 트랙
+            </span>
+            <span className="flex items-center gap-1.5">
+              <i className="h-3 w-3 rounded-sm border border-line bg-paper" /> 미녹음
+            </span>
+          </div>
+
+          <div className="story-card mt-3 px-3 py-2">
+            <p className="text-[11px] text-ink-60">
+              가로·세로·대각선으로 5개를 연속 녹음하면 빙고! 보너스 점수를 획득합니다.
             </p>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="bg-vintage-cream rounded-lg p-4 shadow-lg">
-          <h3 className="font-handwriting text-lg text-vintage-brown mb-3 text-center">
-            보물 탐험 현황
+        {/* 현황 */}
+        <div className="card-paper p-4 shadow-lg">
+          <h3 className="mb-3 text-center font-vintage text-base font-black text-teal-dk">
+            녹음 현황
           </h3>
-          
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-vintage-gold">
-                {completedSubMissions.length}
+
+          <div className="grid grid-cols-3 gap-3 text-center">
+            {[
+              { value: completedSubMissions.length, label: '기록한 트랙' },
+              { value: bingoLines, label: '완성한 빙고' },
+              {
+                value: completedSubMissions.length * 30 + bingoLines * 50,
+                label: '누적 점수',
+              },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <div className="text-2xl font-black text-teal-dk">{stat.value}</div>
+                <div className="text-[10px] text-ink-60">{stat.label}</div>
               </div>
-              <div className="text-xs text-sepia-600 font-handwriting">
-                발견한 보물
-              </div>
-            </div>
-            
-            <div>
-              <div className="text-2xl font-bold text-sepia-700">
-                {bingoLines}
-              </div>
-              <div className="text-xs text-sepia-600 font-handwriting">
-                완성한 빙고
-              </div>
-            </div>
-            
-            <div>
-              <div className="text-2xl font-bold text-green-600">
-                {completedSubMissions.length * 30 + bingoLines * 50}
-              </div>
-              <div className="text-xs text-sepia-600 font-handwriting">
-                보물 점수
-              </div>
-            </div>
+            ))}
           </div>
+
+          <p className="mt-4 text-center font-pen text-[17px] leading-snug text-ink">
+            &ldquo;오늘의 골목은, 이제 우리의 이야기입니다&rdquo;
+          </p>
         </div>
       </div>
 

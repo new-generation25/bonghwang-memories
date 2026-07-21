@@ -2,22 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Serif+KR:wght@600;900&family=Nanum+Gothic+Coding&display=swap');
 
+/* ═══════════════════════════════════════════════════════════
+   P3 「선셋 90 · REC.1988」 팔레트
+   크림 48% / 티얼 18% / 옐로 14% / 셸 10% / 오렌지 6% / 레드 4%
+   ─ 티얼: 구조(헤더·CTA·제목)  ─ 옐로·오렌지: 감정(하이라이트·게이지)
+   ─ 레드: REC·'88'·도장 전용
+   ═══════════════════════════════════════════════════════════ */
 :root {
-  --sepia-50: 250 248 240;
-  --sepia-100: 247 243 233;
-  --sepia-200: 240 230 210;
-  --sepia-300: 232 213 183;
-  --sepia-400: 212 184 150;
-  --sepia-500: 193 154 107;
-  --sepia-600: 166 124 90;
-  --sepia-700: 133 100 71;
-  --sepia-800: 107 78 55;
-  --sepia-900: 84 63 44;
-  --vintage-brown: 139 69 19;
-  --vintage-gold: 218 165 32;
-  --vintage-cream: 245 245 220;
+  /* P3 원색 */
+  --cream: 243 234 211;      /* #F3EAD3 바랜 크림 — 주조 */
+  --cream-dp: 234 224 196;   /* #EAE0C4 크림 딥 */
+  --teal: 46 138 128;        /* #2E8A80 딥 티얼 — 구조 */
+  --teal-dk: 31 98 92;       /* #1F625C 티얼 다크 */
+  --sunset-yellow: 242 179 61; /* #F2B33D 선셋 옐로 — 강조 */
+  --retro-orange: 232 114 44;  /* #E8722C 레트로 오렌지 — 강조 */
+  --shell: 38 36 34;         /* #262422 셸 블랙 — 오브제·텍스트 */
+  --rec-red: 217 58 43;      /* #D93A2B 넘버 레드 — REC 전용 */
+
+  /* 중립 */
+  --paper: 255 253 247;      /* #FFFDF7 */
+  --line: 224 216 198;       /* #E0D8C6 */
+  --ink: 43 36 32;           /* #2B2420 */
+  --ink60: 107 98 89;        /* #6B6259 */
+  --bg-base: 239 235 226;    /* #EFEBE2 */
+
+  /* ── 레거시 토큰 재매핑 (기존 sepia / vintage 사용처가 P3로 흡수됨) ── */
+  --sepia-50: 255 253 247;
+  --sepia-100: 243 234 211;
+  --sepia-200: 234 224 196;
+  --sepia-300: 224 216 198;
+  --sepia-400: 201 191 166;
+  --sepia-500: 169 158 133;
+  --sepia-600: 107 98 89;
+  --sepia-700: 74 66 59;
+  --sepia-800: 43 36 32;
+  --sepia-900: 26 21 18;
+  --vintage-brown: 31 98 92;    /* 브라운 → 티얼 다크 (구조색으로 승격) */
+  --vintage-gold: 242 179 61;   /* 골드 → 선셋 옐로 */
+  --vintage-cream: 243 234 211; /* → 바랜 크림 */
 }
 
 * {
@@ -35,13 +59,8 @@ body {
 }
 
 body {
-  color: rgb(var(--sepia-800));
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgb(var(--sepia-50))
-  )
-  rgb(var(--sepia-100));
+  color: rgb(var(--ink));
+  background: rgb(var(--bg-base));
   font-family: 'Noto Sans KR', sans-serif;
   min-height: 100vh;
   min-height: 100dvh; /* 모바일 뷰포트 높이 지원 */
@@ -52,46 +71,504 @@ a {
   text-decoration: none;
 }
 
-/* Vintage paper texture background */
-.vintage-paper {
-  background-color: #f4f1e8;
-  background-image: 
-    radial-gradient(circle at 25px 25px, #e8d5b7 2px, transparent 2px),
-    radial-gradient(circle at 75px 75px, #e8d5b7 2px, transparent 2px);
+/* ───────── 타이포그래피 ───────── */
+
+/* 디스플레이 — 제목 전용. 기울기 -4°는 브랜드 고정값 */
+.font-display {
+  font-family: 'Black Han Sans', sans-serif;
+  transform: skewX(-4deg);
+  display: inline-block;
+}
+
+/* 손글씨 — 라벨·감성 카피 전용. 가격·안전 정보 금지 */
+.font-pen {
+  font-family: 'Nanum Pen Script', cursive;
+}
+
+/* 기계식 — TRACK 번호·일련번호 */
+.font-mono-retro {
+  font-family: 'Nanum Gothic Coding', monospace;
+  letter-spacing: 0.1em;
+}
+
+/* 옐로 형광펜 하이라이트 */
+.mark-yellow {
+  background: linear-gradient(transparent 55%, rgb(var(--sunset-yellow)) 55%);
+  padding: 0 2px;
+}
+
+/* ───────── 지면 공통 ───────── */
+
+/* 크림 바탕 — 항상 면적의 45% 이상 확보 */
+.vintage-paper,
+.bg-cream-base {
+  background-color: rgb(var(--cream));
+  background-image:
+    radial-gradient(circle at 25px 25px, rgba(224, 216, 198, 0.55) 2px, transparent 2px),
+    radial-gradient(circle at 75px 75px, rgba(224, 216, 198, 0.55) 2px, transparent 2px);
   background-size: 100px 100px;
 }
 
-/* Handwriting animation */
-.typing-effect {
-  overflow: hidden;
-  border-right: 2px solid transparent;
-  white-space: nowrap;
-  animation: typing 3.5s steps(40, end), blink-caret .75s step-end infinite;
+/* 브랜드 식별 장치 — 3색 밴드(옐로·오렌지·티얼) */
+.stripe-band {
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--sunset-yellow)) 0 33.3%,
+    rgb(var(--retro-orange)) 33.3% 66.6%,
+    rgb(var(--teal)) 66.6% 100%
+  );
 }
 
-/* Vintage button styles */
-.vintage-button {
-  background: linear-gradient(to right, #8B4513, #A67C5A);
-  color: white;
-  font-weight: bold;
-  padding: 12px 24px;
+.stripe-band-rec {
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--sunset-yellow)) 0 33.3%,
+    rgb(var(--retro-orange)) 33.3% 66.6%,
+    rgb(var(--rec-red)) 66.6% 100%
+  );
+}
+
+/* 앱바 — 티얼 구조색 + 하단 3색 스트라이프 */
+.appbar {
+  background: rgb(var(--teal));
+  color: rgb(var(--cream));
+  position: relative;
+}
+
+.appbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--sunset-yellow)) 0 33.3%,
+    rgb(var(--retro-orange)) 33.3% 66.6%,
+    rgb(var(--rec-red)) 66.6% 100%
+  );
+}
+
+.appbar-title {
+  font-family: 'Black Han Sans', sans-serif;
+  transform: skewX(-4deg);
+  display: inline-block;
+  text-shadow: 2px 2px 0 rgba(31, 98, 92, 0.6);
+}
+
+.appbar-badge {
+  display: inline-block;
+  background: rgba(243, 234, 211, 0.22);
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 2px 9px;
+  letter-spacing: 0.12em;
+}
+
+/* 트랙바 — 카세트 몸체(셸 블랙) 헤더 */
+.trackbar {
+  background: rgb(var(--shell));
+  color: rgb(var(--cream));
+}
+
+/* 종이 카드 */
+.card-paper {
+  background: rgb(var(--paper));
+  border: 1px solid rgb(var(--line));
+  border-radius: 10px;
+}
+
+/* 스토리 카드 — 오렌지 좌측 강조선 */
+.story-card {
+  background: rgb(var(--paper));
+  border-left: 4px solid rgb(var(--retro-orange));
   border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  transform: scale(1);
+}
+
+/* ───────── 버튼 ───────── */
+
+/* 주 CTA — 티얼 구조색. 모든 지면에 1곳 이상 동반 */
+.btn-teal,
+.vintage-button {
+  background: rgb(var(--teal));
+  color: rgb(var(--cream));
+  font-weight: 900;
+  padding: 13px 24px;
+  border-radius: 10px;
+  box-shadow: 0 4px 0 rgb(var(--teal-dk));
+  transition: all 0.2s ease;
   border: none;
   cursor: pointer;
 }
 
+.btn-teal:hover,
 .vintage-button:hover {
-  background: linear-gradient(to right, #856447, #8B4513);
-  transform: scale(1.05);
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+  background: rgb(var(--teal-dk));
+  box-shadow: 0 2px 0 rgb(var(--teal-dk));
+  transform: translateY(2px);
 }
 
-/* Mission compass icons */
+/* REC 버튼 — 레드는 녹음·완료 행위에만 */
+.btn-rec {
+  background: rgb(var(--rec-red));
+  color: rgb(var(--cream));
+  font-weight: 900;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-rec:hover {
+  filter: brightness(0.92);
+}
+
+/* 보조 버튼 — 크림 바탕 + 티얼 아웃라인 */
+.btn-outline {
+  background: rgb(var(--paper));
+  color: rgb(var(--teal-dk));
+  border: 1.5px solid rgb(var(--teal));
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-outline:hover {
+  background: rgb(var(--cream));
+}
+
+/* 셸 버튼 — 저장·보관 계열 */
+.btn-shell {
+  background: rgb(var(--shell));
+  color: rgb(var(--cream));
+  font-weight: 900;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+/* 옐로 버튼 — 다음 이야기·예약 계열. 텍스트는 셸 블랙만 */
+.btn-yellow {
+  background: rgb(var(--sunset-yellow));
+  color: rgb(var(--shell));
+  font-weight: 900;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+/* REC 표기 — 점멸하는 녹음 인디케이터 */
+.rec-dot {
+  color: rgb(var(--rec-red));
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.rec-dot::after {
+  content: ' ●';
+  animation: rec-blink 1.4s steps(1, end) infinite;
+}
+
+@keyframes rec-blink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0.25; }
+}
+
+/* ───────── 카세트 오브제 ─────────
+   지면당 1개 원칙. 크림 라벨 + 3색 스트라이프 + '88' 넘버링 고정 */
+.cassette {
+  width: 300px;
+  height: 190px;
+  background: rgb(var(--shell));
+  border-radius: 12px;
+  position: relative;
+  box-shadow: 0 12px 26px rgba(43, 36, 32, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.cassette .screw {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #45403c;
+  box-shadow: inset 0 0 0 2px #171514;
+}
+
+.cassette .screw::after {
+  content: '';
+  position: absolute;
+  left: 1.5px;
+  top: 4px;
+  width: 7px;
+  height: 2px;
+  background: #171514;
+}
+
+.cassette .s1 { top: 7px; left: 7px; }
+.cassette .s2 { top: 7px; right: 7px; }
+.cassette .s3 { bottom: 7px; left: 7px; }
+.cassette .s4 { bottom: 7px; right: 7px; }
+
+.cassette .lbl {
+  position: absolute;
+  top: 16px;
+  left: 22px;
+  right: 22px;
+  height: 110px;
+  background: rgb(var(--cream));
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.cassette .stripes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 3.5px;
+}
+
+.cassette .stripes i { height: 6px; display: block; }
+.cassette .stripes i:nth-child(1) { background: rgb(var(--sunset-yellow)); }
+.cassette .stripes i:nth-child(2) { background: rgb(var(--retro-orange)); }
+.cassette .stripes i:nth-child(3) { background: rgb(var(--teal)); }
+
+.cassette .lhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px 0;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: rgb(var(--shell));
+  position: relative;
+  z-index: 3;
+}
+
+.cassette .ltitle {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 26px;
+  text-align: center;
+  color: rgb(var(--shell));
+  line-height: 1.05;
+  margin-top: 12px;
+  position: relative;
+  z-index: 3;
+}
+
+.cassette .num88 {
+  position: absolute;
+  right: 11px;
+  bottom: 28px;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 17px;
+  color: rgb(var(--rec-red));
+  z-index: 3;
+}
+
+.cassette .win {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 168px;
+  height: 40px;
+  background: #141210;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.75);
+  z-index: 4;
+}
+
+.reel {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgb(var(--bg-base));
+  position: relative;
+  flex-shrink: 0;
+}
+
+.reel::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgb(var(--bg-base)) 0 18deg, #b9b2a6 18deg 36deg);
+}
+
+.reel .hub {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: #141210;
+  z-index: 2;
+}
+
+.spin { animation: spin 3.4s linear infinite; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.cassette .tamount {
+  height: 22px;
+  flex: 1;
+  margin: 0 6px;
+  display: flex;
+  align-items: center;
+}
+
+.cassette .tamount i {
+  height: 100%;
+  background: #5b4634;
+  border-radius: 2px;
+  display: block;
+}
+
+.cassette .cbottom {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 26px;
+  background: #171514;
+  clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.cassette .hole {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #45403c;
+}
+
+/* SIDE 배지 — A면은 옐로, 완료는 레드 */
+.cassette .stag {
+  position: absolute;
+  top: 14px;
+  left: -13px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: rgb(var(--sunset-yellow));
+  color: rgb(var(--shell));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 13px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+  z-index: 5;
+}
+
+.cassette .stag.done {
+  background: rgb(var(--rec-red));
+  color: rgb(var(--cream));
+}
+
+/* ───────── 테이프 진행 게이지 ─────────
+   노을 그라데이션은 게이지·축하 화면 전용 (UI 버튼 사용 금지) */
+.tape-prog {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tape-prog .reel {
+  width: 22px;
+  height: 22px;
+}
+
+.tape-prog .reel .hub { inset: 6px; }
+
+.tape-prog .bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(243, 234, 211, 0.18);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tape-prog .bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, rgb(var(--sunset-yellow)), rgb(var(--retro-orange)));
+  transition: width 0.5s ease;
+}
+
+/* 축하 헤더 — 노을 그라데이션 */
+.sunset-head {
+  background: linear-gradient(180deg, rgb(var(--retro-orange)), rgb(var(--sunset-yellow)));
+  color: rgb(var(--shell));
+}
+
+/* ───────── 빙고 / 트랙 그리드 ───────── */
+.bingo-cell {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgb(var(--paper));
+  border: 1px solid rgb(var(--line));
+  transition: all 0.3s ease;
+  min-height: 70px;
+  width: 100%;
+  color: rgb(var(--ink));
+}
+
+/* 완료 = 기록됨 → 티얼 */
+.bingo-cell.completed {
+  background: rgb(var(--teal));
+  border-color: rgb(var(--teal));
+  color: rgb(var(--cream));
+}
+
+/* 다음 목표 → 옐로 */
+.bingo-cell.next {
+  background: rgb(var(--sunset-yellow));
+  border-color: rgb(var(--sunset-yellow));
+  color: rgb(var(--shell));
+}
+
+/* 현재 위치 → 레드 아웃라인 */
+.bingo-cell.current {
+  outline: 2.5px solid rgb(var(--rec-red));
+  outline-offset: 1px;
+}
+
+.bingo-cell:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(43, 36, 32, 0.18);
+}
+
+/* ───────── 기타 ───────── */
+
+.typing-effect {
+  overflow: hidden;
+  border-right: 2px solid transparent;
+  white-space: nowrap;
+  animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
 .compass-icon {
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 4px 8px rgba(43, 36, 32, 0.3));
   transition: transform 0.3s ease;
 }
 
@@ -99,11 +576,10 @@ a {
   transform: rotate(15deg) scale(1.1);
 }
 
-/* Polaroid photo effect */
 .polaroid {
-  background: white;
+  background: rgb(var(--paper));
   padding: 1rem 1rem 3rem 1rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 8px rgba(43, 36, 32, 0.3);
   transform: rotate(-2deg);
   transition: transform 0.3s ease;
 }
@@ -112,7 +588,6 @@ a {
   transform: rotate(0deg) scale(1.05);
 }
 
-/* Map vintage overlay */
 .map-overlay {
   position: absolute;
   top: 0;
@@ -121,47 +596,54 @@ a {
   bottom: 0;
   background: linear-gradient(
     45deg,
-    rgba(244, 241, 232, 0.1) 0%,
-    rgba(212, 184, 150, 0.1) 100%
+    rgba(243, 234, 211, 0.12) 0%,
+    rgba(232, 114, 44, 0.08) 100%
   );
   pointer-events: none;
 }
 
-/* Bingo cell styles */
-.bingo-cell {
-  @apply relative overflow-hidden rounded-lg border-2 border-sepia-400 bg-sepia-100;
-  transition: all 0.3s ease;
-  min-height: 70px;
-  width: 100%;
+/* 인증 도장 — 레드 전용 */
+.seal {
+  border: 2.5px double rgb(var(--rec-red));
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgb(var(--rec-red));
+  transform: rotate(-9deg);
+  font-weight: 900;
+  background: rgba(243, 234, 211, 0.92);
 }
 
-.bingo-cell.completed {
-  @apply border-vintage-gold bg-vintage-gold/20;
+/* 쿠폰 — 레드 파선 */
+.coupon {
+  background: rgb(var(--paper));
+  border: 1.5px dashed rgb(var(--rec-red));
+  border-radius: 8px;
+  color: rgb(var(--rec-red));
+  font-weight: 700;
 }
 
-.bingo-cell:hover {
-  @apply scale-105 shadow-lg;
-}
-
-/* Custom scrollbar */
+/* 스크롤바 */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--sepia-100);
+  background: rgb(var(--cream));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--sepia-400);
+  background: rgb(var(--teal));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--sepia-600);
+  background: rgb(var(--teal-dk));
 }
 
-/* Loading animations */
+/* 애니메이션 */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -188,26 +670,24 @@ a {
   50% { border-color: currentColor; }
 }
 
-/* Hide recording indicator */
+/* 녹화 인디케이터 숨김 */
 video::-webkit-media-controls-play-button,
 video::-webkit-media-controls-start-playback-button {
   display: none !important;
 }
 
-/* Hide camera recording indicator in status bar */
 @media screen and (max-width: 768px) {
-  /* This helps reduce the red recording dot visibility */
   video {
     -webkit-appearance: none;
   }
 }
 
-/* Responsive design */
+/* 반응형 */
 @media (max-width: 768px) {
   .vintage-button {
     @apply py-2 px-4 text-sm;
   }
-  
+
   .polaroid {
     padding: 0.5rem 0.5rem 2rem 0.5rem;
   }

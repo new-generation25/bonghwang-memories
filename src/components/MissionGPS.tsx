@@ -133,18 +133,18 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
     }}>
       {/* Header */}
       <div className="border-b-2 shadow-lg" style={{
-        backgroundColor: '#F5F5DC',
-        borderColor: '#E8D5B7'
+        backgroundColor: '#F3EAD3',
+        borderColor: '#E0D8C6'
       }}>
         <div className="flex items-center justify-between p-4">
           <button
             onClick={onClose}
-            className="flex items-center space-x-2 text-sepia-700 hover:text-sepia-900"
+            className="flex items-center space-x-2 text-ink hover:text-ink"
           >
             <span className="text-xl">←</span>
             <span className="font-handwriting">뒤로</span>
           </button>
-          <h2 className="font-vintage text-lg text-vintage-brown">
+          <h2 className="font-vintage text-lg text-teal-dk">
             📍 위치 인증
           </h2>
           <div className="w-16"></div>
@@ -155,11 +155,11 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="max-w-md mx-auto">
           {/* Story */}
-          <div className="mb-6 bg-vintage-cream p-4 rounded-lg border-2 border-sepia-300">
-            <h3 className="font-handwriting text-lg text-vintage-brown mb-2">
+          <div className="mb-6 bg-cream p-4 rounded-lg border-2 border-line">
+            <h3 className="font-handwriting text-lg text-teal-dk mb-2">
               아버지의 이야기
             </h3>
-            <p className="font-handwriting text-base text-sepia-700 leading-relaxed">
+            <p className="font-handwriting text-base text-ink leading-relaxed">
               "{mission.story.intro}"
             </p>
           </div>
@@ -170,25 +170,25 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
               {checking ? '🔄' : isInRange ? '🎯' : '📍'}
             </div>
             
-            <h3 className="font-vintage text-xl text-vintage-brown mb-2">
+            <h3 className="font-vintage text-xl text-teal-dk mb-2">
               {mission.title.split(':')[1] || mission.title}
             </h3>
 
             {checking && (
-              <div className="bg-blue-50 border border-blue-300 rounded-lg p-4 mb-4">
-                <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-                <p className="font-handwriting text-blue-700">
+              <div className="bg-cream border border-line rounded-lg p-4 mb-4">
+                <div className="animate-spin w-6 h-6 border-2 border-teal border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="font-handwriting text-ink-60">
                   현재 위치를 확인하는 중...
                 </p>
               </div>
             )}
 
             {error && (
-              <div className="bg-red-50 border border-red-300 rounded-lg p-4 mb-4">
-                <p className="font-handwriting text-red-700 mb-2">⚠️ {error}</p>
+              <div className="bg-rec/10 border border-rec rounded-lg p-4 mb-4">
+                <p className="font-handwriting text-rec mb-2">⚠️ {error}</p>
                 <button
                   onClick={getCurrentLocation}
-                  className="text-sm bg-red-100 hover:bg-red-200 px-3 py-1 rounded transition-colors"
+                  className="text-sm bg-rec/15 hover:bg-rec/20 px-3 py-1 rounded transition-colors"
                 >
                   다시 시도
                 </button>
@@ -198,24 +198,24 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
             {distance !== null && !error && (
               <div className={`rounded-lg p-4 mb-4 ${
                 isInRange 
-                  ? 'bg-green-50 border border-green-300' 
-                  : 'bg-yellow-50 border border-yellow-300'
+                  ? 'bg-teal/10 border border-teal' 
+                  : 'bg-sunset/15 border border-sunset'
               }`}>
                 <p className={`font-handwriting text-lg mb-2 ${
-                  isInRange ? 'text-green-700' : 'text-yellow-700'
+                  isInRange ? 'text-teal-dk' : 'text-shell'
                 }`}>
                   {getDistanceMessage()}
                 </p>
                 
                 <div className="text-sm space-y-1">
                   <p className={`font-handwriting ${
-                    isInRange ? 'text-green-600' : 'text-yellow-600'
+                    isInRange ? 'text-teal-dk' : 'text-retro'
                   }`}>
                     거리: {distance}m
                   </p>
                   
                   {getDirectionHint() && (
-                    <p className="font-handwriting text-gray-600">
+                    <p className="font-handwriting text-ink-60">
                       {getDirectionHint()}
                     </p>
                   )}
@@ -229,11 +229,11 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
             <button
               onClick={getCurrentLocation}
               disabled={checking}
-              className={`w-full p-3 border-2 border-sepia-300 rounded-lg
-                       bg-white hover:bg-sepia-50 transition-colors duration-200
+              className={`w-full p-3 border-2 border-line rounded-lg
+                       bg-white hover:bg-paper transition-colors duration-200
                        ${checking ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <span className="font-handwriting text-sepia-700">
+              <span className="font-handwriting text-ink">
                 🔄 위치 새로고침
               </span>
             </button>
@@ -250,7 +250,7 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
           </div>
 
           {/* Map placeholder with Naver Map integration */}
-          <div className="mt-6 bg-gray-100 rounded-lg overflow-hidden" style={{ height: '200px' }}>
+          <div className="mt-6 bg-cream rounded-lg overflow-hidden" style={{ height: '200px' }}>
             <div 
               id="gps-mini-map" 
               style={{ width: '100%', height: '100%' }}
@@ -274,7 +274,7 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
                             width: 24px; 
                             height: 24px; 
                             border-radius: 50%; 
-                            background-color: #8B4513; 
+                            background-color: #1F625C; 
                             border: 2px solid white; 
                             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                             display: flex;
@@ -300,7 +300,7 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
                               width: 16px; 
                               height: 16px; 
                               border-radius: 50%; 
-                              background-color: #3B82F6; 
+                              background-color: #E8722C; 
                               border: 2px solid white; 
                               box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                             "></div>
@@ -315,9 +315,9 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
                       map: miniMap,
                       center: new window.naver.maps.LatLng(mission.location.lat, mission.location.lng),
                       radius: 50,
-                      fillColor: isInRange ? '#10B981' : '#F59E0B',
+                      fillColor: isInRange ? '#2E8A80' : '#F2B33D',
                       fillOpacity: 0.2,
-                      strokeColor: isInRange ? '#10B981' : '#F59E0B',
+                      strokeColor: isInRange ? '#2E8A80' : '#F2B33D',
                       strokeOpacity: 0.6,
                       strokeWeight: 2
                     })
@@ -330,8 +330,8 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
                         align-items: center; 
                         justify-content: center; 
                         height: 100%; 
-                        background-color: #F7F3E9;
-                        color: #A67C5A;
+                        background-color: #F3EAD3;
+                        color: #6B6259;
                       ">
                         <div style="text-align: center;">
                           <div style="font-size: 2rem; margin-bottom: 8px;">🗺️</div>
@@ -348,8 +348,8 @@ export default function MissionGPS({ mission, onComplete, onClose }: MissionGPSP
                       align-items: center; 
                       justify-content: center; 
                       height: 100%; 
-                      background-color: #F7F3E9;
-                      color: #A67C5A;
+                      background-color: #F3EAD3;
+                      color: #6B6259;
                     ">
                       <div style="text-align: center;">
                         <div style="font-size: 2rem; margin-bottom: 8px;">🗺️</div>

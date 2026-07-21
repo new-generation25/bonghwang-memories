@@ -158,12 +158,12 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col" style={{ touchAction: 'none' }}>
+    <div className="fixed inset-0 bg-shell z-50 flex flex-col" style={{ touchAction: 'none' }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-black/80 text-white">
+      <div className="flex items-center justify-between p-4 bg-shell/85 text-cream">
         <button
           onClick={handleClose}
-          className="flex items-center space-x-2 text-white hover:text-gray-300"
+          className="flex items-center space-x-2 text-cream hover:text-cream"
         >
           <span className="text-xl">←</span>
           <span>뒤로</span>
@@ -175,8 +175,8 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
       {/* Scanner view */}
       <div className="flex-1 relative">
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black">
-            <div className="text-white text-center">
+          <div className="absolute inset-0 flex items-center justify-center bg-shell">
+            <div className="text-cream text-center">
               <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               <p>카메라를 준비하는 중...</p>
             </div>
@@ -184,13 +184,13 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
         )}
 
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black">
-            <div className="text-white text-center max-w-sm px-4">
+          <div className="absolute inset-0 flex items-center justify-center bg-shell">
+            <div className="text-cream text-center max-w-sm px-4">
               <div className="text-4xl mb-4">⚠️</div>
               <p className="mb-4">{error}</p>
               <button
                 onClick={handleClose}
-                className="bg-white text-black px-6 py-2 rounded-lg hover:bg-gray-200"
+                className="bg-cream text-shell px-6 py-2 rounded-lg hover:bg-cream-dp"
               >
                 닫기
               </button>
@@ -212,28 +212,28 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
         {/* Scanning overlay */}
         <div className="absolute inset-0 pointer-events-none">
           {/* Dark overlay with hole in center */}
-          <div className="absolute inset-0 bg-black bg-opacity-50">
+          <div className="absolute inset-0 bg-shell/50">
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-white rounded-lg"></div>
           </div>
           
           {/* Scanning corners */}
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64">
             {/* Top-left corner */}
-            <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-green-400 rounded-tl-lg"></div>
+            <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-sunset rounded-tl-lg"></div>
             {/* Top-right corner */}
-            <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-green-400 rounded-tr-lg"></div>
+            <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-sunset rounded-tr-lg"></div>
             {/* Bottom-left corner */}
-            <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-green-400 rounded-bl-lg"></div>
+            <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-sunset rounded-bl-lg"></div>
             {/* Bottom-right corner */}
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-green-400 rounded-br-lg"></div>
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-sunset rounded-br-lg"></div>
             
             {/* Scanning line */}
-            <div className="absolute top-0 left-2 right-2 h-0.5 bg-green-400 animate-pulse"></div>
+            <div className="absolute top-0 left-2 right-2 h-0.5 bg-sunset animate-pulse"></div>
           </div>
 
           {/* Instructions */}
           <div className="absolute bottom-32 left-4 right-4">
-            <div className="bg-black/60 text-white p-4 rounded-lg text-center">
+            <div className="bg-shell/70 text-cream p-4 rounded-lg text-center">
               <p className="text-lg font-bold mb-2">QR 코드를 찾아주세요</p>
               <p className="text-sm opacity-80 mb-3">
                 QR 코드를 화면 중앙의 사각형 안에 맞춰주세요
@@ -242,7 +242,7 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
               {/* Test button for development */}
               <button 
                 onClick={() => onScanSuccess('test-qr-code-data')}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold"
+                className="bg-teal hover:bg-teal-dk text-cream px-4 py-2 rounded-lg text-sm font-bold"
               >
                 🧪 테스트용 QR 스캔
               </button>
