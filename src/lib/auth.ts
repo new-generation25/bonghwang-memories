@@ -1,6 +1,8 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
   updateProfile,
@@ -77,9 +79,25 @@ function toKoreanError(code: string): string {
       return '시도가 너무 잦습니다. 잠시 후 다시 시도해주세요.'
     case 'auth/network-request-failed':
       return '네트워크 연결을 확인해주세요.'
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return '로그인 창이 닫혔습니다. 다시 시도해주세요.'
+    case 'auth/popup-blocked':
+      return '브라우저가 팝업을 차단했습니다. 팝업을 허용한 뒤 다시 시도해주세요.'
+    case 'auth/account-exists-with-different-credential':
+      return '이미 다른 방식으로 가입된 계정입니다. 기존 방식으로 로그인해주세요.'
+    case 'auth/unauthorized-domain':
+      return '이 도메인은 로그인이 허용되지 않았습니다. 관리자에게 문의해주세요.'
     default:
       return '처리 중 문제가 발생했습니다. 다시 시도해주세요.'
   }
+}
+
+/** 닉네임 규칙(12자 이하)에 맞게 다듬는다. 구글 이름이 길 수 있다 */
+function toNickname(displayName: string | null, uid: string): string {
+  const trimmed = (displayName ?? '').trim()
+  if (trimmed) return trimmed.slice(0, 12)
+  return `기록자${uid.slice(0, 4)}`
 }
 
 class AuthUnavailableError extends Error {
@@ -148,6 +166,47 @@ export async function signIn(loginId: string, password: string): Promise<Profile
       totalScore: 0,
       completedMissions: [],
     }
+  } catch (error) {
+    if (error instanceof AuthUnavailableError) throw error
+    const code = (error as { code?: string }).code ?? ''
+    throw new Error(toKoreanError(code))
+  }
+}
+
+/**
+ * 구글 로그인.
+ *
+ * 최초 로그인이면 프로필 문서를 만들고, 이미 있으면 그대로 쓴다.
+ * 사용자가 앱에서 닉네임을 바꿨을 수 있으므로 기존 문서를 덮어쓰지 않는다.
+ */
+export async function signInWithGoogle(): Promise<Profile> {
+  const { auth: a, db: d } = requireAuth()
+
+  try {
+    const provider = new GoogleAuthProvider()
+    // 계정이 여러 개일 때 매번 고를 수 있도록
+    provider.setCustomParameters({ prompt: 'select_account' })
+
+    const cred = await signInWithPopup(a, provider)
+    const existing = await getProfile(cred.user.uid)
+    if (existing) return existing
+
+    const profile: Profile = {
+      uid: cred.user.uid,
+      loginId: '', // 구글 계정은 아이디/비밀번호를 쓰지 않는다
+      nickname: toNickname(cred.user.displayName, cred.user.uid),
+      provider: 'google',
+      totalScore: 0,
+      completedMissions: [],
+    }
+
+    await setDoc(doc(d, 'users', cred.user.uid), {
+      ...profile,
+      createdAt: serverTimestamp(),
+      lastUpdated: serverTimestamp(),
+    })
+
+    return profile
   } catch (error) {
     if (error instanceof AuthUnavailableError) throw error
     const code = (error as { code?: string }).code ?? ''
