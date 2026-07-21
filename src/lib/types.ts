@@ -62,16 +62,34 @@ export interface LocationData {
   accuracy: number
 }
 
-// Naver Map types
+// Naver Map types — Map.tsx가 실제로 쓰는 API 표면만 선언한 얇은 심(shim)
 export interface NaverMapWindow {
   naver: {
     maps: {
       Map: new (element: HTMLElement, options: NaverMapOptions) => NaverMap
       LatLng: new (lat: number, lng: number) => NaverLatLng
+      Point: new (x: number, y: number) => NaverPoint
       Marker: new (options: NaverMarkerOptions) => NaverMarker
+      InfoWindow: new (options: {
+        content: string
+        maxWidth?: number
+        backgroundColor?: string
+        borderColor?: string
+        borderWidth?: number
+        anchorSize?: unknown
+        pixelOffset?: unknown
+      }) => NaverInfoWindow
+      Circle?: new (options: Record<string, unknown>) => { setMap: (m: NaverMap | null) => void }
       Event: {
-        addListener: (target: NaverMarker | NaverMap, event: string, handler: () => void) => void
+        addListener: (
+          target: NaverMarker | NaverMap,
+          event: string,
+          handler: () => void
+        ) => void
       }
+      MapTypeControlStyle: Record<string, unknown>
+      ZoomControlStyle: Record<string, unknown>
+      Position: Record<string, unknown>
     }
   }
   naverMapLoaded?: boolean
@@ -84,12 +102,22 @@ export interface NaverMapOptions {
   center: NaverLatLng
   zoom: number
   zoomControl?: boolean
+  zoomControlOptions?: Record<string, unknown>
   mapTypeControl?: boolean
+  mapTypeControlOptions?: Record<string, unknown>
+  scaleControl?: boolean
+  logoControl?: boolean
+  mapDataControl?: boolean
 }
 
 export interface NaverLatLng {
   lat: () => number
   lng: () => number
+}
+
+export interface NaverPoint {
+  x: number
+  y: number
 }
 
 export interface NaverMarkerOptions {
@@ -98,6 +126,7 @@ export interface NaverMarkerOptions {
   title?: string
   icon?: {
     content: string
+    anchor?: NaverPoint
   }
 }
 
@@ -105,9 +134,17 @@ export interface NaverMarker {
   setMap: (map: NaverMap | null) => void
 }
 
+export interface NaverInfoWindow {
+  open: (map: NaverMap, marker: NaverMarker) => void
+  close: () => void
+  getMap: () => NaverMap | null
+}
+
 export interface NaverMap {
   setCenter: (latlng: NaverLatLng) => void
   setZoom: (zoom: number) => void
+  getZoom: () => number
+  panTo: (latlng: NaverLatLng) => void
 }
 
 // Treasure types

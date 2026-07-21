@@ -137,22 +137,22 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
         mission.location.lng
       )
 
-      // 커스텀 마커 아이콘 생성
+      // 커스텀 마커 아이콘 — 지도는 보조 화면이므로 숫자를 작게(기존의 50%)
       const content = `
         <div style="position: relative; cursor: pointer;">
           <div style="
-            width: 48px; 
-            height: 48px; 
-            border-radius: 50%; 
-            background-color: ${isCompleted ? '#2E8A80' : '#262422'}; 
-            border: 3px solid white; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: ${isCompleted ? '#2E8A80' : '#262422'};
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 10px;
             transform: translate(-50%, -50%);
           ">
             ${isCompleted ? '✓' : index + 1}
@@ -165,7 +165,7 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
         map: map,
         icon: {
           content: content,
-          anchor: new window.naver.maps.Point(24, 24)
+          anchor: new window.naver.maps.Point(12, 12)
         },
         title: mission.title
       })
@@ -381,18 +381,18 @@ export default function Map({ onMissionSelect, completedMissions, userLocation }
       marker.innerHTML = `
         <div style="position: relative;">
           <div style="
-            width: 48px; 
-            height: 48px; 
-            border-radius: 50%; 
-            background-color: ${isCompleted ? '#2E8A80' : '#262422'}; 
-            border: 3px solid white; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: ${isCompleted ? '#2E8A80' : '#262422'};
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 10px;
           ">
             ${isCompleted ? '✓' : index + 1}
           </div>

@@ -1,16 +1,25 @@
 'use client'
 
+/**
+ * S00 — 랜딩: QR 진입 · 상품 소개 · 결제.
+ *
+ * 결제는 모의(테스트) 버튼이다 — 실제 PG 연동 시 handleMockPay만 교체하면 된다.
+ * 로그인은 커뮤니티 참여 조건일 뿐, 투어 자체는 로그인 없이 진행할 수 있다.
+ */
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthModal from '@/components/AuthModal'
 import Cassette from '@/components/Cassette'
-import NarrationPlayer from '@/components/NarrationPlayer'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTourState } from '@/hooks/useTourState'
+import { mutateTour } from '@/lib/tourState'
 
-export default function IntroPage() {
+export default function LandingPage() {
   const [showButton, setShowButton] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const { profile, loading, logout } = useAuth()
+  const tour = useTourState()
   const router = useRouter()
 
   useEffect(() => {
@@ -18,24 +27,27 @@ export default function IntroPage() {
     return () => clearTimeout(timer)
   }, [])
 
-  // 로그인은 커뮤니티 참여 조건일 뿐, 투어 자체는 로그인 없이도 진행할 수 있다.
-  const handleStartJourney = () => {
-    if (profile) {
-      router.push('/story')
-      return
+  // 진행 중인 투어가 있으면 해당 지점으로 이어간다
+  const resumeTarget = (() => {
+    if (!tour.paid) return null
+    switch (tour.phase) {
+      case 'intro':
+        return '/intro'
+      case 'act1':
+        return '/play'
+      case 'act2':
+        return '/treasure'
+      case 'done':
+        return '/finale'
+      default:
+        return '/download'
     }
-    setShowAuth(true)
-  }
+  })()
 
-  const handleAuthSuccess = () => {
-    setShowAuth(false)
-    router.push('/story')
-  }
-
-  // '나중에 하기' — 비로그인 상태로 둘러보기
-  const handleAuthSkip = () => {
-    setShowAuth(false)
-    router.push('/story')
+  /** 모의 결제 — 실제 PG 연동 지점 */
+  const handleMockPay = () => {
+    mutateTour({ paid: true, phase: 'intro' })
+    router.push('/download')
   }
 
   return (
@@ -79,7 +91,7 @@ export default function IntroPage() {
             메모<span>리즈</span>
           </h1>
 
-          <div className="sub-band">약속의 기록자 EP.1 — SIDE A</div>
+          <div className="sub-band">봉황1988 EP.1 — 아버지의 타임캡슐</div>
 
           <div className="price-stick">
             <span>한 팀</span>
@@ -113,9 +125,8 @@ export default function IntroPage() {
         </div>
       </div>
 
-      {/* 실행 영역 — 포스터 바깥 */}
-      <div className="mx-auto max-w-[380px] px-4 pb-10 pt-5">
-        {/* 진입 텍스트 — 대본 C절 */}
+      {/* 상품 소개 + 결제 — 포스터 바깥 */}
+      <div className="mx-auto w-full max-w-[380px] px-4 pb-10 pt-5">
         <p className="text-center text-[13px] font-bold leading-relaxed text-ink">
           19년 만에 고향에 돌아온 친구가,
           <br />
@@ -127,31 +138,49 @@ export default function IntroPage() {
           오늘, 소영과 함께 봉황동을 걷습니다.
         </p>
 
-        {/* 소영의 인트로 — 음성 파일이 없으면 표시되지 않는다 */}
-        <NarrationPlayer
-          id="intro-soyoung"
-          label="소영의 목소리 · 19년 만의 전화"
-          className="mt-4"
-        />
+        {/* 구성 안내 */}
+        <ul className="mt-4 space-y-1.5 rounded-xl border border-line bg-paper px-4 py-3 text-[12px] leading-relaxed text-ink">
+          <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 필수</li>
+          <li>📼 다섯 거점 · 다섯 소원 · 숨겨진 B면 트랙</li>
+          <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 테이프&rsquo;</li>
+          <li>🎟 거점 상점 쿠폰 + 2막 골목 빙고</li>
+        </ul>
 
         {showButton && (
-          <button
-            onClick={handleStartJourney}
-            className="btn-teal mt-4 w-full text-center text-[15px]"
-            style={{ animation: 'slideUp 0.4s ease-out' }}
-          >
-            소영의 이야기 듣기 ▶
-            <small className="mt-0.5 block text-[10px] font-normal opacity-85">
-              {profile ? `${profile.nickname} 기록자로 이어가기` : '기록자 등록 후 바로 시작'}
-            </small>
-          </button>
+          <div style={{ animation: 'slideUp 0.4s ease-out' }}>
+            {resumeTarget ? (
+              <button
+                onClick={() => router.push(resumeTarget)}
+                className="btn-teal mt-4 w-full text-center text-[15px]"
+              >
+                이어서 걷기 ▶
+                <small className="mt-0.5 block text-[10px] font-normal opacity-85">
+                  진행 중인 투어가 있습니다
+                </small>
+              </button>
+            ) : (
+              <button
+                onClick={handleMockPay}
+                className="btn-teal mt-4 w-full text-center text-[15px]"
+              >
+                결제 완료(테스트) ▶
+                <small className="mt-0.5 block text-[10px] font-normal opacity-85">
+                  실제 결제 없이 바로 시작합니다
+                </small>
+              </button>
+            )}
+          </div>
         )}
       </div>
 
       {/* 하단 3색 밴드 — 브랜드 식별 장치. 항상 화면 맨 아래에 붙는다 */}
       <div className="stripe-band mt-auto" />
 
-      <AuthModal isOpen={showAuth} onClose={handleAuthSkip} onSuccess={handleAuthSuccess} />
+      <AuthModal
+        isOpen={showAuth}
+        onClose={() => setShowAuth(false)}
+        onSuccess={() => setShowAuth(false)}
+      />
     </div>
   )
 }

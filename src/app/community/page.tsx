@@ -1,5 +1,12 @@
 'use client'
 
+/**
+ * 소영의 친구들 — 소영을 도운 기록자들의 광장.
+ *
+ * 여정 공유(사진·B면 메시지) + 미션 포인트 랭킹 + 일시한정 보너스 미션.
+ * Firebase 미설정이어도 죽지 않는다: 안내 카드 + 로컬 점수만 표시.
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import Navigation from '@/components/Navigation'
 import AuthModal from '@/components/AuthModal'
@@ -7,14 +14,20 @@ import PostComposer from '@/components/PostComposer'
 import PostCard from '@/components/PostCard'
 import { fetchPosts, CommunityPost } from '@/lib/community'
 import { useAuth } from '@/contexts/AuthContext'
+import { activeBonusMissions } from '@/lib/bonusMissions'
+import { RankingEntry, fetchRankings, findMyRank } from '@/lib/rankings'
+import { getLocalScore } from '@/lib/score'
 
-export default function CommunityPage() {
+export default function FriendsPage() {
   const { profile, loading: authLoading, available } = useAuth()
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showAuth, setShowAuth] = useState(false)
-  const [completedMainMissions, setCompletedMainMissions] = useState(0)
+  const [rankings, setRankings] = useState<RankingEntry[]>([])
+  const [myScore, setMyScore] = useState(0)
+
+  const bonuses = activeBonusMissions()
 
   const loadPosts = useCallback(async () => {
     if (!available) {
@@ -36,18 +49,24 @@ export default function CommunityPage() {
   }, [loadPosts])
 
   useEffect(() => {
-    const missions = JSON.parse(localStorage.getItem('completedMissions') || '[]')
-    setCompletedMainMissions(missions.filter((id: string) => id.startsWith('main-')).length)
-  }, [])
+    setMyScore(getLocalScore())
+    if (available) {
+      fetchRankings()
+        .then(setRankings)
+        .catch(() => setRankings([]))
+    }
+  }, [available])
+
+  const myRank = findMyRank(rankings, profile?.uid ?? null)
 
   return (
     <div className="min-h-screen bg-cream-base pb-32">
       {/* 앱바 — 티얼 구조색 */}
-      <header className="appbar px-4 pt-3 pb-3">
-        <div className="max-w-md mx-auto">
-          <span className="appbar-badge">BONGHWANG MEMORIES · 기록자들</span>
+      <header className="appbar px-4 pb-3 pt-3">
+        <div className="mx-auto max-w-md">
+          <span className="appbar-badge">BONGHWANG 1988 · 함께 걸은 사람들</span>
           <div className="mt-1 flex items-end justify-between gap-3">
-            <h1 className="appbar-title text-[19px]">우리의 기록</h1>
+            <h1 className="appbar-title text-[19px]">소영의 친구들</h1>
             {!authLoading &&
               (profile ? (
                 <span className="shrink-0 pb-1 text-[11px] font-bold">
@@ -65,7 +84,88 @@ export default function CommunityPage() {
         </div>
       </header>
 
-      <div className="max-w-md mx-auto px-4 py-5">
+      <div className="mx-auto max-w-md px-4 py-5">
+        {/* 일시한정 보너스 미션 */}
+        {bonuses.length > 0 && (
+          <div className="mb-5 space-y-2">
+            {bonuses.map((bonus) => (
+              <div
+                key={bonus.id}
+                className="card-paper flex items-center gap-3 border-sunset-yellow p-3"
+              >
+                <span className="text-[26px]">{bonus.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
+                    {bonus.title}
+                    <span className="rounded bg-rec px-1.5 py-0.5 font-mono-retro text-[9px] text-cream">
+                      한정
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] leading-snug text-ink-60">
+                    {bonus.description}
+                  </p>
+                </div>
+                <span className="shrink-0 font-display text-[15px] text-teal">
+                  +{bonus.points}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 랭킹 — 명예의 전당 */}
+        <div className="card-paper mb-5 overflow-hidden shadow-lg">
+          <div className="stripe-band" />
+          <div className="p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-vintage text-sm font-black text-teal-dk">
+                🏆 기록자 랭킹
+              </h2>
+              <span className="font-mono-retro text-[10px] text-ink-60">
+                내 점수 {myScore.toLocaleString()}점
+                {myRank ? ` · ${myRank}위` : ''}
+              </span>
+            </div>
+
+            {rankings.length === 0 ? (
+              <p className="mt-3 text-center text-[12px] text-ink-60">
+                {available
+                  ? '아직 순위가 없어요 — 첫 기록자가 되어보세요'
+                  : '온라인 랭킹은 연결 후 표시됩니다'}
+              </p>
+            ) : (
+              <ol className="mt-3 space-y-1">
+                {rankings.slice(0, 10).map((entry, i) => {
+                  const isMe = profile?.uid === entry.userId
+                  return (
+                    <li
+                      key={entry.userId}
+                      className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${
+                        isMe ? 'bg-sunset-yellow/20' : ''
+                      }`}
+                    >
+                      <span
+                        className={`w-6 text-center font-mono-retro text-[12px] ${
+                          i < 3 ? 'text-rec' : 'text-ink-60'
+                        }`}
+                      >
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                        {entry.nickname}
+                        {isMe && ' (나)'}
+                      </span>
+                      <span className="font-mono-retro text-[12px] text-teal">
+                        {entry.totalScore.toLocaleString()}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ol>
+            )}
+          </div>
+        </div>
+
         {/* Firebase 미설정 안내 — 기능이 조용히 죽은 것처럼 보이지 않도록 */}
         {!available && (
           <div className="card-paper mb-5 border-rec p-4">
@@ -90,7 +190,7 @@ export default function CommunityPage() {
           ) : (
             <div className="card-paper mb-5 p-4 text-center">
               <p className="text-[12px] text-ink-60">
-                로그인하면 사진과 후기를 남길 수 있어요
+                로그인하면 오늘의 여정을 친구들과 나눌 수 있어요
               </p>
               <button
                 onClick={() => setShowAuth(true)}
@@ -143,7 +243,7 @@ export default function CommunityPage() {
         }}
       />
 
-      <Navigation completedMainMissions={completedMainMissions} />
+      <Navigation />
     </div>
   )
 }

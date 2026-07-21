@@ -5,9 +5,14 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 interface MissionCameraProps {
   onCapture: (imageData: string) => void
   onClose: () => void
+  /**
+   * AR 폴백(D11) — 화면과 촬영 결과에 합성되는 오버레이 이미지(예: 능소화 프레임).
+   * WebAR이 실패하거나 없는 환경에서 정적 프레임으로 대신한다.
+   */
+  overlaySrc?: string
 }
 
-export default function MissionCamera({ onCapture, onClose }: MissionCameraProps) {
+export default function MissionCamera({ onCapture, onClose, overlaySrc }: MissionCameraProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -153,15 +158,30 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
       // Draw video frame to canvas
       context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-      // Convert to base64
-      const imageData = canvas.toDataURL('image/jpeg', 0.8)
-      
-      // Stop camera stream
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop())
+      const finalize = () => {
+        // Convert to base64
+        const imageData = canvas.toDataURL('image/jpeg', 0.8)
+
+        // Stop camera stream
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop())
+        }
+
+        onCapture(imageData)
       }
 
-      onCapture(imageData)
+      // 오버레이(능소화 프레임 등)를 사진에 합성 — 실패해도 원본으로 진행
+      if (overlaySrc) {
+        const overlay = new Image()
+        overlay.onload = () => {
+          context.drawImage(overlay, 0, 0, canvas.width, canvas.height)
+          finalize()
+        }
+        overlay.onerror = finalize
+        overlay.src = overlaySrc
+      } else {
+        finalize()
+      }
     } else {
       // PC: Simulate photo capture
       const mockImageData = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
@@ -273,6 +293,16 @@ export default function MissionCamera({ onCapture, onClose }: MissionCameraProps
           className="w-full h-full object-cover"
           style={{ background: '#000' }}
         />
+
+        {/* AR 폴백 오버레이 — 화면 프리뷰에도 겹쳐 보여준다 */}
+        {overlaySrc && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={overlaySrc}
+            alt=""
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          />
+        )}
 
         {/* Guide overlay */}
         <div className="absolute inset-0 pointer-events-none">

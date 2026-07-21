@@ -6,9 +6,7 @@ import { Mission } from '@/lib/types'
 import { mainMissions, subMissions } from '@/lib/missions'
 import MissionCamera from '@/components/MissionCamera'
 import MissionQuiz from '@/components/MissionQuiz'
-import MissionGPS from '@/components/MissionGPS'
 import QRScanner from '@/components/QRScanner'
-import NarrationPlayer from '@/components/NarrationPlayer'
 import { completeMission } from '@/lib/database'
 
 interface MissionPageClientProps {
@@ -16,10 +14,10 @@ interface MissionPageClientProps {
 }
 
 interface MissionCompletionData {
-  photo?: string
+  imageData?: string
   usedHint?: boolean
   location?: { lat: number; lng: number }
-  qrCode?: string
+  qrData?: string
 }
 
 export default function MissionPageClient({ missionId }: MissionPageClientProps) {
@@ -28,12 +26,18 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
   const [missionData, setMissionData] = useState<MissionCompletionData | null>(null)
   const [showCamera, setShowCamera] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
-  const [showGPS, setShowGPS] = useState(false)
   const [showQRScanner, setShowQRScanner] = useState(false)
   const router = useRouter()
 
   // Find mission by ID and start immediately
   useEffect(() => {
+    // EP.1 개편 — 메인 미션은 트랙 흐름(/track/n)이 이어받았다
+    if (missionId.startsWith('main-')) {
+      const n = parseInt(missionId.slice(5), 10)
+      router.replace(n >= 1 && n <= 5 ? `/track/${n}` : '/play')
+      return
+    }
+
     const foundMission = [...mainMissions, ...subMissions].find(m => m.missionId === missionId)
     if (foundMission) {
       setMission(foundMission)
@@ -46,9 +50,6 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
           break
         case 'QUIZ':
           setShowQuiz(true)
-          break
-        case 'GPS':
-          setShowGPS(true)
           break
         case 'QR':
           setShowQRScanner(true)
@@ -81,7 +82,7 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
       localStorage.setItem('totalScore', (currentScore + points).toString())
 
       // Save to Firebase
-      if (userId) {
+      if (userId && mission) {
         try {
           await completeMission(userId, mission.missionId, points)
         } catch (error) {
@@ -93,7 +94,6 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
     // Close all modals
     setShowCamera(false)
     setShowQuiz(false)
-    setShowGPS(false)
     setShowQRScanner(false)
   }
 
@@ -103,10 +103,6 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
 
   const handleQuizComplete = (success: boolean, usedHint: boolean) => {
     handleMissionComplete(success, { usedHint })
-  }
-
-  const handleGPSComplete = (success: boolean) => {
-    handleMissionComplete(success)
   }
 
   const handleQRScanSuccess = (data: string) => {
@@ -169,13 +165,6 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
               </div>
             )}
 
-            {/* 소영의 목소리 — 완료 축하·다음 안내. 파일이 없으면 표시되지 않는다 */}
-            <NarrationPlayer
-              id={`mission-${mission.missionId}-outro`}
-              label="소영의 목소리"
-              className="mb-5 text-left"
-            />
-
             <div className="flex space-x-3">
               <button
                 onClick={handleGoBack}
@@ -205,17 +194,6 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
           onComplete={handleQuizComplete}
           onClose={() => {
             setShowQuiz(false)
-            router.push('/exploration')
-          }}
-        />
-      )}
-
-      {showGPS && (
-        <MissionGPS
-          mission={mission}
-          onComplete={handleGPSComplete}
-          onClose={() => {
-            setShowGPS(false)
             router.push('/exploration')
           }}
         />

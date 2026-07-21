@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "npm run check:forbidden && next build",
     "start": "next start",
     "lint": "next lint",
+    "check:forbidden": "node scripts/check-forbidden.js",
     "update-sw-version": "node scripts/update-sw-version.js"
   },
   "dependencies": {
