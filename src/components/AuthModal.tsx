@@ -19,7 +19,7 @@ interface AuthModalProps {
 type Mode = 'login' | 'signup'
 
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
-  const { available } = useAuth()
+  const { available, applyProfile } = useAuth()
   const [mode, setMode] = useState<Mode>('login')
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
@@ -56,11 +56,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
     setBusy(true)
     try {
-      if (mode === 'signup') {
-        await signUp(loginId, password, nickname)
-      } else {
-        await signIn(loginId, password)
-      }
+      // 가입 직후에는 onAuthStateChanged가 프로필 문서보다 먼저 도착한다.
+      // 여기서 받은 프로필을 바로 넣어 로그인 상태가 즉시 반영되게 한다.
+      const profile =
+        mode === 'signup'
+          ? await signUp(loginId, password, nickname)
+          : await signIn(loginId, password)
+
+      applyProfile(profile)
       setPassword('')
       onSuccess?.()
     } catch (err) {
