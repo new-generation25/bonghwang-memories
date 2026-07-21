@@ -8,6 +8,7 @@ import MissionCamera from '@/components/MissionCamera'
 import MissionQuiz from '@/components/MissionQuiz'
 import MissionGPS from '@/components/MissionGPS'
 import QRScanner from '@/components/QRScanner'
+import NarrationPlayer from '@/components/NarrationPlayer'
 import { completeMission } from '@/lib/database'
 
 interface MissionPageClientProps {
@@ -167,6 +168,13 @@ export default function MissionPageClient({ missionId }: MissionPageClientProps)
                 />
               </div>
             )}
+
+            {/* 소영의 목소리 — 완료 축하·다음 안내. 파일이 없으면 표시되지 않는다 */}
+            <NarrationPlayer
+              id={`mission-${mission.missionId}-outro`}
+              label="소영의 목소리"
+              className="mb-5 text-left"
+            />
 
             <div className="flex space-x-3">
               <button

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import NarrationPlayer from '@/components/NarrationPlayer'
 
 const storyText = `이 편지를 쓰는 지금,
 나의 기억은 하나둘 흐려져가고 있구나.
@@ -118,6 +119,11 @@ export default function StoryPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 아빠의 목소리 — 음성 파일이 없으면 컨트롤이 표시되지 않는다 */}
+      <div className="mx-auto w-full max-w-2xl px-5 pt-3">
+        <NarrationPlayer id="prologue" label="아빠의 목소리 · 1988 녹음분" />
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-5 relative">

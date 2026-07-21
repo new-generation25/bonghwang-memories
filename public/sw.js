@@ -1,15 +1,35 @@
-const CACHE_NAME = 'bonghwang-memories-v1.0.2';
+const CACHE_NAME = 'bonghwang-memories-v1.1.0';
 const urlsToCache = [
   '/manifest.json',
   '/icon-192x192.png',
   '/icon-512x512.png'
 ];
 
+// 내레이션 음성 — 골목에서 신호가 끊겨도 재생되어야 하므로 미리 받아둔다.
+// 아직 준비되지 않은 파일이 있을 수 있어 개별로 담고 실패는 무시한다.
+// (addAll은 하나만 404여도 설치 전체가 실패한다)
+const audioToCache = [
+  '/audio/prologue.m4a',
+  '/audio/prologue.mp3',
+  '/audio/mission-main-1-outro.m4a',
+  '/audio/mission-main-2-outro.m4a',
+  '/audio/mission-main-3-outro.m4a',
+  '/audio/mission-main-4-outro.m4a',
+  '/audio/mission-main-5-outro.m4a',
+  '/audio/mission-sub-1-outro.m4a',
+  '/audio/mission-sub-2-outro.m4a'
+];
+
 // Install - 정적 자원만 프리캐시하고 즉시 활성화
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await cache.addAll(urlsToCache);
+      await Promise.all(
+        audioToCache.map((url) => cache.add(url).catch(() => null))
+      );
+    })
   );
 });
 
