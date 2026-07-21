@@ -8,6 +8,15 @@ interface PostComposerProps {
   onPosted: () => void
 }
 
+/**
+ * 사진 업로드 사용 가능 여부.
+ *
+ * Cloud Storage는 Blaze(종량제) 요금제에서만 쓸 수 있는데 현재 프로젝트는 Spark다.
+ * 이 상태로 사진을 첨부하면 업로드 단계에서 실패하면서 작성 중이던 글까지 날아가므로
+ * 첨부 자체를 막아둔다. Storage를 활성화하면 이 값만 true로 바꾸면 된다.
+ */
+const PHOTO_UPLOAD_ENABLED = false
+
 /** 후기 작성 — 사진 1장 + 본문. 사진은 선택 사항이다. */
 export default function PostComposer({ onPosted }: PostComposerProps) {
   const { profile } = useAuth()
@@ -134,13 +143,19 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
         )}
 
         <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="btn-outline flex-1 py-2.5 text-[12px]"
-          >
-            📸 사진 첨부
-          </button>
+          {PHOTO_UPLOAD_ENABLED ? (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-outline flex-1 py-2.5 text-[12px]"
+            >
+              📸 사진 첨부
+            </button>
+          ) : (
+            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-line px-2 py-2.5 text-center text-[11px] text-ink-60">
+              📸 사진은 준비 중이에요
+            </div>
+          )}
           <button
             type="submit"
             disabled={busy}
