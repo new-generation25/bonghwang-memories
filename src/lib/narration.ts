@@ -10,10 +10,11 @@
  */
 
 export type NarrationId =
-  | 'prologue' // 아빠 — 프롤로그 편지
-  | `mission-${string}-intro` // 소영 — 미션 안내
+  | 'intro-soyoung' // 소영 — CUE 0 진입 직후 전화 (약 40초)
+  | 'prologue' // (구) 아빠 — 프롤로그 편지
+  | `mission-${string}-intro` // 소영 — 거점 도착
   | `mission-${string}-outro` // 소영 — 미션 완료
-  | 'complete' // 소영 — 완주 축하
+  | 'complete' // 소영 — CUE 7.0 완주 작별
 
 const BASE_PATH = '/audio'
 

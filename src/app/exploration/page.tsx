@@ -78,12 +78,13 @@ export default function ExplorationPage() {
     router.push(`/mission/${mission.missionId}`)
   }
 
+  // 새 제목 형식: "첫 번째 소원: 엄마와의 러브스토리 — 봉황1935"
   const getCurrentMissionTitle = () => {
     const nextMission = mainMissions.find(m => !completedMissions.includes(m.missionId))
     if (nextMission) {
-      return `${nextMission.order}단계: ${nextMission.title.split(':')[0]}를 찾아서`
+      return nextMission.title
     }
-    return completedMissions.length === 5 ? '모든 기억을 되찾았습니다!' : '아버지의 첫 번째 기억을 찾아서'
+    return completedMissions.length === 5 ? '다섯 소원을 모두 이뤘습니다!' : '첫 번째 소원을 찾아서'
   }
 
   const progressPct = Math.round((completedMissions.length / 5) * 100)

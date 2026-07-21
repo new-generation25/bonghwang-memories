@@ -39,12 +39,13 @@ export default function TreasurePage() {
     const board = []
     
     // Main mission mapping to treasure items (diagonal line: 0,0 -> 1,1 -> 2,2 -> 3,3 -> 4,4)
+    // 다섯 소원 = EP.1 5거점 (대각선 배치)
     const mainMissionMapping = {
-      0: { id: 'main-1', title: '마을의 우물', emoji: '🏺', type: 'QR', isMainMission: true }, // 첫 번째 기억
-      6: { id: 'main-2', title: '오래된 목욕탕', emoji: '🛁', type: 'PHOTO', isMainMission: true }, // 두 번째 기억  
-      12: { id: 'main-3', title: '보물 LP판', emoji: '💿', type: 'QUIZ', isMainMission: true }, // 세 번째 기억
-      18: { id: 'main-4', title: '봉황동 벽화', emoji: '🎨', type: 'PHOTO', isMainMission: true }, // 네 번째 기억
-      24: { id: 'main-5', title: '김수로왕릉', emoji: '👑', type: 'GPS', isMainMission: true }, // 마지막 기억
+      0: { id: 'main-1', title: '봉황1935', emoji: '💧', type: 'QR', isMainMission: true }, // ① 엄마와의 러브스토리
+      6: { id: 'main-2', title: '미야상회', emoji: '🥛', type: 'PHOTO', isMainMission: true }, // ② 목욕탕 대신 바나나우유
+      12: { id: 'main-3', title: '능소화 고택', emoji: '🌺', type: 'PHOTO', isMainMission: true }, // ③ 예쁜 사진 찍어주기
+      18: { id: 'main-4', title: '카페 탱자', emoji: '📻', type: 'QUIZ', isMainMission: true }, // ④ 좋아하는 음악 함께 듣기
+      24: { id: 'main-5', title: '방하림', emoji: '🎪', type: 'GPS', isMainMission: true }, // ⑤ 가족오락관 같이 나가기
     }
     
     // Regular treasure items for other positions

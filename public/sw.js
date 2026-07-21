@@ -9,6 +9,7 @@ const urlsToCache = [
 // 아직 준비되지 않은 파일이 있을 수 있어 개별로 담고 실패는 무시한다.
 // (addAll은 하나만 404여도 설치 전체가 실패한다)
 const audioToCache = [
+  '/audio/intro-soyoung.mp3',
   '/audio/prologue.m4a',
   '/audio/prologue.mp3',
   '/audio/mission-main-1-outro.m4a',

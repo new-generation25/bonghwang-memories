@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthModal from '@/components/AuthModal'
 import Cassette from '@/components/Cassette'
+import NarrationPlayer from '@/components/NarrationPlayer'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function IntroPage() {
@@ -114,13 +115,32 @@ export default function IntroPage() {
 
       {/* 실행 영역 — 포스터 바깥 */}
       <div className="mx-auto max-w-[380px] px-4 pb-10 pt-5">
+        {/* 진입 텍스트 — 대본 C절 */}
+        <p className="text-center text-[13px] font-bold leading-relaxed text-ink">
+          19년 만에 고향에 돌아온 친구가,
+          <br />
+          당신에게 하루를 부탁했습니다.
+        </p>
+        <p className="mt-1 text-center text-[11px] leading-relaxed text-ink-60">
+          기억을 잃어가는 아버지의 다섯 소원.
+          <br />
+          오늘, 소영과 함께 봉황동을 걷습니다.
+        </p>
+
+        {/* 소영의 인트로 — 음성 파일이 없으면 표시되지 않는다 */}
+        <NarrationPlayer
+          id="intro-soyoung"
+          label="소영의 목소리 · 19년 만의 전화"
+          className="mt-4"
+        />
+
         {showButton && (
           <button
             onClick={handleStartJourney}
-            className="btn-teal w-full text-center text-[15px]"
+            className="btn-teal mt-4 w-full text-center text-[15px]"
             style={{ animation: 'slideUp 0.4s ease-out' }}
           >
-            ▶ PLAY — 이야기 열기
+            소영의 이야기 듣기 ▶
             <small className="mt-0.5 block text-[10px] font-normal opacity-85">
               {profile ? `${profile.nickname} 기록자로 이어가기` : '기록자 등록 후 바로 시작'}
             </small>
