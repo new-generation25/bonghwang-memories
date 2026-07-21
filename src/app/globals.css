@@ -484,6 +484,175 @@ a {
   color: rgb(var(--cream));
 }
 
+/* ───────── 인트로 키 비주얼 포스터 ─────────
+   시안 2장 '메인 포스터'를 그대로 옮긴 것.
+   내부 수치는 모두 380×532 원본 기준값이라 임의로 바꾸면 비율이 깨진다.
+   좁은 화면에서는 통째로 축소해 비율을 유지한다. */
+.kv-stage {
+  display: flex;
+  justify-content: center;
+  transform-origin: top center;
+}
+
+@media (max-width: 404px) { .kv-stage { transform: scale(0.95); } }
+@media (max-width: 384px) { .kv-stage { transform: scale(0.9); } }
+@media (max-width: 366px) { .kv-stage { transform: scale(0.85); } }
+
+.kv-poster {
+  width: 380px;
+  aspect-ratio: 3 / 4.2;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 16px 36px rgba(43, 36, 32, 0.3);
+  background: rgb(var(--cream));
+  flex-shrink: 0;
+}
+
+/* 노을 동심원 — 레코드판·테이프 릴을 동시에 연상시키는 이중 장치 */
+.kv-poster .sun {
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, transparent 0 44px, rgba(242, 179, 61, 0.16) 44px 88px),
+    radial-gradient(circle at 50% 42%, rgba(242, 179, 61, 0.55) 0 90px, rgba(232, 114, 44, 0.35) 90px 160px, transparent 160px);
+}
+
+.kv-poster .rays {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 46%;
+  background: repeating-linear-gradient(180deg, transparent 0 22px, rgba(46, 138, 128, 0.06) 22px 24px);
+}
+
+/* 마스킹테이프 지역 태그 — 지역판 교체 지점 */
+.kv-poster .tape1 {
+  position: absolute;
+  top: 18px;
+  left: -14px;
+  background: rgb(var(--teal));
+  color: rgb(var(--cream));
+  font-weight: 900;
+  font-size: 12px;
+  padding: 6px 30px;
+  transform: rotate(-7deg);
+  letter-spacing: 0.22em;
+  box-shadow: 2px 3px 0 rgba(31, 98, 92, 0.35);
+}
+
+/* 타이틀 — 티얼 글자 + 옐로 오프셋 그림자, 기울기 -6° 고정 */
+.kv-poster h1 {
+  position: absolute;
+  top: 64px;
+  left: 26px;
+  right: 26px;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 52px;
+  line-height: 1.05;
+  color: rgb(var(--teal-dk));
+  transform: skewX(-6deg);
+  text-shadow: 4px 4px 0 rgba(242, 179, 61, 0.85);
+}
+
+.kv-poster h1 span { color: rgb(var(--rec-red)); }
+
+.kv-poster .sub-band {
+  position: absolute;
+  top: 196px;
+  left: 26px;
+  background: rgb(var(--shell));
+  color: rgb(var(--sunset-yellow));
+  font-weight: 900;
+  font-size: 13.5px;
+  padding: 7px 18px;
+  transform: skewX(-6deg);
+}
+
+.kv-poster .price-stick {
+  position: absolute;
+  top: 210px;
+  right: 14px;
+  width: 82px;
+  height: 82px;
+  background: rgb(var(--rec-red));
+  border-radius: 50%;
+  border: 3px dashed rgba(243, 234, 211, 0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgb(var(--cream));
+  font-weight: 900;
+  font-size: 11px;
+  transform: rotate(9deg);
+  z-index: 6;
+  box-shadow: 0 6px 14px rgba(43, 36, 32, 0.28);
+}
+
+.kv-poster .price-stick b { font-size: 17px; }
+
+.kv-poster .cass-hold {
+  position: absolute;
+  top: 244px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-3.5deg);
+}
+
+.kv-poster .cass-hold .cassette {
+  width: 272px;
+  height: 172px;
+}
+
+.kv-poster .slogan {
+  position: absolute;
+  bottom: 64px;
+  left: 26px;
+  right: 26px;
+  font-weight: 900;
+  font-size: 16.5px;
+  color: rgb(var(--shell));
+  line-height: 1.55;
+}
+
+.kv-poster .slogan em {
+  font-style: normal;
+  background: linear-gradient(transparent 55%, rgb(var(--sunset-yellow)) 55%);
+  padding: 0 2px;
+}
+
+.kv-poster .qr {
+  position: absolute;
+  bottom: 60px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  background:
+    conic-gradient(rgb(var(--shell)) 25%, transparent 0 50%, rgb(var(--shell)) 0 75%, transparent 0) 0 0 / 26px 26px,
+    repeating-linear-gradient(rgb(var(--shell)) 0 4px, rgb(var(--cream)) 4px 8px);
+  border: 4px solid rgb(var(--paper));
+  outline: 1.5px solid rgb(var(--shell));
+}
+
+.kv-poster .foot {
+  position: absolute;
+  bottom: 16px;
+  left: 26px;
+  right: 26px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgb(var(--ink60));
+}
+
 /* ───────── 테이프 진행 게이지 ─────────
    노을 그라데이션은 게이지·축하 화면 전용 (UI 버튼 사용 금지) */
 .tape-prog {
