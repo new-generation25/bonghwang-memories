@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   signUp,
   signIn,
   signInWithGoogle,
+  completeGoogleSignUp,
+  isNicknameTaken,
   validateLoginId,
   validatePassword,
   validateNickname,
@@ -17,7 +19,15 @@ interface AuthModalProps {
   onSuccess?: () => void
 }
 
-type Mode = 'login' | 'signup'
+type Mode = 'login' | 'signup' | 'google-nickname'
+
+/** 닉네임 중복 확인 상태 */
+type NickCheck =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'ok' }
+  | { state: 'taken' }
+  | { state: 'invalid'; message: string }
 
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   const { available, applyProfile } = useAuth()
@@ -27,6 +37,43 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [nickname, setNickname] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // 구글 신규 가입 — 닉네임을 정하기 전까지 프로필 문서를 만들지 않는다
+  const [googleUid, setGoogleUid] = useState<string | null>(null)
+  const [nickCheck, setNickCheck] = useState<NickCheck>({ state: 'idle' })
+
+  /**
+   * 닉네임 중복 확인 — 입력이 멈춘 뒤에 조회한다.
+   * 매 글자마다 Firestore를 때리지 않도록 400ms 기다린다.
+   */
+  useEffect(() => {
+    const trimmed = nickname.trim()
+    if (!trimmed) {
+      setNickCheck({ state: 'idle' })
+      return
+    }
+    const invalid = validateNickname(trimmed)
+    if (invalid) {
+      setNickCheck({ state: 'invalid', message: invalid })
+      return
+    }
+
+    setNickCheck({ state: 'checking' })
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const taken = await isNicknameTaken(trimmed, googleUid ?? undefined)
+        if (!cancelled) setNickCheck({ state: taken ? 'taken' : 'ok' })
+      } catch {
+        // 조회 실패로 가입을 막지 않는다 — 최종 확인은 제출 시점에 한 번 더 한다
+        if (!cancelled) setNickCheck({ state: 'idle' })
+      }
+    }, 400)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [nickname, googleUid])
 
   if (!isOpen) return null
 
@@ -44,10 +91,34 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setError('')
     setBusy(true)
     try {
-      applyProfile(await signInWithGoogle())
-      onSuccess?.()
+      const result = await signInWithGoogle()
+      if (result.kind === 'existing') {
+        applyProfile(result.profile)
+        onSuccess?.()
+        return
+      }
+      // 신규 — 구글 실명이 그대로 노출되지 않도록 닉네임부터 정한다
+      setGoogleUid(result.uid)
+      setNickname(result.suggestedNickname)
+      setMode('google-nickname')
     } catch (err) {
       setError(err instanceof Error ? err.message : '구글 로그인에 실패했습니다.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** 구글 신규 가입 마무리 */
+  const handleGoogleNickname = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!googleUid) return
+    setError('')
+    setBusy(true)
+    try {
+      applyProfile(await completeGoogleSignUp(googleUid, nickname))
+      onSuccess?.()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '닉네임 저장에 실패했습니다.')
     } finally {
       setBusy(false)
     }
@@ -87,21 +158,70 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     }
   }
 
+  // 가입 모드는 필드가 늘어 작은 기기에서 뷰포트를 넘는다.
+  // 바깥에 세로 스크롤을 열어두지 않으면 버튼에 닿을 방법이 아예 없다.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-shell/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm overflow-hidden rounded-xl bg-paper shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-shell/60 p-4 py-8 backdrop-blur-sm">
+      <div className="my-auto w-full max-w-sm overflow-hidden rounded-xl bg-paper shadow-2xl">
         {/* 3색 밴드 — 브랜드 식별 */}
-        <div className="stripe-band" />
+        <div className="stripe-rule" />
 
         <div className="trackbar px-5 py-4">
           <div className="font-mono-retro text-[10px] text-sunset">
-            {mode === 'login' ? 'PLAY ▶ 기록자 인증' : 'REC ● 새 기록자 등록'}
+            {mode === 'login'
+              ? 'PLAY ▶ 기록자 인증'
+              : mode === 'google-nickname'
+                ? 'REC ● 이름 정하기'
+                : 'REC ● 새 기록자 등록'}
           </div>
           <h2 className="appbar-title mt-1 text-[19px]">
-            {mode === 'login' ? '다시 오셨군요' : '기록자로 등록하기'}
+            {mode === 'login'
+              ? '다시 오셨군요'
+              : mode === 'google-nickname'
+                ? '어떤 이름으로 기록할까요?'
+                : '기록자로 등록하기'}
           </h2>
         </div>
 
+        {/* 구글 신규 가입 — 닉네임만 받는다 */}
+        {mode === 'google-nickname' && (
+          <form onSubmit={handleGoogleNickname} className="px-5 py-5">
+            <p className="mb-4 rounded-lg bg-cream px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-60">
+              커뮤니티와 랭킹에는 이 이름만 보입니다. 구글 계정의 실명은
+              표시되지 않아요.
+            </p>
+
+            <label className="mb-1 block text-[11px] font-bold text-teal-dk">
+              닉네임
+            </label>
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="2~12자"
+              maxLength={12}
+              autoFocus
+              className="w-full rounded-lg border border-line bg-cream px-3 py-2.5 text-sm outline-none focus:border-teal"
+            />
+            <NicknameHint check={nickCheck} />
+
+            {error && (
+              <p className="mt-3 rounded-lg bg-rec/10 px-3 py-2 text-[11px] font-bold text-rec">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={busy || nickCheck.state !== 'ok'}
+              className="btn-teal mt-4 w-full text-[15px] disabled:opacity-60"
+            >
+              {busy ? '저장 중...' : '이 이름으로 시작하기'}
+            </button>
+          </form>
+        )}
+
+        {mode !== 'google-nickname' && (
         <form onSubmit={handleSubmit} className="px-5 py-5">
           {!available && (
             <div className="mb-4 rounded-lg border border-rec bg-rec/10 px-3 py-2.5 text-[11px] text-rec">
@@ -127,9 +247,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                placeholder="커뮤니티에 표시될 이름 (12자 이하)"
-                className="mb-3 w-full rounded-lg border border-line bg-cream px-3 py-2.5 text-sm outline-none focus:border-teal"
+                placeholder="커뮤니티에 표시될 이름 (2~12자)"
+                maxLength={12}
+                className="w-full rounded-lg border border-line bg-cream px-3 py-2.5 text-sm outline-none focus:border-teal"
               />
+              <div className="mb-3">
+                <NicknameHint check={nickCheck} />
+              </div>
             </>
           )}
 
@@ -151,7 +275,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || (mode === 'signup' && nickCheck.state !== 'ok')}
             className="btn-teal mt-4 w-full text-[15px] disabled:opacity-60"
           >
             {busy ? '처리 중...' : mode === 'login' ? '▶ 로그인' : '● 등록하고 시작하기'}
@@ -232,7 +356,31 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             </button>
           )}
         </form>
+        )}
       </div>
     </div>
   )
+}
+
+/** 닉네임 중복 확인 결과 표시 */
+function NicknameHint({ check }: { check: NickCheck }) {
+  if (check.state === 'idle') return null
+
+  const style =
+    check.state === 'ok'
+      ? 'text-teal-dk'
+      : check.state === 'checking'
+        ? 'text-ink-60'
+        : 'text-rec'
+
+  const text =
+    check.state === 'checking'
+      ? '확인 중…'
+      : check.state === 'ok'
+        ? '✓ 사용할 수 있는 이름이에요'
+        : check.state === 'taken'
+          ? '이미 사용 중인 이름이에요'
+          : check.message
+
+  return <p className={`mt-1 text-[11px] font-bold ${style}`}>{text}</p>
 }

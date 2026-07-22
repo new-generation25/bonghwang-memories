@@ -34,6 +34,13 @@ service cloud.firestore {
       allow update: if isOwner(userId)
                     && request.resource.data.uid == resource.data.uid;
       allow delete: if false;
+
+      // ───────── 투어 진행도 ─────────
+      // 닉네임·점수와 달리 남에게 보일 이유가 없다 — 본인만 읽고 쓴다.
+      // 기기를 바꿔 로그인하면 여기서 이어 걷는다.
+      match /progress/{docId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     // ───────── 게시글 ─────────

@@ -1,8 +1,17 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  ReactNode,
+  useCallback,
+} from 'react'
 import { subscribeAuth, getProfile, signOutUser, Profile } from '@/lib/auth'
 import { auth, isFirebaseReady } from '@/lib/firebase'
+import { pullTour, pushTour, startTourSync } from '@/lib/tourSync'
 
 interface AuthContextValue {
   profile: Profile | null
@@ -45,15 +54,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [available, setAvailable] = useState(false)
 
+  // 진행도 동기화 구독 해제 함수 — 로그아웃·계정 전환 때 끊는다
+  const stopSyncRef = useRef<(() => void) | null>(null)
+
   useEffect(() => {
     setAvailable(isFirebaseReady())
 
     const unsubscribe = subscribeAuth(async (user) => {
+      // 이전 계정의 동기화를 먼저 끊는다
+      stopSyncRef.current?.()
+      stopSyncRef.current = null
+
       if (user) {
         try {
           setProfile(await getProfileWithRetry(user.uid))
         } catch {
           setProfile(null)
+        }
+        // 서버 기록을 로컬과 병합한 뒤(기기 교체 대비) 이후 변경을 계속 올린다
+        try {
+          await pullTour(user.uid)
+          await pushTour(user.uid)
+          stopSyncRef.current = startTourSync(user.uid)
+        } catch {
+          // 동기화 실패로 투어를 막지 않는다 — localStorage가 원본이다
         }
       } else {
         setProfile(null)
@@ -61,7 +85,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     })
 
-    return unsubscribe
+    return () => {
+      stopSyncRef.current?.()
+      stopSyncRef.current = null
+      unsubscribe()
+    }
   }, [])
 
   const applyProfile = useCallback((next: Profile) => {
@@ -82,6 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [profile])
 
   const logout = useCallback(async () => {
+    // 로그아웃 전에 마지막 진행도를 확정 저장한다
+    const uid = auth?.currentUser?.uid
+    if (uid) await pushTour(uid)
+    stopSyncRef.current?.()
+    stopSyncRef.current = null
     await signOutUser()
     setProfile(null)
   }, [])

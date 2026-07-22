@@ -87,39 +87,12 @@ function load(): TourState {
   } catch {
     // 손상된 저장값은 무시하고 초기화
   }
-  return migrateLegacy()
-}
-
-/**
- * 구 진행 상태(main-1 완료 등)를 새 스키마로 1회 이관한다.
- * main-n 완료 → 트랙 n 완료 + (n≤4) frag_n 지급으로 근사.
- */
-function migrateLegacy(): TourState {
-  const next = { ...INITIAL_TOUR_STATE }
-  try {
-    const raw = window.localStorage.getItem('completedMissions')
-    if (raw) {
-      const ids = JSON.parse(raw) as string[]
-      const mains = ids
-        .filter((id) => id.startsWith('main-'))
-        .map((id) => parseInt(id.slice(5), 10))
-        .filter((n) => n >= 1 && n <= 5)
-      if (mains.length > 0) {
-        next.tracksCompleted = mains.sort()
-        next.fragments = mains
-          .filter((n) => n <= 4)
-          .map((n) => `frag_${n}` as FragmentId)
-        next.speechMode = mains.includes(1) ? 'casual' : 'formal'
-        next.phase = mains.length >= 5 ? 'act2' : 'act1'
-        next.bingo = { ...INITIAL_TOUR_STATE.bingo, unlocked: mains.length >= 5 }
-        next.currentTrack = (Math.min(Math.max(...mains) + 1, 5) as TourState['currentTrack'])
-        next.paid = true
-      }
-    }
-  } catch {
-    // 이관 실패는 치명적이지 않다 — 새로 시작하면 된다
-  }
-  return next
+  // 저장값이 없으면 처음부터 시작한다.
+  // 구 키(completedMissions)를 읽어 진행 상태를 복원하지 않는다 —
+  // 그 키는 score.ts가 점수 적립용으로 지금도 쓰고 있어서(main-1 등),
+  // 이관 로직을 두면 결제하지 않은 사람이 paid=true로 복원돼 결제·인트로를
+  // 통째로 건너뛴다. 구 앱은 컨셉 자체가 달라 이어받을 진행도도 없다.
+  return { ...INITIAL_TOUR_STATE }
 }
 
 function persist() {
