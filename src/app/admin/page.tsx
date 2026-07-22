@@ -44,21 +44,31 @@ export default function AdminPage() {
   const [points, setPoints] = useState<AdminPointEntry[]>([])
   const [responses, setResponses] = useState<AdminSurveyResponse[]>([])
   const [posts, setPosts] = useState<AdminPost[]>([])
-  const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'denied'>('idle')
+  const [state, setState] = useState<
+    'idle' | 'loading' | 'ready' | 'denied' | 'error'
+  >('idle')
+  const [errorMsg, setErrorMsg] = useState('')
 
   const load = useCallback(async () => {
     setState('loading')
-    const [u, p, r, po] = await Promise.all([
-      fetchUsers(),
-      fetchAllPoints(),
-      fetchSurveyResponses(),
-      fetchPosts(),
-    ])
-    setUsers(u)
-    setPoints(p)
-    setResponses(r)
-    setPosts(po)
-    setState('ready')
+    try {
+      const [u, p, r, po] = await Promise.all([
+        fetchUsers(),
+        fetchAllPoints(),
+        fetchSurveyResponses(),
+        fetchPosts(),
+      ])
+      setUsers(u)
+      setPoints(p)
+      setResponses(r)
+      setPosts(po)
+      setState('ready')
+    } catch (err) {
+      // 규칙을 아직 게시하지 않았으면 users 읽기가 권한 거부로 떨어진다.
+      // 잡지 않으면 화면이 "불러오는 중…"에서 영영 멈춰 원인을 알 수 없다.
+      setErrorMsg(err instanceof Error ? err.message : String(err))
+      setState('error')
+    }
   }, [])
 
   useEffect(() => {
@@ -92,6 +102,29 @@ export default function AdminPage() {
 
   if (loading || state === 'idle' || state === 'loading') {
     return <Shell><p className="text-[13px] text-ink-60">불러오는 중…</p></Shell>
+  }
+
+  if (state === 'error') {
+    return (
+      <Shell>
+        <div className="card-paper p-6 text-center">
+          <div className="text-4xl">⚠️</div>
+          <h2 className="mt-2 font-display text-[17px] text-ink">
+            데이터를 읽지 못했습니다
+          </h2>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-ink-60">
+            firestore.rules가 아직 게시되지 않았을 수 있습니다. 콘솔에서
+            규칙을 게시한 뒤 다시 시도해주세요.
+          </p>
+          <p className="mt-2 break-all font-mono-retro text-[10px] text-ink-60">
+            {errorMsg}
+          </p>
+          <button onClick={load} className="btn-teal mt-4 px-5 text-[14px]">
+            다시 시도
+          </button>
+        </div>
+      </Shell>
+    )
   }
 
   if (state === 'denied') {
