@@ -20,7 +20,7 @@ import { BINGO_ALWAYS_OPEN } from '@/lib/tracks'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { markBingoCell, mutateTour, addCoupon } from '@/lib/tourState'
-import { POINTS, awardPoints } from '@/lib/score'
+import { award } from '@/lib/points'
 import { logEvent } from '@/lib/analytics'
 
 export default function BingoPage() {
@@ -53,7 +53,7 @@ export default function BingoPage() {
     if (lines > tour.bingo.lines) {
       for (let i = tour.bingo.lines + 1; i <= lines; i++) {
         addCoupon(`bingo-line-${i}`)
-        awardPoints(`bingo-line-${i}`, POINTS.bingoLine)
+        void award(`bingo-line-${i}`, 'treasureLine')
         logEvent('bingo_line', { n: i })
       }
       mutateTour((prev) => ({ bingo: { ...prev.bingo, lines } }))
@@ -115,7 +115,7 @@ export default function BingoPage() {
     if (!pendingCell) return
     unlockAudio()
     markBingoCell(pendingCell.id)
-    awardPoints(pendingCell.id, POINTS.bingoCell)
+    void award(`bingo-cell-${pendingCell.id}`, 'bonusMission')
     if (pendingCell.cueAction) {
       dispatchAction(pendingCell.cueAction)
     }

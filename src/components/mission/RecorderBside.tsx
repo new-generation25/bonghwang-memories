@@ -22,7 +22,7 @@ import { submitOnCtrlEnter } from '@/lib/submitOnEnter'
 import { putBlob } from '@/lib/blobStore'
 import { dispatchAction } from '@/lib/cueEngine'
 import { logEvent } from '@/lib/analytics'
-import { storage } from '@/lib/firebase'
+import { auth, storage } from '@/lib/firebase'
 import { BsideEntry, mutateTour } from '@/lib/tourState'
 
 const MAX_SEC = 60
@@ -159,15 +159,19 @@ export default function RecorderBside() {
       if (blob && entry.idbKey) {
         await putBlob(entry.idbKey, blob)
       }
-      // 서버 업로드는 명시 동의 시에만 (D12)
-      if (uploadConsent && blob && storage) {
+      // 서버 업로드는 명시 동의 시에만 (D12).
+      // 경로 첫 칸이 uid여야 storage.rules가 소유권을 판정할 수 있고,
+      // 같은 밀리초에 녹음한 두 사람이 서로를 덮어쓰는 일도 막힌다.
+      const uid = auth?.currentUser?.uid
+      if (uploadConsent && blob && storage && uid) {
         try {
           const { ref, uploadBytes } = await import('firebase/storage')
-          const path = `bside/${Date.now()}-recording`
+          const ext = (blob.type.split('/')[1] ?? 'webm').split(';')[0]
+          const path = `bside/${uid}/${Date.now()}-memo.${ext}`
           await uploadBytes(ref(storage, path), blob)
           entry = { ...entry, uploaded: true }
         } catch {
-          // 업로드 실패는 로컬 저장만으로 진행
+          // 업로드 실패는 로컬 저장만으로 진행 — 원본은 IndexedDB에 있다
         }
       }
       mutateTour({ bsideEntry: entry })

@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
 import CuePlayer from '@/components/cue/CuePlayer'
+import SurveyCard from '@/components/SurveyCard'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlobUrl } from '@/lib/blobStore'
@@ -205,6 +206,9 @@ export default function FinalePage() {
             )
           })}
         </div>
+
+        {/* 완주 설문 — 기억이 선명할 때 받는다 */}
+        <SurveyCard />
 
         {/* 우리의 테이프 앨범 */}
         {(photoUrls.length > 0 || tour.bsideEntry) && (

@@ -160,6 +160,7 @@ export function startTourSync(uid: string, delayMs = 1500): () => void {
     timer = setTimeout(() => {
       lastSent = JSON.stringify(toSynced(getTourState()))
       void pushTour(uid)
+      void syncUserStats(uid)
     }, delayMs)
   })
 
@@ -188,4 +189,36 @@ export function startTourSync(uid: string, delayMs = 1500): () => void {
 /** 로그인 세션의 uid — 편의용 */
 export function currentUid(): string | null {
   return auth?.currentUser?.uid ?? null
+}
+
+/**
+ * 관리자 화면이 쓰는 요약 통계를 users 문서에 올린다.
+ *
+ * 진행도 문서(users/{uid}/progress/tour)만 있으면 참여자 한 명을 보려고
+ * 하위 문서를 전부 열어야 한다. 목록·집계에 필요한 값만 상위 문서에
+ * 평평하게 복사해두면 users 컬렉션 한 번 읽기로 대시보드가 그려진다.
+ */
+export async function syncUserStats(uid: string): Promise<void> {
+  if (!isFirebaseReady() || !db) return
+  const s = getTourState()
+  try {
+    await setDoc(
+      doc(db, 'users', uid),
+      {
+        missionCount: s.tracksCompleted.length + s.bingo.cellsDone.length,
+        tracksCompleted: s.tracksCompleted.length,
+        bingoCells: s.bingo.cellsDone.length,
+        bingoLines: s.bingo.lines,
+        couponCount: s.coupons.length,
+        phase: s.phase,
+        paid: s.paid,
+        startedAt: s.startTime ?? null,
+        finishedAt: s.phase === 'done' ? (s.startTime ? Date.now() : null) : null,
+        lastActiveAt: serverTimestamp(),
+      },
+      { merge: true }
+    )
+  } catch {
+    // 통계 저장 실패로 투어를 막지 않는다
+  }
 }

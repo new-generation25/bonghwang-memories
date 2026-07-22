@@ -11,7 +11,8 @@ import {
 } from 'react'
 import { subscribeAuth, getProfile, signOutUser, Profile } from '@/lib/auth'
 import { auth, isFirebaseReady } from '@/lib/firebase'
-import { pullTour, pushTour, startTourSync } from '@/lib/tourSync'
+import { pullTour, pushTour, startTourSync, syncUserStats } from '@/lib/tourSync'
+import { flushPendingPoints } from '@/lib/points'
 
 interface AuthContextValue {
   profile: Profile | null
@@ -76,6 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await pullTour(user.uid)
           await pushTour(user.uid)
           stopSyncRef.current = startTourSync(user.uid)
+          // 로그인 전에 쌓인 적립을 올린다 — 투어 도중 로그인하는 경우가 있다
+          await flushPendingPoints(user.uid)
+          await syncUserStats(user.uid)
         } catch {
           // 동기화 실패로 투어를 막지 않는다 — localStorage가 원본이다
         }

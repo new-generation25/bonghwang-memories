@@ -5,6 +5,7 @@ import { createPost, validateImage } from '@/lib/community'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlob } from '@/lib/blobStore'
+import { award } from '@/lib/points'
 import { submitOnCtrlEnter } from '@/lib/submitOnEnter'
 
 interface PostComposerProps {
@@ -14,11 +15,14 @@ interface PostComposerProps {
 /**
  * 사진 업로드 사용 가능 여부.
  *
- * Cloud Storage는 Blaze(종량제) 요금제에서만 쓸 수 있는데 현재 프로젝트는 Spark다.
- * 이 상태로 사진을 첨부하면 업로드 단계에서 실패하면서 작성 중이던 글까지 날아가므로
- * 첨부 자체를 막아둔다. Storage를 활성화하면 이 값만 true로 바꾸면 된다.
+ * Cloud Storage는 Blaze(종량제) 요금제에서만 쓸 수 있다. Spark였을 때는
+ * 첨부하면 업로드 단계에서 실패하며 작성 중이던 글까지 날아가서 막아뒀었다.
+ * 2026-07-23 Blaze 전환 + storage.rules 게시로 열었다.
+ *
+ * ⚠️ Storage 버킷이 없거나 규칙이 게시되지 않은 환경(다른 Firebase 프로젝트로
+ * 붙일 때 등)에서는 다시 false로 내려야 한다.
  */
-const PHOTO_UPLOAD_ENABLED = false
+const PHOTO_UPLOAD_ENABLED = true
 
 /** 후기 작성 — 사진 1장 + 본문. 사진은 선택 사항이다. */
 export default function PostComposer({ onPosted }: PostComposerProps) {
@@ -138,6 +142,9 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
         comment: comment.trim(),
         file,
       })
+
+      // 첫 공유에만 적립된다 — refId가 uid 고정이라 두 번째 글부터는 중복 처리
+      void award(`share-${profile.uid}`, 'shareRecord')
 
       setComment('')
       setMissionTitle('')

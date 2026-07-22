@@ -34,7 +34,7 @@ import {
 } from './tourState'
 import { timingsFor } from './audioTimings'
 import { STATIONS } from './tracks'
-import { POINTS, awardPoints } from './score'
+import { award } from './points'
 import { logEvent } from './analytics'
 
 /** D9 — 스킵 허용 시점(초) */
@@ -484,7 +484,7 @@ function runDirective(directive: UiDirective, cueId: CueId) {
     const track = parseInt(directive.slice('track_check:'.length), 10)
     // 점수는 최초 완료에만 — 다시듣기(D9)로 지시자가 재실행돼도 중복 적립 금지
     if (!getTourState().tracksCompleted.includes(track)) {
-      awardPoints(`main-${track}`, POINTS.mainTrack)
+      void award(`main-${track}`, 'mainMission')
     }
     completeTrack(track)
   } else if (directive === 'speech_mode:casual') {

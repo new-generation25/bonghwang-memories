@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// 봉황 메모리즈 — Cloud Storage 보안 규칙
+//
+// 원칙
+//  · 경로 첫 칸이 uid다 — 남의 폴더에 쓸 수 없다
+//  · 클라이언트 검사(용량·형식)는 우회 가능하므로 여기서 다시 강제한다
+//  · 커뮤니티 사진만 공개 읽기, 개인 녹음은 본인만
+//  · 정의하지 않은 경로는 전부 거부 (기본값)
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|heic)');
+    }
+
+    // ───────── 커뮤니티 후기 사진 ─────────
+    // 글이 공개이므로 사진도 공개로 읽힌다. 쓰기는 본인 폴더에만.
+    // 5MB 상한은 community.ts의 MAX_IMAGE_BYTES와 같은 값이다.
+    match /posts/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(userId)
+                   && request.resource.size <= 5 * 1024 * 1024
+                   && isImage();
+      allow delete: if isOwner(userId);
+    }
+
+    // ───────── '나의 육십 초' 음성 메모 ─────────
+    // 명시 동의(D12)한 경우에만 올라온다. 사적인 녹음이라 읽기도 본인만.
+    // 60초 상한이므로 10MB면 충분하다.
+    match /bside/{userId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+                   && request.resource.size <= 10 * 1024 * 1024
+                   && request.resource.contentType.matches('audio/.*');
+      allow delete: if isOwner(userId);
+    }
+  }
+}

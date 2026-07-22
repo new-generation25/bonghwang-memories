@@ -19,6 +19,14 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // 관리자 — 구글 로그인 토큰의 이메일로 판정한다.
+    // admins 컬렉션을 두면 최초 관리자를 넣는 부트스트랩이 필요한데,
+    // 토큰에 이메일이 있어 여기서 바로 비교할 수 있다.
+    function isAdmin() {
+      return request.auth != null
+             && request.auth.token.email == 'socialceos@gmail.com';
+    }
+
     // 이번 수정으로 실제 바뀐 필드 집합
     function changedKeys() {
       return request.resource.data.diff(resource.data).affectedKeys();
@@ -29,18 +37,49 @@ service cloud.firestore {
     // 문서 ID가 곧 uid이므로 본인만 만들고 고칠 수 있다.
     match /users/{userId} {
       allow read: if true;
-      allow create: if isOwner(userId)
-                    && request.resource.data.uid == userId;
-      allow update: if isOwner(userId)
-                    && request.resource.data.uid == resource.data.uid;
-      allow delete: if false;
+      allow create: if (isOwner(userId) && request.resource.data.uid == userId)
+                    || isAdmin();
+      allow update: if (isOwner(userId)
+                        && request.resource.data.uid == resource.data.uid)
+                    || isAdmin();
+      // 관리자만 지울 수 있다 — 데모 데이터 정리용
+      allow delete: if isAdmin();
 
       // ───────── 투어 진행도 ─────────
       // 닉네임·점수와 달리 남에게 보일 이유가 없다 — 본인만 읽고 쓴다.
       // 기기를 바꿔 로그인하면 여기서 이어 걷는다.
       match /progress/{docId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) || isAdmin();
       }
+
+      // ───────── 포인트 적립 내역 ─────────
+      // 문서 ID가 refId라 같은 미션을 두 번 완료해도 덮어쓰기가 되어
+      // 중복 적립이 되지 않는다. 수정·삭제는 막는다.
+      match /points/{refId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if (isOwner(userId)
+                          && request.resource.data.points is int
+                          && request.resource.data.points > 0
+                          && request.resource.data.points <= 500)
+                      || isAdmin();
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+      }
+
+      // ───────── 설문 응답 ─────────
+      // 문서 ID가 surveyId라 한 설문에 한 번만 답할 수 있다.
+      match /surveyResponses/{surveyId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) || isAdmin();
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // ───────── 설문 정의 ─────────
+    // 문항을 코드가 아니라 여기 두어 배포 없이 바꾼다. 쓰기는 관리자만.
+    match /surveys/{surveyId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // ───────── 게시글 ─────────
@@ -84,15 +123,17 @@ service cloud.firestore {
       allow read: if true;
 
       // 남의 이름으로 글을 쓰거나, 좋아요를 부풀린 채 시작할 수 없다
-      allow create: if isSignedIn()
-                    && request.resource.data.authorUid == request.auth.uid
-                    && request.resource.data.likes == 0
-                    && request.resource.data.likedBy.size() == 0
-                    && request.resource.data.commentCount == 0;
+      allow create: if (isSignedIn()
+                        && request.resource.data.authorUid == request.auth.uid
+                        && request.resource.data.likes == 0
+                        && request.resource.data.likedBy.size() == 0
+                        && request.resource.data.commentCount == 0)
+                    || isAdmin();
 
       allow update: if isAuthorEdit() || isLikeToggle() || isCommentCountChange();
 
-      allow delete: if isOwner(resource.data.authorUid);
+      // 신고 대응 — 관리자도 지울 수 있다
+      allow delete: if isOwner(resource.data.authorUid) || isAdmin();
 
       // ───────── 댓글 ─────────
       match /comments/{commentId} {

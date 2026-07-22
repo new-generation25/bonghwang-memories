@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import { UNLOCK_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
+import { award } from '@/lib/points'
 import { useRevealOnChange } from '@/hooks/useRevealOnChange'
 import { useTourState } from '@/hooks/useTourState'
 import { ALL_FRAGMENTS, UNLOCK_THRESHOLD } from '@/lib/tracks'
@@ -32,6 +33,8 @@ export default function UnlockGate() {
     // 조각이 릴에 끼워지는 연출 후 해제 문구 + [B면 재생] 버튼 노출
     setTimeout(() => {
       setRevealed(true)
+      // 스페셜미션 — 조각을 모아 B면을 연 사람에게만
+      void award('special-bside-unlock', 'specialMission')
       // 상태 기록·분석용 — v2에서 큐 재생은 아래 BSIDE 탭이 담당한다
       dispatchAction('unlock_done')
     }, 900)
