@@ -340,8 +340,11 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="bg-shell/85 p-6 flex items-center justify-center">
+      {/* Controls — 셔터가 홈 인디케이터에 걸리지 않도록 안전영역만큼 띄운다 */}
+      <div
+        className="bg-shell/85 p-6 flex items-center justify-center"
+        style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
+      >
         <button
           onClick={capturePhoto}
           disabled={isLoading}

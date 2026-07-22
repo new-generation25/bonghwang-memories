@@ -12,6 +12,7 @@ import {
   deleteComment,
 } from '@/lib/community'
 import { useAuth } from '@/contexts/AuthContext'
+import { submitOnCtrlEnter } from '@/lib/submitOnEnter'
 
 interface PostCardProps {
   post: CommunityPost
@@ -157,7 +158,9 @@ export default function PostCard({ post, onChanged, onRequireLogin }: PostCardPr
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={submitOnCtrlEnter(handleSaveEdit, !busy)}
               rows={3}
+              placeholder="Ctrl+Enter로 저장"
               className="w-full resize-none rounded-lg border border-line bg-cream px-3 py-2 text-[12px] outline-none focus:border-teal"
             />
             <div className="mt-2 flex gap-2">

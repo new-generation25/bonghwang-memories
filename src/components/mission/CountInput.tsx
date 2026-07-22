@@ -9,12 +9,15 @@
 
 import { useState } from 'react'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
+import { useRevealOnChange } from '@/hooks/useRevealOnChange'
+import { submitOnEnter } from '@/lib/submitOnEnter'
 import { TRACK_MISSIONS } from '@/lib/tracks'
 
 export default function CountInput() {
   const [value, setValue] = useState('')
   const [wrong, setWrong] = useState(false)
   const [solved, setSolved] = useState(false)
+  const nextRef = useRevealOnChange<HTMLDivElement>(solved, solved)
 
   const answer = TRACK_MISSIONS.M1.validation?.answer ?? 7
 
@@ -52,6 +55,7 @@ export default function CountInput() {
             setValue(e.target.value.replace(/\D/g, ''))
             setWrong(false)
           }}
+          onKeyDown={submitOnEnter(handleSubmit, value.length > 0 && !solved)}
           placeholder="?"
           className="w-20 rounded-xl border border-line bg-cream px-3 py-3 text-center font-mono-retro text-[22px] text-ink outline-none focus:border-teal"
         />
@@ -80,15 +84,17 @@ export default function CountInput() {
           <p className="text-[12.5px] text-ink-60">
             맞아요, 일곱 개. 가게에 그 시절을 기억하시는 사장님이 계실 거예요.
           </p>
-          <button
-            onClick={() => {
-              unlockAudio()
-              dispatchTap('LISTEN')
-            }}
-            className="btn-teal mt-3 w-full text-[14px]"
-          >
-            👵 사장님의 이야기 듣기 ▶
-          </button>
+          <div ref={nextRef} className="cta-band mt-3">
+            <button
+              onClick={() => {
+                unlockAudio()
+                dispatchTap('LISTEN')
+              }}
+              className="btn-teal w-full text-[14px]"
+            >
+              👵 사장님의 이야기 듣기 ▶
+            </button>
+          </div>
         </div>
       )}
     </div>

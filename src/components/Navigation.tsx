@@ -10,6 +10,7 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import { useTourState } from '@/hooks/useTourState'
+import { BINGO_ALWAYS_OPEN } from '@/lib/tracks'
 
 export default function Navigation() {
   const router = useRouter()
@@ -36,7 +37,7 @@ export default function Navigation() {
       label: '빙고',
       path: '/treasure',
       icon: '🎴',
-      disabled: !tour.bingo.unlocked,
+      disabled: !tour.bingo.unlocked && !BINGO_ALWAYS_OPEN,
     },
     {
       key: 'community',
@@ -47,8 +48,12 @@ export default function Navigation() {
     },
   ]
 
+  // iOS PWA 전체화면에서 홈 인디케이터가 라벨을 덮지 않도록 안전영역만큼 띄운다
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-cream shadow-[0_-4px_14px_rgba(43,36,32,0.12)]">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-40 bg-cream shadow-[0_-4px_14px_rgba(43,36,32,0.12)]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {/* 상단 3색 밴드 — 브랜드 식별 장치 */}
       <div className="stripe-band" />
       <div className="mx-auto flex max-w-md items-center justify-around px-4 py-2">

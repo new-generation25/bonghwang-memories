@@ -10,14 +10,14 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Cassette from '@/components/Cassette'
+import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
 import Navigation from '@/components/Navigation'
 import QRGate from '@/components/QRGate'
 import { useProximityNotice } from '@/hooks/useProximityNotice'
 import { useTourState } from '@/hooks/useTourState'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchQr } from '@/lib/cueEngine'
-import { Station, TRACK_STATIONS, stationByTrack } from '@/lib/tracks'
+import { BINGO_ALWAYS_OPEN, Station, TRACK_STATIONS, stationByTrack } from '@/lib/tracks'
 
 export default function PlayerHomePage() {
   const tour = useTourState()
@@ -40,8 +40,9 @@ export default function PlayerHomePage() {
     router.push(`/track/${station.track}`)
   }
 
+  // pb-32 — 하단 탭바(84px)와 안전영역을 덮는 여백. 탭바를 쓰는 화면 공통값
   return (
-    <div className="flex min-h-screen flex-col bg-cream-base pb-24">
+    <div className="flex min-h-screen flex-col bg-cream-base pb-32">
       <header className="px-4 pt-6 text-center">
         <p className="font-mono-retro text-[11px] tracking-[0.25em] text-teal">
           SIDE A · 다섯 가지 소원
@@ -57,7 +58,7 @@ export default function PlayerHomePage() {
           side={completedCount >= 5 ? 'done' : 'A'}
           progress={progress}
           spin="none"
-          scale={0.85}
+          scale={CASSETTE_SCALE}
         />
       </div>
 
@@ -96,15 +97,15 @@ export default function PlayerHomePage() {
           )
         })}
 
-        {/* 빙고 배지 — 5개 소원 완료 전 잠김 */}
+        {/* 빙고 배지 — 5개 소원 완료 전 잠김 (BINGO_ALWAYS_OPEN이면 검수용 개방) */}
         <div
           className={`mt-4 rounded-xl border px-4 py-3 text-center ${
-            tour.bingo.unlocked
+            tour.bingo.unlocked || BINGO_ALWAYS_OPEN
               ? 'border-sunset-yellow bg-sunset-yellow/15'
               : 'border-line bg-paper/60'
           }`}
         >
-          {tour.bingo.unlocked ? (
+          {tour.bingo.unlocked || BINGO_ALWAYS_OPEN ? (
             <button
               onClick={() => router.push('/treasure')}
               className="w-full font-display text-[14px] text-ink"

@@ -1,12 +1,16 @@
 'use client'
 
 /**
- * S21 — B면 녹음 (M4, D12).
+ * S21 — '나의 육십 초' 음성 메모 (M4, D12).
  *
- * 카세트가 B면으로 뒤집히고 ● REC. 3택:
+ * ⚠️ 이건 아버지 테이프의 B면이 아니다. 앱 안에 남기는 별도 음성 메모다.
+ * 카세트 플립 연출은 Track 5의 B면 편지(B5_LETTER) 전용으로 예약돼 있다(D12·§7).
+ * 그래서 여기서는 카세트를 쓰지 않고 REC 메모 카드로 표현한다.
+ *
+ * 3택 (§7):
  *  [목소리로 남기기] — MediaRecorder ≤60초, 파형 시각화, 재녹음 무제한, 미리듣기
  *  [글로 남기기]     — 텍스트 입력
- *  [오늘의 마음만 담기] — 입력 없이 완료 (감정 강요 금지 — D12)
+ *  [오늘의 마음만 담기] — 입력 없이 완료 (감정 강요 금지)
  *
  * 마이크 권한 거부 → 텍스트 입력으로 무중단 전환(안내 토스트 1회).
  * 저장은 IndexedDB 로컬 기본. "완주 테이프에 담아 보관할까요?" 체크
@@ -14,7 +18,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import Cassette from '@/components/Cassette'
+import { submitOnCtrlEnter } from '@/lib/submitOnEnter'
 import { putBlob } from '@/lib/blobStore'
 import { dispatchAction } from '@/lib/cueEngine'
 import { logEvent } from '@/lib/analytics'
@@ -192,17 +196,31 @@ export default function RecorderBside() {
       className="mt-4 rounded-2xl border border-rec/50 bg-paper p-5 shadow-sm"
       style={{ animation: 'slideUp 0.4s ease-out' }}
     >
-      {/* B면 카세트 — 플립 연출 */}
-      <div className="flex justify-center" style={{ animation: 'fadeIn 0.8s ease-in-out' }}>
-        <Cassette
-          title="소영과 나의 B면"
-          headLeft="SIDE B · REPLY"
-          headRight="REC"
-          side="B"
-          progress={recording ? Math.min(100, (elapsed / MAX_SEC) * 100) : 0}
-          spin={recording ? 'right' : 'none'}
-          scale={0.75}
-        />
+      {/* 음성 메모 카드 — 카세트 플립이 아니다(D12). REC 표시 + 남은 시간 */}
+      <div style={{ animation: 'fadeIn 0.8s ease-in-out' }}>
+        <div className="flex items-center gap-2">
+          <span
+            className={`h-3 w-3 shrink-0 rounded-full bg-rec${
+              recording ? ' rec-dot' : ''
+            }`}
+            aria-hidden
+          />
+          <p className="font-mono-retro text-[10px] tracking-widest text-rec">
+            MEMO · 나의 육십 초
+          </p>
+          <span className="ml-auto font-mono-retro text-[11px] text-ink-60">
+            {recording
+              ? `${Math.floor(elapsed)} / ${MAX_SEC}s`
+              : `최대 ${MAX_SEC}초`}
+          </span>
+        </div>
+        <div className="tape-prog mt-2" aria-hidden>
+          <i
+            style={{
+              width: `${recording ? Math.min(100, (elapsed / MAX_SEC) * 100) : 0}%`,
+            }}
+          />
+        </div>
       </div>
 
       {micDeniedToast && (
@@ -212,7 +230,9 @@ export default function RecorderBside() {
       )}
 
       {mode === 'choose' && (
-        <div className="mt-4 space-y-2">
+        // 세 선택지를 함께 고정한다 — '오늘의 마음만 담기'는 감정을 강요하지 않기
+        // 위한 탈출구인데, 흐름 배치에서는 가장 아래라 제일 닿기 어려웠다.
+        <div className="cta-band mt-4 space-y-2">
           <p className="text-center text-[13px] text-ink">
             마음에 떠오르는 사람에게, 한 트랙 남겨주세요
           </p>
@@ -266,7 +286,7 @@ export default function RecorderBside() {
                 <audio controls src={previewUrl} className="w-full" />
               )}
               {consentCheckbox}
-              <div className="mt-3 flex gap-2">
+              <div className="cta-band mt-3 flex gap-2">
                 <button
                   onClick={startRecording}
                   className="flex-1 rounded-xl border border-line bg-cream py-3 text-[13px] text-ink"
@@ -287,7 +307,7 @@ export default function RecorderBside() {
                   disabled={saving}
                   className="flex-1 rounded-xl bg-teal py-3 font-display text-[14px] text-cream disabled:opacity-60"
                 >
-                  {saving ? '담는 중…' : 'B면에 담기 ▶'}
+                  {saving ? '담는 중…' : '이 마음 담기 ▶'}
                 </button>
               </div>
             </div>
@@ -300,24 +320,30 @@ export default function RecorderBside() {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={submitOnCtrlEnter(
+              () => complete({ type: 'text', text: text.trim(), uploaded: false }),
+              text.trim().length > 0 && !saving
+            )}
             rows={5}
-            placeholder="전하고 싶은 말을 적어주세요…"
+            placeholder="전하고 싶은 말을 적어주세요… (Ctrl+Enter로 완료)"
             className="w-full rounded-xl border border-line bg-cream px-4 py-3 font-pen text-[18px] leading-relaxed text-ink outline-none focus:border-teal"
           />
           {consentCheckbox}
-          <button
-            onClick={() =>
-              complete({ type: 'text', text: text.trim(), uploaded: false })
-            }
-            disabled={text.trim().length === 0 || saving}
-            className={`mt-3 w-full rounded-xl py-3.5 font-display text-[15px] ${
-              text.trim().length > 0 && !saving
-                ? 'bg-teal text-cream'
-                : 'cursor-not-allowed bg-line text-ink-60'
-            }`}
-          >
-            {saving ? '담는 중…' : 'B면에 담기 ▶'}
-          </button>
+          <div className="cta-band mt-3">
+            <button
+              onClick={() =>
+                complete({ type: 'text', text: text.trim(), uploaded: false })
+              }
+              disabled={text.trim().length === 0 || saving}
+              className={`w-full rounded-xl py-3.5 font-display text-[15px] ${
+                text.trim().length > 0 && !saving
+                  ? 'bg-teal text-cream'
+                  : 'cursor-not-allowed bg-line text-ink-60'
+              }`}
+            >
+              {saving ? '담는 중…' : '이 마음 담기 ▶'}
+            </button>
+          </div>
           <button
             onClick={() => setMode('choose')}
             className="mt-2 w-full text-[12px] text-ink-60 underline"

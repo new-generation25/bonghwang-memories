@@ -5,6 +5,7 @@ import { createPost, validateImage } from '@/lib/community'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlob } from '@/lib/blobStore'
+import { submitOnCtrlEnter } from '@/lib/submitOnEnter'
 
 interface PostComposerProps {
   onPosted: () => void
@@ -34,6 +35,7 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
     { idbKey: string; track: number; url: string }[]
   >([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   // 여정 사진 썸네일 로드 (IndexedDB) — 패널을 열 때 한 번만
   useEffect(() => {
@@ -149,7 +151,11 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card-paper mb-6 overflow-hidden shadow-lg">
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className="card-paper mb-6 overflow-hidden shadow-lg"
+    >
       <div className="stripe-band" />
 
       <div className="p-4">
@@ -169,7 +175,8 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="함께한 사람, 골목에서 발견한 것, 기억하고 싶은 순간을 적어주세요"
+          onKeyDown={submitOnCtrlEnter(() => formRef.current?.requestSubmit())}
+          placeholder="함께한 사람, 골목에서 발견한 것, 기억하고 싶은 순간을 적어주세요 (Ctrl+Enter로 올리기)"
           rows={3}
           className="w-full resize-none rounded-lg border border-line bg-cream px-3 py-2 text-[12px] leading-relaxed outline-none focus:border-teal"
         />

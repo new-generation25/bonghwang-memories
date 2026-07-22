@@ -19,6 +19,7 @@ import PhotoStep from '@/components/mission/PhotoStep'
 import RecorderBside from '@/components/mission/RecorderBside'
 import UnlockGate from '@/components/mission/UnlockGate'
 import { useCue } from '@/hooks/useCue'
+import { useRevealOnChange } from '@/hooks/useRevealOnChange'
 import { useTourState } from '@/hooks/useTourState'
 import { CUES, CueId, FragmentId } from '@/lib/cues'
 import { dispatchQr, dispatchTap, playCue, unlockAudio } from '@/lib/cueEngine'
@@ -80,14 +81,6 @@ export default function TrackPageClient({ n }: { n: number }) {
   const tour = useTourState()
   const station = stationByTrack(n)
 
-  if (!station) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-cream-base">
-        <p className="text-ink">존재하지 않는 트랙입니다.</p>
-      </div>
-    )
-  }
-
   // 방금 끝난 큐 (재생 중이면 아직 상호작용 없음)
   const endedCue =
     cueState.cueId && cueState.ended && !cueState.pendingAutoChain
@@ -115,7 +108,7 @@ export default function TrackPageClient({ n }: { n: number }) {
       startTime: prev.startTime ?? Date.now(),
     }))
     unlockAudio()
-    dispatchQr(station.id)
+    if (station) dispatchQr(station.id)
   }
 
   // §10 재개 — 엔진이 비어 있으면 마지막 완료 큐를 기준으로 복원
@@ -129,6 +122,19 @@ export default function TrackPageClient({ n }: { n: number }) {
 
   const activeCue = endedCue ?? resumable
   const interaction = activeCue ? INTERACTIONS[activeCue] : undefined
+  const interactionRef = useRevealOnChange<HTMLDivElement>(
+    interaction?.kind,
+    Boolean(interaction)
+  )
+
+  // 훅 호출 뒤에 검사한다 — 훅은 렌더마다 같은 순서로 불려야 한다
+  if (!station) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-cream-base">
+        <p className="text-ink">존재하지 않는 트랙입니다.</p>
+      </div>
+    )
+  }
 
   const renderInteraction = () => {
     if (!interaction) return null
@@ -171,63 +177,78 @@ export default function TrackPageClient({ n }: { n: number }) {
       case 'resume':
         // Track 4 — 정지해둔 자리(소원 끝)에서 라디오를 이어 재생 (D9 사용자 탭)
         return (
-          <button
-            onClick={() => {
-              unlockAudio()
-              dispatchTap('RESUME')
-            }}
-            className="btn-shell mt-4 w-full py-3 text-[15px]"
-            style={{ animation: 'slideUp 0.4s ease-out' }}
-          >
-            ▶ 이어서 재생 — 정지해둔 자리부터
-          </button>
+          <div className="cta-band mt-4" style={{ animation: 'slideUp 0.4s ease-out' }}>
+            <button
+              onClick={() => {
+                unlockAudio()
+                dispatchTap('RESUME')
+              }}
+              className="btn-shell w-full py-3 text-[15px]"
+            >
+              ▶ 이어서 재생 — 정지해둔 자리부터
+            </button>
+          </div>
         )
       case 'ask':
         // Track 5 — 가게 주인에게 여쭤보기 (증언 반전)
         return (
-          <button
-            onClick={() => {
-              unlockAudio()
-              dispatchTap('ASK')
-            }}
-            className="btn-teal mt-4 w-full text-[15px]"
-            style={{ animation: 'slideUp 0.4s ease-out' }}
-          >
-            🗣️ 가게 주인에게 여쭤보기
-          </button>
+          <div className="cta-band mt-4" style={{ animation: 'slideUp 0.4s ease-out' }}>
+            <button
+              onClick={() => {
+                unlockAudio()
+                dispatchTap('ASK')
+              }}
+              className="btn-teal w-full text-[15px]"
+            >
+              🗣️ 가게 주인에게 여쭤보기
+            </button>
+          </div>
         )
       case 'return':
         return (
-          <button
-            onClick={() => router.push('/play')}
-            className="btn-teal mt-4 w-full text-[15px]"
-            style={{ animation: 'slideUp 0.4s ease-out' }}
-          >
-            📼 플레이어로 돌아가기
-          </button>
+          <div className="cta-band mt-4" style={{ animation: 'slideUp 0.4s ease-out' }}>
+            <button
+              onClick={() => router.push('/play')}
+              className="btn-teal w-full text-[15px]"
+            >
+              📼 플레이어로 돌아가기
+            </button>
+          </div>
         )
       case 'bingo':
         return (
-          <button
-            onClick={() => router.push('/treasure')}
-            className="btn-teal mt-4 w-full text-[15px]"
-            style={{ animation: 'slideUp 0.4s ease-out' }}
-          >
-            🎴 골목 빙고 펼치기 ▶
-          </button>
+          <div className="cta-band mt-4" style={{ animation: 'slideUp 0.4s ease-out' }}>
+            <button
+              onClick={() => router.push('/treasure')}
+              className="btn-teal w-full text-[15px]"
+            >
+              🎴 골목 빙고 펼치기 ▶
+            </button>
+          </div>
         )
     }
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-cream-base px-4 pb-16 pt-5">
-      <header className="mx-auto w-full max-w-[380px]">
-        <p className="font-mono-retro text-[10.5px] tracking-[0.25em] text-teal">
-          TRACK {n} / 5 · {station.name}
-        </p>
-        <h1 className="mt-0.5 font-display text-[18px] leading-snug text-ink">
-          {station.wish}
-        </h1>
+      {/* 헤더 — 미션 진행 중에도 이 화면을 벗어날 수 있어야 한다.
+          탭바는 몰입을 깨서 두지 않되, 플레이어로 가는 길은 항상 열어둔다. */}
+      <header className="mx-auto flex w-full max-w-[380px] items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-mono-retro text-[10.5px] tracking-[0.25em] text-teal">
+            TRACK {n} / 5 · {station.name}
+          </p>
+          <h1 className="mt-0.5 font-display text-[18px] leading-snug text-ink">
+            {station.wish}
+          </h1>
+        </div>
+        <button
+          onClick={() => router.push('/play')}
+          className="-mr-1 shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold text-ink-60"
+          aria-label="플레이어로 돌아가기"
+        >
+          📼 목록
+        </button>
       </header>
 
       <div className="mx-auto mt-4 w-full max-w-[380px]">
@@ -272,7 +293,9 @@ export default function TrackPageClient({ n }: { n: number }) {
           </div>
         )}
 
-        {renderInteraction()}
+        {/* 미션·진행 버튼이 열리는 순간 화면 안으로 끌어온다 —
+            자막·카드가 쌓여 이 영역이 스크롤 아래에 묻히기 때문 */}
+        <div ref={interactionRef}>{renderInteraction()}</div>
       </div>
 
       <div className="stripe-band fixed bottom-0 left-0 right-0" />

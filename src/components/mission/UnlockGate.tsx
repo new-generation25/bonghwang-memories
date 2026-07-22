@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import { UNLOCK_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
+import { useRevealOnChange } from '@/hooks/useRevealOnChange'
 import { useTourState } from '@/hooks/useTourState'
 import { ALL_FRAGMENTS, UNLOCK_THRESHOLD } from '@/lib/tracks'
 
@@ -19,6 +20,7 @@ export default function UnlockGate() {
   const tour = useTourState()
   const [unlocking, setUnlocking] = useState(false)
   const [revealed, setRevealed] = useState(false)
+  const playRef = useRevealOnChange<HTMLDivElement>(revealed, revealed)
 
   const count = tour.fragments.length
   const canUnlock = count >= UNLOCK_THRESHOLD
@@ -73,21 +75,25 @@ export default function UnlockGate() {
       {revealed ? (
         <div style={{ animation: 'fadeIn 1s ease-in-out' }}>
           <p className="mt-4 font-pen text-[21px] text-ink">{UNLOCK_MESSAGE}</p>
-          <button
-            onClick={handlePlayBside}
-            className="mt-3 w-full rounded-xl bg-rec py-3.5 font-display text-[15px] text-cream"
-          >
-            ▶ B면 재생 — 아버지의 편지
-          </button>
+          <div ref={playRef} className="cta-band mt-3">
+            <button
+              onClick={handlePlayBside}
+              className="w-full rounded-xl bg-rec py-3.5 font-display text-[15px] text-cream"
+            >
+              ▶ B면 재생 — 아버지의 편지
+            </button>
+          </div>
         </div>
       ) : canUnlock ? (
-        <button
-          onClick={handleUnlock}
-          disabled={unlocking}
-          className="mt-4 w-full rounded-xl bg-shell py-3.5 font-display text-[15px] text-cream disabled:opacity-70"
-        >
-          {unlocking ? '릴에 조각을 끼우는 중…' : '🔓 조각을 끼워 넣기'}
-        </button>
+        <div className="cta-band mt-4">
+          <button
+            onClick={handleUnlock}
+            disabled={unlocking}
+            className="w-full rounded-xl bg-shell py-3.5 font-display text-[15px] text-cream disabled:opacity-70"
+          >
+            {unlocking ? '릴에 조각을 끼우는 중…' : '🔓 조각을 끼워 넣기'}
+          </button>
+        </div>
       ) : (
         <div className="mt-4 rounded-xl border border-line bg-cream px-4 py-3">
           <p className="text-[12.5px] leading-relaxed text-ink-60">

@@ -4,7 +4,7 @@
  * S00 — 랜딩: QR 진입 · 상품 소개 · 결제.
  *
  * 결제는 모의(테스트) 버튼이다 — 실제 PG 연동 시 handleMockPay만 교체하면 된다.
- * 로그인은 커뮤니티 참여 조건일 뿐, 투어 자체는 로그인 없이 진행할 수 있다.
+ * 시작하려면 기록자 등록이 필요하다 — 구매 이력·진행도가 계정에 묶여 저장된다.
  */
 
 import { useState, useEffect } from 'react'
@@ -19,9 +19,12 @@ import { logEvent } from '@/lib/analytics'
 export default function LandingPage() {
   const [showButton, setShowButton] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
-  const { profile, loading, logout } = useAuth()
+  const [showInfo, setShowInfo] = useState(false)
+  const { profile, loading, available, logout } = useAuth()
   const tour = useTourState()
   const router = useRouter()
+  // 로그인 창을 결제 때문에 열었는지 — 로그인이 끝나면 이어서 결제로 넘어간다
+  const [payAfterLogin, setPayAfterLogin] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => setShowButton(true), 900)
@@ -52,10 +55,39 @@ export default function LandingPage() {
     router.push('/download')
   }
 
+  /**
+   * 시작 — 기록자 등록을 먼저 거친다.
+   *
+   * 구매 이력과 투어 진행도는 계정(uid)에 묶여 저장된다. 등록 없이 결제하면
+   * 기기를 바꾸거나 브라우저 데이터를 지웠을 때 산 것을 되찾을 방법이 없고,
+   * 5천원 → 1.5만원 업그레이드도 "이미 낸 사람"을 알아볼 수 없다.
+   * 단, Firebase가 꺼진 환경(환경변수 미설정)에서는 흐름을 막지 않는다.
+   */
+  const handleStart = () => {
+    if (profile || !available) {
+      handleMockPay()
+      return
+    }
+    setPayAfterLogin(true)
+    setShowAuth(true)
+  }
+
+  /** 등록·로그인 완료 → 결제하려던 참이었다면 이어서 진행 */
+  const handleAuthSuccess = () => {
+    setShowAuth(false)
+    if (payAfterLogin) {
+      setPayAfterLogin(false)
+      handleMockPay()
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-cream-base">
-      {/* 로그인 상태 — 포스터를 가리지 않도록 최소한으로 */}
-      <div className="mx-auto flex max-w-[420px] items-center justify-end px-4 pt-3">
+      {/*
+        로그인 버튼은 두지 않는다 — 시작 버튼을 누르면 등록 화면이 뜬다.
+        이미 로그인한 사람에게만 누구로 접속 중인지 알려준다(로그아웃 경로 겸용).
+      */}
+      <div className="mx-auto flex h-8 max-w-[420px] items-center justify-end px-4 pt-3">
         {!loading &&
           (profile ? (
             <div className="text-right">
@@ -69,14 +101,7 @@ export default function LandingPage() {
                 로그아웃
               </button>
             </div>
-          ) : (
-            <button
-              onClick={() => setShowAuth(true)}
-              className="rounded-full border border-line bg-paper px-3 py-1 text-[11px] font-bold text-teal-dk"
-            >
-              로그인
-            </button>
-          ))}
+          ) : null)}
       </div>
 
       {/* 키 비주얼 포스터 — 시안 2장 그대로 */}
@@ -88,9 +113,9 @@ export default function LandingPage() {
           <div className="tape1">BONGHWANG-DONG · GIMHAE</div>
 
           <h1>
-            봉황
+            BONGHWANG
             <br />
-            메모<span>리즈</span>
+            MEMO<span>RIES</span>
           </h1>
 
           <div className="sub-band">봉황1988 EP.1 — 아버지의 타임캡슐</div>
@@ -108,7 +133,7 @@ export default function LandingPage() {
               headRight="REC"
               side="A"
               progress={70}
-              spin="left"
+              spin="both"
             />
           </div>
 
@@ -118,70 +143,98 @@ export default function LandingPage() {
             <em>열지 않은 이야기가 있다</em>
           </div>
 
-          <div className="qr" />
-
           <div className="foot">
             <span>봉황 메모리즈</span>
-            <span>QR 스캔 · 즉시 시작</span>
+            <span>AUDIO DRAMA TOUR</span>
           </div>
         </div>
       </div>
 
-      {/* 상품 소개 + 결제 — 포스터 바깥 */}
-      <div className="mx-auto w-full max-w-[380px] px-4 pb-10 pt-5">
+      {/* 상품 소개 — 포스터 바깥. 결제 버튼은 아래 고정 바로 뺐다 */}
+      <div className="mx-auto w-full max-w-[380px] px-4 pb-32 pt-5">
         <p className="text-center text-[13px] font-bold leading-relaxed text-ink">
-          19년 만에 고향에 돌아온 친구가,
+          골목에 남겨진 카세트테이프 하나,
           <br />
-          당신에게 하루를 부탁했습니다.
+          그리고 손글씨 쪽지 한 장.
         </p>
         <p className="mt-1 text-center text-[11px] leading-relaxed text-ink-60">
-          기억을 잃어가는 아버지의 다섯 소원.
+          1988년, 아버지가 태어날 딸에게 남긴 다섯 가지 소원.
           <br />
-          오늘, 소영과 함께 봉황동을 걷습니다.
+          쪽지 속 번호로 전화를 걸면 이야기가 시작됩니다.
         </p>
 
-        {/* 구성 안내 */}
-        <ul className="mt-4 space-y-1.5 rounded-xl border border-line bg-paper px-4 py-3 text-[12px] leading-relaxed text-ink">
-          <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 필수</li>
-          <li>📼 다섯 거점 · 다섯 소원 · 숨겨진 B면 트랙</li>
-          <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 테이프&rsquo;</li>
-          <li>🎟 거점 상점 쿠폰 + 2막 골목 빙고</li>
-        </ul>
-
-        {showButton && (
-          <div style={{ animation: 'slideUp 0.4s ease-out' }}>
-            {resumeTarget ? (
-              <button
-                onClick={() => router.push(resumeTarget)}
-                className="btn-teal mt-4 w-full text-center text-[15px]"
-              >
-                이어서 걷기 ▶
-                <small className="mt-0.5 block text-[10px] font-normal opacity-85">
-                  진행 중인 투어가 있습니다
-                </small>
-              </button>
-            ) : (
-              <button
-                onClick={handleMockPay}
-                className="btn-teal mt-4 w-full text-center text-[15px]"
-              >
-                결제 완료(테스트) ▶
-                <small className="mt-0.5 block text-[10px] font-normal opacity-85">
-                  실제 결제 없이 바로 시작합니다
-                </small>
-              </button>
-            )}
-          </div>
+        {/* 구성 안내 — 기본은 접혀 있고 버튼으로 펼친다 */}
+        <button
+          onClick={() => setShowInfo((v) => !v)}
+          className="mt-4 w-full rounded-xl border border-line bg-paper px-4 py-2.5 text-center text-[12px] font-bold text-teal-dk"
+        >
+          {showInfo ? '구성·이용 안내 접기 ▲' : '구성·이용 안내 보기 ▼'}
+        </button>
+        {showInfo && (
+          <ul
+            className="mt-2 space-y-1.5 rounded-xl border border-line bg-paper px-4 py-3 text-[12px] leading-relaxed text-ink"
+            style={{ animation: 'fadeIn 0.25s ease-in-out' }}
+          >
+            <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 필수</li>
+            <li>📼 다섯 거점 · 다섯 소원 · 숨겨진 B면 트랙</li>
+            <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 테이프&rsquo;</li>
+            <li>🎟 거점 상점 쿠폰 + 2막 골목 빙고</li>
+          </ul>
         )}
+
       </div>
 
-      {/* 하단 3색 밴드 — 브랜드 식별 장치. 항상 화면 맨 아래에 붙는다 */}
-      <div className="stripe-band mt-auto" />
+      {/*
+        결제 CTA — 화면 하단 고정.
+        포스터가 532px 고정 높이라 흐름 배치로는 작은 기기에서 첫 화면 밖으로
+        밀린다(iPhone SE 기준 753px 지점). 이 화면은 유일한 전환 지점이고
+        하단 탭바도 없어 겹칠 대상이 없다. 3색 밴드도 여기 함께 붙여
+        다른 화면들과 같은 fixed 정책으로 맞춘다.
+      */}
+      <div className="fixed bottom-0 left-0 right-0 z-30">
+        {showButton && (
+          <div
+            className="bg-cream-base/95 px-4 pb-3 pt-3 backdrop-blur-sm"
+            style={{
+              animation: 'slideUp 0.4s ease-out',
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+            }}
+          >
+            <div className="mx-auto w-full max-w-[380px]">
+              {resumeTarget ? (
+                <button
+                  onClick={() => router.push(resumeTarget)}
+                  className="btn-teal w-full text-center text-[15px]"
+                >
+                  이어서 걷기 ▶
+                  <small className="mt-0.5 block text-[10px] font-normal opacity-85">
+                    진행 중인 투어가 있습니다
+                  </small>
+                </button>
+              ) : (
+                <button
+                  onClick={handleStart}
+                  className="btn-teal w-full text-center text-[15px]"
+                >
+                  결제 완료(테스트) ▶
+                  <small className="mt-0.5 block text-[10px] font-normal opacity-85">
+                    실제 결제 없이 바로 시작합니다
+                  </small>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        <div className="stripe-band" />
+      </div>
 
       <AuthModal
         isOpen={showAuth}
-        onClose={() => setShowAuth(false)}
-        onSuccess={() => setShowAuth(false)}
+        onClose={() => {
+          setShowAuth(false)
+          setPayAfterLogin(false)
+        }}
+        onSuccess={handleAuthSuccess}
       />
     </div>
   )

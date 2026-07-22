@@ -13,7 +13,9 @@
 import { useState } from 'react'
 import QRScanner from '@/components/QRScanner'
 import type { StationId } from '@/lib/cues'
+import { submitOnEnter } from '@/lib/submitOnEnter'
 import {
+  CAMERA_SCAN_ENABLED,
   Station,
   UNIVERSAL_PASS_CODE,
   stationByManualCode,
@@ -32,7 +34,10 @@ export default function QRGate({
   onSuccess,
   onClose,
 }: QRGateProps) {
-  const [mode, setMode] = useState<'scan' | 'manual'>('scan')
+  // 카메라를 끈 상태에서는 스캔 화면을 아예 거치지 않는다 — 권한 요청 자체가 없다
+  const [mode, setMode] = useState<'scan' | 'manual'>(
+    CAMERA_SCAN_ENABLED ? 'scan' : 'manual'
+  )
   const [error, setError] = useState('')
   const [code, setCode] = useState('')
 
@@ -79,14 +84,16 @@ export default function QRGate({
     accept(stationByManualCode(code))
   }
 
-  if (mode === 'scan') {
+  if (mode === 'scan' && CAMERA_SCAN_ENABLED) {
     return (
       <div className="fixed inset-0 z-50">
         <QRScanner onScanSuccess={handleScan} onClose={onClose} />
         {/* 수동 코드 폴백 진입 */}
+        {/* QR 인식 실패 시 유일한 탈출구 — 홈 인디케이터에 가리지 않도록 안전영역만큼 띄운다 */}
         <button
           onClick={() => setMode('manual')}
-          className="absolute bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-cream/95 px-5 py-2.5 text-[13px] font-bold text-ink shadow-lg"
+          className="absolute left-1/2 z-[60] -translate-x-1/2 rounded-full bg-cream/95 px-5 py-2.5 text-[13px] font-bold text-ink shadow-lg"
+          style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
         >
           QR이 안 보이나요? 코드 입력
         </button>
@@ -94,13 +101,23 @@ export default function QRGate({
     )
   }
 
+  // autoFocus로 키보드가 바로 올라오므로 위쪽에 붙인다 —
+  // 가운데 정렬이면 키보드가 [입장하기] 버튼을 덮는다.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-shell/85 px-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-shell/85 px-6 py-12">
       <div className="w-full max-w-[340px] rounded-2xl bg-paper p-6">
         <h3 className="font-display text-[17px] text-ink">거점 코드 입력</h3>
         <p className="mt-1 text-[12px] leading-relaxed text-ink-60">
           거점 안내판에 적힌 4자리 코드를 입력해주세요.
         </p>
+
+        {!CAMERA_SCAN_ENABLED && UNIVERSAL_PASS_CODE && (
+          <p className="mt-2 rounded-lg bg-sunset-yellow/20 px-3 py-2 text-[11.5px] leading-relaxed text-ink">
+            🧪 검수 모드 — 카메라 스캔이 꺼져 있습니다. 코드{' '}
+            <b className="font-mono-retro">{UNIVERSAL_PASS_CODE}</b>로 지금 차례
+            거점을 통과할 수 있어요.
+          </p>
+        )}
 
         <input
           type="text"
@@ -111,6 +128,8 @@ export default function QRGate({
             setCode(e.target.value.replace(/\D/g, ''))
             setError('')
           }}
+          onKeyDown={submitOnEnter(handleManualSubmit, code.length === 4)}
+          autoFocus
           placeholder="0000"
           className="mt-4 w-full rounded-xl border border-line bg-cream px-4 py-3 text-center font-mono-retro text-[24px] tracking-[0.5em] text-ink outline-none focus:border-teal"
         />
@@ -132,15 +151,19 @@ export default function QRGate({
         </button>
 
         <div className="mt-3 flex justify-between">
-          <button
-            onClick={() => {
-              setError('')
-              setMode('scan')
-            }}
-            className="text-[12px] text-teal underline underline-offset-2"
-          >
-            ← QR 스캔으로
-          </button>
+          {CAMERA_SCAN_ENABLED ? (
+            <button
+              onClick={() => {
+                setError('')
+                setMode('scan')
+              }}
+              className="text-[12px] text-teal underline underline-offset-2"
+            >
+              ← QR 스캔으로
+            </button>
+          ) : (
+            <span />
+          )}
           <button onClick={onClose} className="text-[12px] text-ink-60 underline">
             닫기
           </button>

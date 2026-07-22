@@ -11,6 +11,7 @@
 
 import { useState } from 'react'
 import MissionCamera from '@/components/MissionCamera'
+import { useRevealOnChange } from '@/hooks/useRevealOnChange'
 import type { ActionId } from '@/lib/cues'
 import { putDataUrl } from '@/lib/blobStore'
 import { dispatchAction } from '@/lib/cueEngine'
@@ -34,6 +35,7 @@ export default function PhotoStep({
 }: PhotoStepProps) {
   const [cameraOpen, setCameraOpen] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
+  const confirmRef = useRevealOnChange<HTMLDivElement>(preview, Boolean(preview))
   const [saving, setSaving] = useState(false)
 
   const handleCapture = async (imageData: string) => {
@@ -73,7 +75,7 @@ export default function PhotoStep({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={preview} alt="촬영한 사진" className="w-full" />
           </div>
-          <div className="mt-3 flex gap-2">
+          <div ref={confirmRef} className="cta-band mt-3 flex gap-2">
             <button
               onClick={() => {
                 setPreview(null)
