@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from 'react'
 import Cassette from '@/components/Cassette'
 import { putBlob } from '@/lib/blobStore'
 import { dispatchAction } from '@/lib/cueEngine'
+import { logEvent } from '@/lib/analytics'
 import { storage } from '@/lib/firebase'
 import { BsideEntry, mutateTour } from '@/lib/tourState'
 
@@ -169,6 +170,8 @@ export default function RecorderBside() {
     } catch {
       mutateTour({ bsideEntry: entry })
     }
+    logEvent('memo_type', { type: entry.type })
+    if (entry.uploaded) logEvent('upload_consent')
     dispatchAction('M4_done')
   }
 

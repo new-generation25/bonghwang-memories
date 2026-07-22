@@ -18,6 +18,7 @@ import { getBlobUrl } from '@/lib/blobStore'
 import { S40_TEXT } from '@/lib/cues'
 import { TRACK_STATIONS } from '@/lib/tracks'
 import { formatElapsed, mutateTour } from '@/lib/tourState'
+import { logEvent } from '@/lib/analytics'
 
 export default function FinalePage() {
   const tour = useTourState()
@@ -85,6 +86,7 @@ export default function FinalePage() {
 
   /** 우리의 테이프 저장 — 간단한 인증서 PNG 합성 */
   const handleSave = async () => {
+    logEvent('finale_saved')
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -241,7 +243,10 @@ export default function FinalePage() {
           {S40_TEXT.saveButton}
         </button>
         <button
-          onClick={() => window.alert('EP.2 예약은 곧 열립니다. 조금만 기다려주세요!')}
+          onClick={() => {
+            logEvent('ep2_reserved')
+            window.alert('EP.2 예약은 곧 열립니다. 조금만 기다려주세요!')
+          }}
           className="mt-2 w-full rounded-xl border border-line bg-paper py-3 text-[13.5px] text-ink"
         >
           {S40_TEXT.ep2Button}

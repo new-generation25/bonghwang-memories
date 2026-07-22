@@ -34,6 +34,7 @@ import {
 } from './tourState'
 import { STATIONS } from './tracks'
 import { POINTS, awardPoints } from './score'
+import { logEvent } from './analytics'
 
 /** D9 — 스킵 허용 시점(초) */
 export const SKIP_AFTER_SEC = 15
@@ -117,6 +118,8 @@ export function getCueState(): CuePlaybackState {
 let audio: HTMLAudioElement | null = null
 let clockTimer: ReturnType<typeof setInterval> | null = null
 let chainTimer: ReturnType<typeof setTimeout> | null = null
+/** auto_chain 예정 시각 — 백그라운드 타이머 스로틀링 복구용(§10) */
+let chainDueAt = 0
 /**
  * 합성 클록은 벽시계 기준으로 계산한다 — setInterval 횟수 누적 방식은
  * 브라우저 타이머 스로틀링(백그라운드 탭 등)에서 실제보다 느려진다.
@@ -226,6 +229,7 @@ export function cancelPendingChain() {
     clearTimeout(chainTimer)
     chainTimer = null
   }
+  chainDueAt = 0
   if (state.pendingAutoChain) emit({ pendingAutoChain: null })
 }
 
@@ -345,6 +349,7 @@ export function replayCue() {
 export function skipCue() {
   if (!state.cueId || !state.skippable || state.ended) return
   const cue = CUES[state.cueId]
+  logEvent('bundle_skipped', { id: cue.id, atSec: Math.round(state.elapsed) })
   clearResources()
   finishCue(cue)
 }
@@ -387,8 +392,10 @@ function finishCue(cue: Cue) {
       }
       const delay = (nextCue.autoChainDelayMs ?? 2500) / timeScale
       emit({ pendingAutoChain: nextCue.id })
+      chainDueAt = Date.now() + delay
       chainTimer = setTimeout(() => {
         chainTimer = null
+        chainDueAt = 0
         if (state.pendingAutoChain === nextCue.id) {
           void playCue(nextCue.id)
         }
@@ -413,6 +420,8 @@ function runDirective(directive: UiDirective, cueId: CueId) {
   } else if (directive === 'speech_mode:casual') {
     mutateTour({ speechMode: 'casual' })
   } else if (directive === 'phase:act2') {
+    // 재실행(다시듣기) 시 중복 계측 방지
+    if (getTourState().phase !== 'act2') logEvent('act2_entered')
     mutateTour((prev) => ({
       phase: 'act2',
       bingo: { ...prev.bingo, unlocked: true },
@@ -437,6 +446,7 @@ export function dispatchQr(station: StationId): boolean {
   const st = STATIONS[station]
   if (st && st.track >= 1 && st.track <= 5) {
     setCurrentTrack(st.track as 1 | 2 | 3 | 4 | 5)
+    logEvent('track_arrived', { n: st.track })
   }
   void playCue(cue.id)
   return true
@@ -444,6 +454,10 @@ export function dispatchQr(station: StationId): boolean {
 
 /** T3 — 미션 액션 완료 */
 export function dispatchAction(action: ActionId): boolean {
+  // 미션 완료 계측 — 빙고 셀은 bingo_line으로 따로 집계한다(§11)
+  if (!action.startsWith('bingo_cell_done:')) {
+    logEvent('mission_done', { id: action })
+  }
   const cue = findCueByAction(action)
   if (!cue) return false
   void playCue(cue.id)
@@ -453,6 +467,11 @@ export function dispatchAction(action: ActionId): boolean {
 /** T4 — 명시적 버튼 탭. 반드시 클릭 핸들러 안에서 호출할 것 */
 export function dispatchTap(tap: TapId): boolean {
   unlockAudio()
+  if (tap === 'CALL') {
+    logEvent('call_started')
+  } else if (tap === 'BSIDE') {
+    logEvent('bside_played', { frag_count: getTourState().fragments.length })
+  }
   const cue = findCueByTap(tap, getTourState().currentTrack)
   if (!cue) return false
   void playCue(cue.id)
@@ -465,9 +484,23 @@ export function dispatchTap(tap: TapId): boolean {
 
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      // 백그라운드에서 setTimeout이 스로틀링되면 auto_chain이 밀린다.
+      // 복귀 시 기한이 지난 체인은 즉시 발화시킨다(§10 — 재진입 복원).
+      if (state.pendingAutoChain && chainDueAt > 0 && Date.now() >= chainDueAt) {
+        const nextId = state.pendingAutoChain
+        if (chainTimer) {
+          clearTimeout(chainTimer)
+          chainTimer = null
+        }
+        chainDueAt = 0
+        void playCue(nextId)
+      }
+      return
+    }
     // e2e 배속 모드에서는 자동 일시정지를 끈다(헤드리스 테스트가 멈추지 않도록)
     if (timeScale !== 1) return
-    if (document.visibilityState === 'hidden' && state.playing) {
+    if (state.playing) {
       pauseCue()
     }
   })

@@ -20,6 +20,7 @@ import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { markBingoCell, mutateTour, addCoupon } from '@/lib/tourState'
 import { POINTS, awardPoints } from '@/lib/score'
+import { logEvent } from '@/lib/analytics'
 
 export default function BingoPage() {
   const tour = useTourState()
@@ -51,6 +52,7 @@ export default function BingoPage() {
       for (let i = tour.bingo.lines + 1; i <= lines; i++) {
         addCoupon(`bingo-line-${i}`)
         awardPoints(`bingo-line-${i}`, POINTS.bingoLine)
+        logEvent('bingo_line', { n: i })
       }
       mutateTour((prev) => ({ bingo: { ...prev.bingo, lines } }))
     }

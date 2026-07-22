@@ -4,13 +4,14 @@
  * S22 — 최종 잠금 해제 (M5b, D10).
  *
  * 기억의 조각 슬롯 4개. 3개 이상이면 해제 가능(1미션 실패 허용).
- * 해제 → "B면의 마지막 트랙이 발견되었습니다." → unlock_done 액션
- * → C5_3(소영) → C5_4(아버지의 편지) → C5_5 체인이 이어진다.
+ * 해제 → "B면의 마지막 트랙이 발견되었습니다." → [▶ B면 재생] 버튼 노출.
+ * B면 편지(B5_LETTER)는 자동재생이 아니라 사용자 탭(user_tap:BSIDE)으로만
+ * 시작한다 — 편지는 참여자가 직접 재생 버튼을 눌러야 하는 순간이다(D9·T4).
  */
 
 import { useState } from 'react'
 import { UNLOCK_MESSAGE } from '@/lib/cues'
-import { dispatchAction, unlockAudio } from '@/lib/cueEngine'
+import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { useTourState } from '@/hooks/useTourState'
 import { ALL_FRAGMENTS, UNLOCK_THRESHOLD } from '@/lib/tracks'
 
@@ -26,11 +27,17 @@ export default function UnlockGate() {
     if (!canUnlock || unlocking) return
     unlockAudio()
     setUnlocking(true)
-    // 조각이 릴에 끼워지는 연출 후 해제 문구 → 큐 체인 시작
+    // 조각이 릴에 끼워지는 연출 후 해제 문구 + [B면 재생] 버튼 노출
     setTimeout(() => {
       setRevealed(true)
-      setTimeout(() => dispatchAction('unlock_done'), 1600)
+      // 상태 기록·분석용 — v2에서 큐 재생은 아래 BSIDE 탭이 담당한다
+      dispatchAction('unlock_done')
     }, 900)
+  }
+
+  const handlePlayBside = () => {
+    unlockAudio()
+    dispatchTap('BSIDE')
   }
 
   return (
@@ -64,12 +71,15 @@ export default function UnlockGate() {
       </p>
 
       {revealed ? (
-        <p
-          className="mt-4 font-pen text-[21px] text-ink"
-          style={{ animation: 'fadeIn 1s ease-in-out' }}
-        >
-          {UNLOCK_MESSAGE}
-        </p>
+        <div style={{ animation: 'fadeIn 1s ease-in-out' }}>
+          <p className="mt-4 font-pen text-[21px] text-ink">{UNLOCK_MESSAGE}</p>
+          <button
+            onClick={handlePlayBside}
+            className="mt-3 w-full rounded-xl bg-rec py-3.5 font-display text-[15px] text-cream"
+          >
+            ▶ B면 재생 — 아버지의 편지
+          </button>
+        </div>
       ) : canUnlock ? (
         <button
           onClick={handleUnlock}

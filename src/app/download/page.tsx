@@ -14,6 +14,7 @@ import Cassette from '@/components/Cassette'
 import { ALL_CUE_IDS, CUES } from '@/lib/cues'
 import { mutateTour } from '@/lib/tourState'
 import { useTourHydrated, useTourState } from '@/hooks/useTourState'
+import { logEvent } from '@/lib/analytics'
 
 const EXTENSIONS = ['m4a', 'mp3'] as const
 
@@ -76,6 +77,7 @@ export default function DownloadPage() {
         setChecked(checkedCount)
       }
       mutateTour({ audioCacheReady: true })
+      logEvent('cache_done')
       setDone(true)
     })()
   }, [tour.paid])

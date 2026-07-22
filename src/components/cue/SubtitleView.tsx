@@ -52,8 +52,9 @@ export default function SubtitleView({
       } text-ink ${opts.spaced ? 'mt-1.5' : ''}`}
     >
       {line.speaker && (
+        // 시각 여백(mr) 외에 실제 공백도 둔다 — 스크린리더·복사 텍스트에서 라벨과 본문이 붙지 않도록
         <span className="mr-1.5 font-mono-retro text-[11px] text-teal">
-          {line.speaker}
+          {line.speaker}{' '}
         </span>
       )}
       {line.text}

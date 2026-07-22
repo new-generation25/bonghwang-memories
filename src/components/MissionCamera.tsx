@@ -183,9 +183,34 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
         finalize()
       }
     } else {
-      // PC: Simulate photo capture
-      const mockImageData = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-      onCapture(mockImageData)
+      // PC: 모의 촬영 — 실제 촬영과 같은 경로로 오버레이를 합성한다.
+      // (M3 능소화 AR 폴백(D11)을 PC에서도 눈으로 검증할 수 있어야 한다)
+      const canvas = document.createElement('canvas')
+      canvas.width = 480
+      canvas.height = 640
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      const bg = ctx.createLinearGradient(0, 0, 0, canvas.height)
+      bg.addColorStop(0, '#F3EAD3')
+      bg.addColorStop(1, '#EAE0C4')
+      ctx.fillStyle = bg
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = '#6B6259'
+      ctx.font = '20px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('모의 촬영 (PC 테스트)', canvas.width / 2, canvas.height / 2)
+      const finalize = () => onCapture(canvas.toDataURL('image/jpeg', 0.85))
+      if (overlaySrc) {
+        const overlay = new Image()
+        overlay.onload = () => {
+          ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height)
+          finalize()
+        }
+        overlay.onerror = finalize
+        overlay.src = overlaySrc
+      } else {
+        finalize()
+      }
     }
   }
 

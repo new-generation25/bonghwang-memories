@@ -14,6 +14,7 @@ import Cassette from '@/components/Cassette'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import { mutateTour } from '@/lib/tourState'
+import { logEvent } from '@/lib/analytics'
 
 export default function LandingPage() {
   const [showButton, setShowButton] = useState(false)
@@ -46,6 +47,7 @@ export default function LandingPage() {
 
   /** 모의 결제 — 실제 PG 연동 지점 */
   const handleMockPay = () => {
+    logEvent('purchase', { mock: true })
     mutateTour({ paid: true, phase: 'intro' })
     router.push('/download')
   }
