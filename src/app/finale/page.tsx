@@ -13,6 +13,8 @@ import { useRouter } from 'next/navigation'
 import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
 import CuePlayer from '@/components/cue/CuePlayer'
 import SurveyCard from '@/components/SurveyCard'
+import MyPoints from '@/components/MyPoints'
+import { ep2Discount, localPointTotal, POINTS_EVENT } from '@/lib/points'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlobUrl } from '@/lib/blobStore'
@@ -27,6 +29,16 @@ export default function FinalePage() {
   const router = useRouter()
   const [photoUrls, setPhotoUrls] = useState<{ track: number; url: string }[]>([])
   const [bsideVoiceUrl, setBsideVoiceUrl] = useState<string | null>(null)
+  const [points, setPoints] = useState(0)
+  const ep2 = ep2Discount(points)
+
+  // 설문에 응답하면 그 자리에서 200P가 붙는다 — 할인 문구도 같이 올라가야 한다
+  useEffect(() => {
+    const sync = () => setPoints(localPointTotal())
+    sync()
+    window.addEventListener(POINTS_EVENT, sync)
+    return () => window.removeEventListener(POINTS_EVENT, sync)
+  }, [])
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   // 완주 기록
@@ -207,6 +219,9 @@ export default function FinalePage() {
           })}
         </div>
 
+        {/* 오늘 모은 포인트 — 설문 바로 위. 설문 200P가 눈에 보여야 응답한다 */}
+        <MyPoints />
+
         {/* 완주 설문 — 기억이 선명할 때 받는다 */}
         <SurveyCard />
 
@@ -255,7 +270,11 @@ export default function FinalePage() {
           className="mt-2 w-full rounded-xl border border-line bg-paper py-3 text-[13.5px] text-ink"
         >
           {S40_TEXT.ep2Button}
-          <span className="block text-[11px] text-ink-60">{S40_TEXT.ep2Note}</span>
+          <span className="block text-[11px] text-ink-60">
+            {ep2.discount > 0
+              ? `오늘 모은 ${points.toLocaleString()}P로 ${ep2.discount.toLocaleString()}원 할인`
+              : S40_TEXT.ep2Note}
+          </span>
         </button>
         <button
           onClick={() => router.push('/community')}

@@ -48,27 +48,37 @@ export interface TrackMission {
 // ---------------------------------------------------------------------------
 
 /**
- * 만능 통과 코드 — 코드 입력창에 이 값을 넣으면 지금 차례인 거점의
- * QR을 스캔한 것으로 통과한다. 현장 리허설·검수용.
- * ⚠️ 실판매 전 반드시 null로 바꿔 비활성화할 것 — 참여자가 알면
- * 걷지 않고 전 트랙을 열 수 있다.
+ * 검수용 완화 장치들.
+ *
+ * 셋 다 개발 빌드에서만 켜진다. 판매 전에 손으로 되돌리는 방식이었는데,
+ * 되돌리기를 한 번만 잊어도 참여자가 걷지 않고 전 트랙을 여는 채로 배포된다.
+ * 그래서 프로덕션 빌드에서는 코드가 스스로 잠기게 했다.
+ *
+ * 현장 리허설을 프로덕션 빌드로 해야 한다면 NEXT_PUBLIC_REHEARSAL=1을 걸고
+ * 배포하되, 판매 시작 전에 그 환경변수를 반드시 지운다.
  */
-export const UNIVERSAL_PASS_CODE: string | null = '1111'
+const REHEARSAL =
+  process.env.NODE_ENV !== 'production' ||
+  process.env.NEXT_PUBLIC_REHEARSAL === '1'
+
+/**
+ * 만능 통과 코드 — 코드 입력창에 이 값을 넣으면 지금 차례인 거점의
+ * QR을 스캔한 것으로 통과한다.
+ */
+export const UNIVERSAL_PASS_CODE: string | null = REHEARSAL ? '1111' : null
 
 /**
  * 빙고 상시 개방 — true면 다섯 소원 완료 전에도 빙고판을 열 수 있다.
- * 현장 리허설·검수용. ⚠️ 실판매 전 반드시 false로 되돌릴 것
- * (스펙: 다섯 소원 완료(phase=act2) 시에만 해제).
+ * 스펙상 정상 동작은 다섯 소원 완료(phase=act2) 시에만 해제다.
  */
-export const BINGO_ALWAYS_OPEN = true
+export const BINGO_ALWAYS_OPEN = REHEARSAL
 
 /**
  * QR 카메라 스캔 사용 여부 — false면 거점 진입이 코드 입력만으로 진행된다.
- * 카메라를 아예 열지 않으므로 권한 팝업·차단 메시지가 뜨지 않는다
- * (PC 브라우저·인앱 프리뷰에서 클릭 검수할 때 사용).
- * ⚠️ 실판매 전 반드시 true로 되돌릴 것 — D4는 QR 스캔 6회가 전제다.
+ * 카메라를 열지 않으므로 PC 브라우저에서 클릭만으로 검수할 수 있다.
+ * D4는 QR 스캔 6회가 전제이므로 실판매에서는 반드시 켜져야 한다.
  */
-export const CAMERA_SCAN_ENABLED = false
+export const CAMERA_SCAN_ENABLED = !REHEARSAL
 
 export const STATIONS: Record<StationId, Station> = {
   intro: {

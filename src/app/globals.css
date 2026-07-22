@@ -1482,3 +1482,35 @@ video::-webkit-media-controls-start-playback-button {
   border-left: 1px dashed rgba(43, 36, 32, 0.2);
   border-right: 1px dashed rgba(43, 36, 32, 0.2);
 }
+
+/* ── 포인트 적립 알림 ──────────────────────────────────────────────
+   위에서 떨어져 잠시 머물다 사라진다. 걷는 중에 보는 화면이라
+   시선을 뺏지 않도록 짧게 끝낸다. */
+.point-toast {
+  animation: point-toast-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both,
+    point-toast-out 0.3s ease-in 2.9s both;
+}
+
+@keyframes point-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes point-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .point-toast {
+    animation: none;
+  }
+}

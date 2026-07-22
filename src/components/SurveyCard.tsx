@@ -4,10 +4,14 @@
  * 완주 설문 카드 — 피날레에서만 뜬다.
  *
  * 투어를 막 끝낸 직후가 응답률이 가장 높고 기억도 선명하다.
- * 이미 답했거나 로그인하지 않았으면 아무것도 렌더하지 않는다.
+ *
+ * 이미 답했으면 숨긴다. 로그인하지 않았으면 숨기지 않고 로그인 유도 카드를
+ * 띄운다 — 앱 전체에서 로그인이 선택 사항이라 완주자 상당수가 비로그인이고,
+ * 그냥 숨기면 설문 데이터와 200P 적립을 둘 다 놓친다.
  */
 
 import { useEffect, useState } from 'react'
+import AuthModal from '@/components/AuthModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { POINT_TABLE } from '@/lib/points'
 import {
@@ -22,13 +26,16 @@ export default function SurveyCard() {
   const { profile } = useAuth()
   const [survey, setSurvey] = useState<Survey | null>(null)
   const [answers, setAnswers] = useState<SurveyAnswers>({})
-  const [state, setState] = useState<'loading' | 'form' | 'done' | 'hidden'>('loading')
+  const [state, setState] = useState<
+    'loading' | 'form' | 'done' | 'hidden' | 'needsLogin'
+  >('loading')
+  const [showAuth, setShowAuth] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (!profile) {
-      setState('hidden')
+      setState('needsLogin')
       return
     }
     let cancelled = false
@@ -49,12 +56,35 @@ export default function SurveyCard() {
     }
   }, [profile])
 
-  if (state === 'hidden' || state === 'loading' || !survey) {
-    // 완료 직후에만 감사 문구를 남긴다
-    return state === 'done' ? <ThanksCard /> : null
+  if (state === 'done') return <ThanksCard />
+
+  if (state === 'needsLogin') {
+    return (
+      <>
+        <div className="card-paper mt-4 p-5 text-center shadow-lg">
+          <p className="font-mono-retro text-[10px] tracking-widest text-rec">
+            SURVEY · +{POINT_TABLE.survey}P
+          </p>
+          <h3 className="mt-1 font-display text-[16px] text-ink">
+            오늘 걸은 이야기를 들려주세요
+          </h3>
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-60">
+            다섯 문항이면 끝나요. 답해주시면 {POINT_TABLE.survey}P를 드리고,
+            EP.2를 만드는 데 씁니다.
+          </p>
+          <button
+            onClick={() => setShowAuth(true)}
+            className="btn-teal mt-4 w-full text-[15px]"
+          >
+            로그인하고 설문 참여하기
+          </button>
+        </div>
+        <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} />
+      </>
+    )
   }
 
-  if (state === 'done') return <ThanksCard />
+  if (state === 'hidden' || state === 'loading' || !survey) return null
 
   const missing = survey.questions
     .filter((q) => q.required)

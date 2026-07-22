@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import PointToast from '@/components/PointToast'
 
 export const metadata: Metadata = {
   title: '봉황 메모리즈 — 봉황1988 EP.1 「아버지의 타임캡슐」',
@@ -223,7 +224,10 @@ export default function RootLayout({
         }} />
       </head>
       <body className="min-h-screen bg-cream-base">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <PointToast />
+        </AuthProvider>
       </body>
     </html>
   )

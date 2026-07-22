@@ -5,7 +5,8 @@ import { createPost, validateImage } from '@/lib/community'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlob } from '@/lib/blobStore'
-import { award } from '@/lib/points'
+import { award, awardCampaign } from '@/lib/points'
+import { activeBonusMissions } from '@/lib/bonusMissions'
 import { submitOnCtrlEnter } from '@/lib/submitOnEnter'
 
 interface PostComposerProps {
@@ -35,6 +36,9 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [journeyOpen, setJourneyOpen] = useState(false)
+  // 진행 중인 한정 미션 — 글을 그 미션으로 태그하면 캠페인 포인트가 붙는다
+  const campaigns = activeBonusMissions()
+  const [campaignId, setCampaignId] = useState('')
   const [journeyThumbs, setJourneyThumbs] = useState<
     { idbKey: string; track: number; url: string }[]
   >([])
@@ -146,8 +150,13 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
       // 첫 공유에만 적립된다 — refId가 uid 고정이라 두 번째 글부터는 중복 처리
       void award(`share-${profile.uid}`, 'shareRecord')
 
+      // 한정 미션으로 태그했으면 그 캠페인의 지급액을 따로 준다
+      const picked = campaigns.find((c) => c.id === campaignId)
+      if (picked) void awardCampaign(picked.id, picked.points)
+
       setComment('')
       setMissionTitle('')
+      setCampaignId('')
       clearImage()
       onPosted()
     } catch (err) {
@@ -187,6 +196,40 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
           rows={3}
           className="w-full resize-none rounded-lg border border-line bg-cream px-3 py-2 text-[12px] leading-relaxed outline-none focus:border-teal"
         />
+
+        {/* 한정 미션 태그 — 배너에 적힌 포인트를 실제로 받는 통로 */}
+        {campaigns.length > 0 && (
+          <div className="mt-2.5">
+            <p className="mb-1.5 font-mono-retro text-[10px] text-ink-60">
+              한정 미션 인증인가요? (선택)
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {campaigns.map((c) => {
+                const on = campaignId === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setCampaignId(on ? '' : c.id)}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                      on
+                        ? 'border-teal bg-teal text-cream'
+                        : 'border-line bg-cream text-ink'
+                    }`}
+                  >
+                    {c.emoji} {c.title}
+                    <span
+                      className={`ml-1 font-display ${on ? 'text-sunset-yellow' : 'text-teal'}`}
+                    >
+                      +{c.points}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 사진 미리보기 */}
         {previewUrl && (

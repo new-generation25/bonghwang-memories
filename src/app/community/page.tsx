@@ -16,7 +16,8 @@ import { fetchPosts, CommunityPost } from '@/lib/community'
 import { useAuth } from '@/contexts/AuthContext'
 import { activeBonusMissions } from '@/lib/bonusMissions'
 import { RankingEntry, fetchRankings, findMyRank } from '@/lib/rankings'
-import { getLocalScore } from '@/lib/score'
+import { localPointTotal, POINTS_EVENT } from '@/lib/points'
+import MyPoints from '@/components/MyPoints'
 
 export default function FriendsPage() {
   const { profile, loading: authLoading, available } = useAuth()
@@ -49,12 +50,15 @@ export default function FriendsPage() {
   }, [loadPosts])
 
   useEffect(() => {
-    setMyScore(getLocalScore())
+    setMyScore(localPointTotal())
+    const onAward = () => setMyScore(localPointTotal())
+    window.addEventListener(POINTS_EVENT, onAward)
     if (available) {
       fetchRankings()
         .then(setRankings)
         .catch(() => setRankings([]))
     }
+    return () => window.removeEventListener(POINTS_EVENT, onAward)
   }, [available])
 
   const myRank = findMyRank(rankings, profile?.uid ?? null)
@@ -85,6 +89,9 @@ export default function FriendsPage() {
       </header>
 
       <div className="mx-auto max-w-md px-4 py-5">
+        {/* 내 포인트 — 화면 맨 위. 들어오자마자 내 점수가 보여야 한다 */}
+        <MyPoints />
+
         {/* 일시한정 보너스 미션 */}
         {bonuses.length > 0 && (
           <div className="mb-5 space-y-2">
@@ -122,7 +129,7 @@ export default function FriendsPage() {
                 🏆 기록자 랭킹
               </h2>
               <span className="font-mono-retro text-[10px] text-ink-60">
-                내 점수 {myScore.toLocaleString()}점
+                내 {myScore.toLocaleString()}P
                 {myRank ? ` · ${myRank}위` : ''}
               </span>
             </div>
@@ -156,7 +163,7 @@ export default function FriendsPage() {
                         {isMe && ' (나)'}
                       </span>
                       <span className="font-mono-retro text-[12px] text-teal">
-                        {entry.totalScore.toLocaleString()}
+                        {entry.totalPoints.toLocaleString()}
                       </span>
                     </li>
                   )
