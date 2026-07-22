@@ -76,7 +76,7 @@ export default function SubtitleView({
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="mt-1.5 text-[12px] text-ink60 underline underline-offset-2"
+          className="mt-0.5 -ml-2 px-2 py-2.5 text-[12px] text-ink60 underline underline-offset-2"
         >
           자막 접기
         </button>
@@ -90,9 +90,18 @@ export default function SubtitleView({
 
   return (
     <div className="mt-3">
+      {/*
+        고정 높이 — 글 세 줄(현재 자막 2줄 + 직전 자막 1줄) + 줄 간격 + 상하 여백.
+        min-height로 두면 문장 길이에 따라 상자가 늘었다 줄었다 하면서
+        아래 데크 버튼이 계속 움직인다. 높이를 못박아 버튼 위치를 고정한다.
+
+        문장이 길어 세 줄을 넘기면 justify-end + overflow-hidden 조합으로
+        직전 자막이 위로 밀려 나가고 현재 자막이 온전히 남는다 — 잘리지 않는다.
+        em 기준이라 손글씨 모드(19px)에서도 같은 비율로 커진다.
+      */}
       <div
         className={`flex flex-col justify-end overflow-hidden rounded-lg bg-black/5 px-4 py-3 ${fontClass}`}
-        style={{ minHeight: handwriting ? '5.6em' : '4.6em' }}
+        style={{ height: 'calc(4.875em + 6px + 1.5rem)' }}
         aria-live="polite"
       >
         {prev && renderLine(prev, subtitleIndex - 1, { current: false })}

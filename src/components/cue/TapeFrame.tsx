@@ -5,7 +5,7 @@
  * 아버지(과거)·라디오 큐가 이 프레임을 쓴다.
  */
 
-import Cassette from '@/components/Cassette'
+import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
 import { Cue, SPEAKER_NAMES } from '@/lib/cues'
 
 interface TapeFrameProps {
@@ -28,7 +28,7 @@ export default function TapeFrame({ cue, playing, progress }: TapeFrameProps) {
         side={side}
         progress={progress}
         spin={playing ? 'right' : 'none'}
-        scale={0.9}
+        scale={CASSETTE_SCALE}
       />
       <p className="mt-2 font-mono-retro text-[11px] tracking-widest text-ink60">
         {playing ? '▶ PLAYING' : '⏸ PAUSED'} · {SPEAKER_NAMES[cue.speaker]}

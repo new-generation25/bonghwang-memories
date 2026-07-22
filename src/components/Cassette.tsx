@@ -10,6 +10,12 @@
  * 지면당 1개 원칙 — 한 화면에 두 개 이상 배치하지 않는다.
  */
 
+/**
+ * 표준 배율 — 카세트는 어느 화면에서나 같은 크기로 보여야 한다.
+ * 특별한 이유(포스터 합성 등) 없이는 이 값을 쓴다.
+ */
+export const CASSETTE_SCALE = 0.9
+
 interface CassetteProps {
   /** 손글씨 라벨 — 에피소드명 (지역판 교체 지점) */
   title: string
@@ -21,8 +27,8 @@ interface CassetteProps {
   side?: 'A' | 'B' | 'done'
   /** 테이프 감김 정도 0~100 — 스토리 진행률 */
   progress?: number
-  /** 릴 회전 애니메이션: 왼쪽 감김 / 오른쪽 감김 / 정지 */
-  spin?: 'left' | 'right' | 'none'
+  /** 릴 회전 애니메이션: 왼쪽 감김 / 오른쪽 감김 / 양쪽 동시 / 정지 */
+  spin?: 'left' | 'right' | 'both' | 'none'
   /** 넘버링 연도 — 스토리 기점 연도 (지역판 교체 지점) */
   year?: string
   /** 배치 배율 */
@@ -80,13 +86,13 @@ export default function Cassette({
         </div>
 
         <div className="win">
-          <div className={`reel${spin === 'left' ? ' spin' : ''}`}>
+          <div className={`reel${spin === 'left' || spin === 'both' ? ' spin' : ''}`}>
             <span className="hub" />
           </div>
           <div className="tamount">
             <i style={{ width: `${clamped}%` }} />
           </div>
-          <div className={`reel${spin === 'right' ? ' spin' : ''}`}>
+          <div className={`reel${spin === 'right' || spin === 'both' ? ' spin' : ''}`}>
             <span className="hub" />
           </div>
         </div>

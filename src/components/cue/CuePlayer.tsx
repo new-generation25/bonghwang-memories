@@ -9,21 +9,16 @@
  */
 
 import { CUES } from '@/lib/cues'
-import {
-  SKIP_AFTER_SEC,
-  pauseCue,
-  replayCue,
-  resumeCue,
-  skipCue,
-} from '@/lib/cueEngine'
+import { pauseCue, replayCue, resumeCue, skipLine } from '@/lib/cueEngine'
 import { useCue } from '@/hooks/useCue'
 import CallFrame from './CallFrame'
+import DeckControls from './DeckControls'
 import SubtitleView from './SubtitleView'
 import TapeFrame from './TapeFrame'
 
 export default function CuePlayer() {
   const cueState = useCue()
-  const { cueId, playing, elapsed, duration, subtitleIndex, skippable, ended, audioAvailable, pendingAutoChain } = cueState
+  const { cueId, playing, elapsed, duration, subtitleIndex, ended, audioAvailable, pendingAutoChain } = cueState
 
   if (!cueId) return null
   const cue = CUES[cueId]
@@ -51,52 +46,36 @@ export default function CuePlayer() {
       />
 
       {needsTap ? (
-        <button
-          type="button"
-          onClick={resumeCue}
-          className="mt-3 w-full rounded-xl bg-rec py-3 font-display text-[15px] text-cream"
-        >
-          ▶ 탭해서 계속 듣기
-        </button>
+        <DeckControls
+          className="mt-3"
+          keys={[
+            { kind: 'rew' },
+            { kind: 'play', label: '탭해서 계속', onClick: resumeCue },
+            { kind: 'ff' },
+            { kind: 'stop' },
+          ]}
+        />
       ) : (
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={replayCue}
-            className="rounded-lg border border-line px-3 py-2 text-[13px] text-ink"
-            aria-label="다시듣기"
-          >
-            ⏪ 다시듣기
-          </button>
-
-          {!ended && (
-            <button
-              type="button"
-              onClick={playing ? pauseCue : resumeCue}
-              className="rounded-lg border border-line px-4 py-2 text-[15px] text-ink"
-              aria-label={playing ? '일시정지' : '재생'}
-            >
-              {playing ? '⏸' : '▶'}
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={skipCue}
-            disabled={!skippable || ended}
-            className={`rounded-lg px-3 py-2 text-[13px] ${
-              skippable && !ended
-                ? 'border border-line text-ink'
-                : 'cursor-not-allowed border border-line/50 text-ink60/50'
-            }`}
-            aria-label="건너뛰기"
-            title={
-              skippable ? '건너뛰기' : `${SKIP_AFTER_SEC}초 후 건너뛸 수 있어요`
-            }
-          >
-            ⏩ 건너뛰기
-          </button>
-        </div>
+        <DeckControls
+          className="mt-3"
+          keys={[
+            { kind: 'rew', label: '다시듣기', onClick: replayCue, ariaLabel: '다시듣기' },
+            ended
+              ? { kind: 'play' }
+              : playing
+                ? { kind: 'pause', onClick: pauseCue, ariaLabel: '일시정지' }
+                : { kind: 'play', onClick: resumeCue, ariaLabel: '재생' },
+            {
+              // FF — 재생 중에도 한 줄씩 넘긴다. 마지막 줄이면 다음 단계로.
+              kind: 'ff',
+              label: '다음 줄',
+              onClick: ended ? undefined : skipLine,
+              ariaLabel: '다음 줄로 건너뛰기',
+              title: '다음 문장으로 — 마지막 문장에서는 다음으로 넘어갑니다',
+            },
+            { kind: 'stop' },
+          ]}
+        />
       )}
 
       {!audioAvailable && !ended && (
