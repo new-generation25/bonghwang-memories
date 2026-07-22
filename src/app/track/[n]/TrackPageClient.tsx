@@ -20,9 +20,10 @@ import RecorderBside from '@/components/mission/RecorderBside'
 import UnlockGate from '@/components/mission/UnlockGate'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
-import { CUES, CueId } from '@/lib/cues'
-import { dispatchTap, playCue, unlockAudio } from '@/lib/cueEngine'
+import { CUES, CueId, FragmentId } from '@/lib/cues'
+import { dispatchQr, dispatchTap, playCue, unlockAudio } from '@/lib/cueEngine'
 import { stationByTrack } from '@/lib/tracks'
+import { mutateTour } from '@/lib/tourState'
 
 const NEUNGSOHWA_OVERLAY = '/images/neungsohwa-overlay.png'
 
@@ -92,6 +93,30 @@ export default function TrackPageClient({ n }: { n: number }) {
     cueState.cueId && cueState.ended && !cueState.pendingAutoChain
       ? cueState.cueId
       : null
+
+  /**
+   * 개발 전용 — 이 거점 QR을 스캔한 것으로 바로 입장한다.
+   * 순서 강제(QRGate) 때문에 트랙 직링크로는 볼 수 없는 화면을
+   * 테스트할 수 있도록, 선행 트랙을 완료 상태로 채운 뒤 도착 큐를 시작한다.
+   * 프로덕션 빌드에는 렌더되지 않는다.
+   */
+  const devEnter = () => {
+    const prevTracks = Array.from({ length: n - 1 }, (_, i) => i + 1)
+    const prevFrags = prevTracks
+      .filter((t) => t <= 4)
+      .map((t) => `frag_${t}` as FragmentId)
+    mutateTour((prev) => ({
+      paid: true,
+      audioCacheReady: true,
+      phase: 'act1',
+      tracksCompleted: prevTracks,
+      fragments: prevFrags,
+      speechMode: n >= 2 ? 'casual' : prev.speechMode,
+      startTime: prev.startTime ?? Date.now(),
+    }))
+    unlockAudio()
+    dispatchQr(station.id)
+  }
 
   // §10 재개 — 엔진이 비어 있으면 마지막 완료 큐를 기준으로 복원
   const resumable =
@@ -236,6 +261,14 @@ export default function TrackPageClient({ n }: { n: number }) {
             >
               📼 플레이어로 가기
             </button>
+            {process.env.NODE_ENV === 'development' && (
+              <button
+                onClick={devEnter}
+                className="mt-2 w-full rounded-xl border border-dashed border-rec py-2.5 text-[12.5px] font-bold text-rec"
+              >
+                🧪 테스트 입장 — 이전 트랙 완료 처리 후 이 거점 QR 스캔
+              </button>
+            )}
           </div>
         )}
 
