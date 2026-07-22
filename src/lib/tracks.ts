@@ -47,6 +47,14 @@ export interface TrackMission {
 // 거점
 // ---------------------------------------------------------------------------
 
+/**
+ * 만능 통과 코드 — 코드 입력창에 이 값을 넣으면 지금 차례인 거점의
+ * QR을 스캔한 것으로 통과한다. 현장 리허설·검수용.
+ * ⚠️ 실판매 전 반드시 null로 바꿔 비활성화할 것 — 참여자가 알면
+ * 걷지 않고 전 트랙을 열 수 있다.
+ */
+export const UNIVERSAL_PASS_CODE: string | null = '1111'
+
 export const STATIONS: Record<StationId, Station> = {
   intro: {
     id: 'intro',

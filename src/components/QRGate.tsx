@@ -15,6 +15,7 @@ import QRScanner from '@/components/QRScanner'
 import type { StationId } from '@/lib/cues'
 import {
   Station,
+  UNIVERSAL_PASS_CODE,
   stationByManualCode,
   stationByQrPayload,
 } from '@/lib/tracks'
@@ -48,13 +49,18 @@ export default function QRGate({
     return true
   }
 
+  /** 지금 차례인 거점으로 통과 — 테스트 스캔·만능 코드 공용 */
+  const acceptCurrent = () => {
+    const first = allowedStations[0]
+    if (first) {
+      accept(stationByQrPayload(`BH88:${first.toUpperCase()}`) ?? null)
+    }
+  }
+
   const handleScan = (data: string) => {
     // 개발용 테스트 스캔 — 허용된 첫 거점으로 통과
     if (data === 'test-qr-code-data') {
-      const first = allowedStations[0]
-      if (first) {
-        accept(stationByQrPayload(`BH88:${first.toUpperCase()}`) ?? null)
-      }
+      acceptCurrent()
       return
     }
     if (!accept(stationByQrPayload(data))) {
@@ -65,6 +71,11 @@ export default function QRGate({
 
   const handleManualSubmit = () => {
     setError('')
+    // 만능 통과 코드(검수용) — QR을 찍은 것으로 처리 (tracks.ts 참고, 실판매 전 비활성화)
+    if (UNIVERSAL_PASS_CODE !== null && code === UNIVERSAL_PASS_CODE) {
+      acceptCurrent()
+      return
+    }
     accept(stationByManualCode(code))
   }
 
