@@ -180,20 +180,27 @@ export default function FinalePage() {
 
         {/* 소원 체크 5 */}
         <div className="card-paper mt-4 p-4 shadow-lg">
-          {TRACK_STATIONS.map((station) => (
-            <div key={station.id} className="mt-1.5 flex items-center gap-2 first:mt-0">
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                  tour.tracksCompleted.includes(station.track)
-                    ? 'bg-teal text-cream'
-                    : 'bg-line text-ink-60'
-                }`}
-              >
-                ✓
-              </span>
-              <span className="text-[13px] text-ink">{station.wish}</span>
-            </div>
-          ))}
+          {TRACK_STATIONS.map((station) => {
+            // 4+1 유보(§6 B5_F) — 다섯 번째 소원은 다음 주, 부녀가 직접 이룬다
+            const reserved = station.track === 5
+            const done = !reserved && tour.tracksCompleted.includes(station.track)
+            return (
+              <div key={station.id} className="mt-1.5 flex items-center gap-2 first:mt-0">
+                <span
+                  className={`flex h-5 shrink-0 items-center justify-center rounded-full text-[11px] ${
+                    reserved
+                      ? 'w-auto bg-sunset-yellow px-2 font-mono-retro text-[10px] text-ink'
+                      : done
+                        ? 'w-5 bg-teal text-cream'
+                        : 'w-5 bg-line text-ink-60'
+                  }`}
+                >
+                  {reserved ? '다음 주' : '✓'}
+                </span>
+                <span className="text-[13px] text-ink">{station.wish}</span>
+              </div>
+            )
+          })}
         </div>
 
         {/* 우리의 테이프 앨범 */}
