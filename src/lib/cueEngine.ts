@@ -47,7 +47,7 @@ const EXTENSIONS = ['m4a', 'mp3'] as const
 
 export interface CuePlaybackState {
   cueId: CueId | null
-  channel: 'tape' | 'call' | null
+  channel: 'tape' | 'call' | 'shop' | null
   playing: boolean
   /** 경과 시간(초) — 오디오 또는 합성 클록 */
   elapsed: number

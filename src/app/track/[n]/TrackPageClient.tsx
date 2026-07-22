@@ -34,44 +34,43 @@ type Interaction =
   | { kind: 'posterphoto' }
   | { kind: 'record' }
   | { kind: 'unlock' }
-  | { kind: 'next' }
+  | { kind: 'resume' }
+  | { kind: 'ask' }
   | { kind: 'return' }
   | { kind: 'bingo' }
 
 const INTERACTIONS: Partial<Record<CueId, Interaction>> = {
-  // TRACK 1 — 봉황1935
-  C1_2: { kind: 'count' },
-  C1_3: {
+  // TRACK 1 — 봉황1935 : B1_A(개수→사장님) → B1_S(사진) → B1_B(완료)
+  B1_A: { kind: 'count' },
+  B1_S: {
     kind: 'photo',
     track: 1,
     actionId: 'M1_photo_done',
     label: 'MISSION 1 · 기록',
     prompt: '풍선초 앞에서 사진 한 장 — 오늘 우리의 첫 번째 기록이에요.',
   },
-  C1_4: { kind: 'next' },
-  C1_5: { kind: 'return' },
-  // TRACK 2 — 미야상회
-  C2_2: {
+  B1_B: { kind: 'return' },
+  // TRACK 2 — 미야상회 : 도착 번들이 곧 미션 안내
+  B2_A: {
     kind: 'photo',
     track: 2,
     actionId: 'M2_photo_done',
     label: 'MISSION 2 · 바나나우유',
     prompt: '바나나우유를 손에 들고, 무슨 맛인지 사진으로 보여주세요.',
   },
-  C2_3: { kind: 'next' },
-  C2_4: { kind: 'return' },
+  B2_B: { kind: 'return' },
   // TRACK 3 — 능소화 고택
-  C3_2: { kind: 'arphoto' },
-  C3_3: { kind: 'next' },
-  C3_4: { kind: 'return' },
-  // TRACK 4 — 카페 탱자
-  C4_3: { kind: 'record' },
-  C4_4: { kind: 'next' },
-  C4_5: { kind: 'return' },
-  // TRACK 5 — 방하림
-  C5_1: { kind: 'posterphoto' },
-  C5_2: { kind: 'unlock' },
-  C6_0: { kind: 'bingo' },
+  B3_A: { kind: 'arphoto' },
+  B3_B: { kind: 'return' },
+  // TRACK 4 — 카페 탱자 : B4_A(이어서 재생) → 라디오 → B4_B(메모) → B4_C(완료)
+  B4_A: { kind: 'resume' },
+  B4_B: { kind: 'record' },
+  B4_C: { kind: 'return' },
+  // TRACK 5 — 방하림 : 포스터 → B5_T1(여쭤보기) → 증언 → B5_T3(B면 잠금해제)
+  B5_A: { kind: 'posterphoto' },
+  B5_T1: { kind: 'ask' },
+  B5_T3: { kind: 'unlock' },
+  B6_0: { kind: 'bingo' },
 }
 
 export default function TrackPageClient({ n }: { n: number }) {
@@ -144,17 +143,32 @@ export default function TrackPageClient({ n }: { n: number }) {
         return <RecorderBside />
       case 'unlock':
         return <UnlockGate />
-      case 'next':
+      case 'resume':
+        // Track 4 — 정지해둔 자리(소원 끝)에서 라디오를 이어 재생 (D9 사용자 탭)
         return (
           <button
             onClick={() => {
               unlockAudio()
-              dispatchTap('NEXT')
+              dispatchTap('RESUME')
+            }}
+            className="btn-shell mt-4 w-full py-3 text-[15px]"
+            style={{ animation: 'slideUp 0.4s ease-out' }}
+          >
+            ▶ 이어서 재생 — 정지해둔 자리부터
+          </button>
+        )
+      case 'ask':
+        // Track 5 — 가게 주인에게 여쭤보기 (증언 반전)
+        return (
+          <button
+            onClick={() => {
+              unlockAudio()
+              dispatchTap('ASK')
             }}
             className="btn-teal mt-4 w-full text-[15px]"
             style={{ animation: 'slideUp 0.4s ease-out' }}
           >
-            🚶 다음으로 출발 ▶
+            🗣️ 가게 주인에게 여쭤보기
           </button>
         )
       case 'return':

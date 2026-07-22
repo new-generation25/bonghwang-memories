@@ -47,7 +47,7 @@ export default function CuePlayer() {
       <SubtitleView
         cue={cue}
         subtitleIndex={subtitleIndex}
-        handwriting={cue.id === 'C5_4'}
+        handwriting={cue.id === 'B5_LETTER'}
       />
 
       {needsTap ? (

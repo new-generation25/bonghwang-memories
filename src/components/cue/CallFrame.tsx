@@ -25,7 +25,7 @@ export default function CallFrame({ cue, playing, elapsed }: CallFrameProps) {
       <div className="flex items-center gap-3">
         {/* 프로필 */}
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-teal text-[22px] text-cream shadow-inner">
-          {cue.speaker === 'shopkeeper' ? '👵' : '📞'}
+          {cue.speaker === 'shopkeeper1' || cue.speaker === 'shopkeeper2' ? '👵' : '📞'}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[17px] text-ink">

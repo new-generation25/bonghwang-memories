@@ -16,8 +16,8 @@ interface TapeFrameProps {
 }
 
 export default function TapeFrame({ cue, playing, progress }: TapeFrameProps) {
-  // B면 편지(C5_4)는 SIDE B 표기
-  const side = cue.id === 'C5_4' ? 'B' : 'A'
+  // B면 편지(B5_LETTER)만 SIDE B 표기. 나머지 테이프 큐(소원·라디오)는 A면.
+  const side = cue.id === 'B5_LETTER' ? 'B' : 'A'
 
   return (
     <div className="flex flex-col items-center">

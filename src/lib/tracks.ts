@@ -32,7 +32,7 @@ export type TrackMissionType =
   | 'unlock'
 
 export interface TrackMission {
-  id: 'M1' | 'M2' | 'M3' | 'M4' | 'M5a' | 'M5b'
+  id: 'M1' | 'M1b' | 'M2' | 'M3' | 'M4' | 'M5a' | 'M5b'
   track: 1 | 2 | 3 | 4 | 5
   type: TrackMissionType
   title: string
@@ -66,7 +66,7 @@ export const STATIONS: Record<StationId, Station> = {
     location: { lat: 35.228483, lng: 128.876678 },
     qrPayload: 'BH88:T1',
     manualCode: '1935',
-    arrivalCue: 'C1_1',
+    arrivalCue: 'B1_A',
   },
   t2: {
     id: 't2',
@@ -76,7 +76,7 @@ export const STATIONS: Record<StationId, Station> = {
     location: { lat: 35.229116, lng: 128.878596 },
     qrPayload: 'BH88:T2',
     manualCode: '0917',
-    arrivalCue: 'C2_1',
+    arrivalCue: 'B2_A',
   },
   t3: {
     id: 't3',
@@ -86,7 +86,7 @@ export const STATIONS: Record<StationId, Station> = {
     location: { lat: 35.229192, lng: 128.87929 },
     qrPayload: 'BH88:T3',
     manualCode: '7788',
-    arrivalCue: 'C3_1',
+    arrivalCue: 'B3_A',
   },
   t4: {
     id: 't4',
@@ -96,7 +96,7 @@ export const STATIONS: Record<StationId, Station> = {
     location: { lat: 35.229361, lng: 128.879839 },
     qrPayload: 'BH88:T4',
     manualCode: '8890',
-    arrivalCue: 'C4_1',
+    arrivalCue: 'B4_A',
   },
   t5: {
     id: 't5',
@@ -106,7 +106,7 @@ export const STATIONS: Record<StationId, Station> = {
     location: { lat: 35.229729, lng: 128.880246 },
     qrPayload: 'BH88:T5',
     manualCode: '0625',
-    arrivalCue: 'C5_1',
+    arrivalCue: 'B5_A',
   },
 }
 
@@ -159,8 +159,16 @@ export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
     type: 'count_input',
     title: '풍선초 열매 세기',
     validation: { answer: 7 },
-    reward: { fragment: 'frag_1', coupon: 'cp1' },
+    // 개수 정답 → [사장님의 이야기 듣기] 활성 (아직 조각 없음)
     onCompleteAction: 'M1_count_ok',
+  },
+  M1b: {
+    id: 'M1b',
+    track: 1,
+    type: 'photo',
+    title: '풍선초 앞 인증샷',
+    reward: { fragment: 'frag_1', coupon: 'cp1' },
+    onCompleteAction: 'M1_photo_done',
   },
   M2: {
     id: 'M2',

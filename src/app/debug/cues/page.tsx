@@ -119,7 +119,10 @@ export default function CueDebugPage() {
         <div className="mt-2 flex flex-wrap gap-1.5">
           <DebugBtn onClick={() => dispatchTap('PLAY')}>tap:PLAY</DebugBtn>
           <DebugBtn onClick={() => dispatchTap('CALL')}>tap:CALL</DebugBtn>
-          <DebugBtn onClick={() => dispatchTap('NEXT')}>tap:NEXT</DebugBtn>
+          <DebugBtn onClick={() => dispatchTap('LISTEN')}>tap:LISTEN</DebugBtn>
+          <DebugBtn onClick={() => dispatchTap('RESUME')}>tap:RESUME</DebugBtn>
+          <DebugBtn onClick={() => dispatchTap('ASK')}>tap:ASK</DebugBtn>
+          <DebugBtn onClick={() => dispatchTap('BSIDE')}>tap:BSIDE</DebugBtn>
           <DebugBtn onClick={() => dispatchTap('FINISH')}>tap:FINISH</DebugBtn>
           {Object.values(STATIONS)
             .filter((s) => s.arrivalCue)
