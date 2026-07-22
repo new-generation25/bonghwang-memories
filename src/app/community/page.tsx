@@ -115,7 +115,7 @@ export default function FriendsPage() {
 
         {/* 랭킹 — 명예의 전당 */}
         <div className="card-paper mb-5 overflow-hidden shadow-lg">
-          <div className="stripe-band" />
+          <div className="stripe-rule" />
           <div className="p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-vintage text-sm font-black text-teal-dk">

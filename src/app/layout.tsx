@@ -3,12 +3,14 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 
 export const metadata: Metadata = {
-  title: '봉황 메모리즈: 아버지의 유산을 찾아서',
-  description: '봉황동의 역사와 문화를 스토리텔링과 게임형 미션을 통해 체험하는 인터랙티브 투어 앱',
-  keywords: '봉황동, 메모리즈, 투어, 가족, 추억, 문화체험',
+  title: '봉황 메모리즈 — 봉황1988 EP.1 「아버지의 타임캡슐」',
+  description:
+    '골목에 남겨진 카세트테이프와 손글씨 쪽지 한 장. 1988년 아버지가 태어날 딸에게 남긴 다섯 가지 소원을 따라 걷는 90분 오디오 드라마 투어.',
+  keywords: '봉황동, 봉황1988, 메모리즈, 오디오드라마, 워킹투어, 김해, 타임캡슐',
   openGraph: {
-    title: '봉황 메모리즈: 아버지의 유산을 찾아서',
-    description: '봉황동의 역사와 문화를 스토리텔링과 게임형 미션을 통해 체험하는 인터랙티브 투어 앱',
+    title: '봉황 메모리즈 — 봉황1988 EP.1 「아버지의 타임캡슐」',
+    description:
+      '골목에 남겨진 카세트테이프와 손글씨 쪽지 한 장. 아버지의 다섯 가지 소원을 따라 걷는 90분 오디오 드라마 투어.',
     type: 'website',
   },
   manifest: '/manifest.json',

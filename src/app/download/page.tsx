@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Cassette from '@/components/Cassette'
+import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
 import { ALL_CUE_IDS, CUES } from '@/lib/cues'
 import { mutateTour } from '@/lib/tourState'
 import { useTourHydrated, useTourState } from '@/hooks/useTourState'
@@ -93,7 +93,7 @@ export default function DownloadPage() {
         side="A"
         progress={progress}
         spin={done ? 'none' : 'right'}
-        scale={0.85}
+        scale={CASSETTE_SCALE}
       />
 
       <div className="mt-6 w-full max-w-[320px]">

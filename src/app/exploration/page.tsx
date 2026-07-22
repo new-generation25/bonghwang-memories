@@ -8,7 +8,6 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Mission, LocationData } from '@/lib/types'
 import Map from '@/components/Map'
 import Navigation from '@/components/Navigation'
@@ -19,7 +18,6 @@ export default function GuideMapPage() {
   const [userLocation, setUserLocation] = useState<LocationData | null>(null)
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const tour = useTourState()
-  const router = useRouter()
 
   useEffect(() => {
     if ('geolocation' in navigator) {
@@ -89,17 +87,13 @@ export default function GuideMapPage() {
         )}
 
         <div className="card-paper mt-4 p-4 text-center shadow-lg">
+          {/* 하단 탭바에 '플레이어' 탭이 항상 있어 돌아가기 버튼은 두지 않는다 —
+              중복 CTA를 없애면 안내 카드가 첫 화면 안에 들어온다 */}
           <p className="text-[12px] leading-relaxed text-ink-60">
             거점 도착 → 입구 QR 스캔 → 소영의 전화가 이어집니다.
             <br />
             100m 안에 들어오면 도착 알림을 드려요.
           </p>
-          <button
-            onClick={() => router.push('/play')}
-            className="btn-teal mt-3 w-full text-[14px]"
-          >
-            📼 플레이어로 돌아가기
-          </button>
         </div>
       </div>
 

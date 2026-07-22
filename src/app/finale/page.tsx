@@ -10,7 +10,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Cassette from '@/components/Cassette'
+import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
 import CuePlayer from '@/components/cue/CuePlayer'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
@@ -147,7 +147,8 @@ export default function FinalePage() {
 
       <div className="mx-auto mt-3 w-full max-w-[380px]">
         {/* C7_0 / C7_1 */}
-        {cueState.cueId?.startsWith('C7') && (
+        {/* 큐 ID는 B7_0·B7_1 — 'C7'은 v1 시절 접두사라 영영 거짓이었다 */}
+        {cueState.cueId?.startsWith('B7') && (
           <div className="mb-4">
             <CuePlayer />
           </div>
@@ -157,12 +158,12 @@ export default function FinalePage() {
         <div className="flex justify-center">
           <Cassette
             title="아버지의 타임캡슐"
-            headLeft="A면 아빠 · B면 우리"
+            headLeft="A면 소원 · B면 편지"
             headRight="DONE"
             side="done"
             progress={100}
             spin="none"
-            scale={0.8}
+            scale={CASSETTE_SCALE}
           />
         </div>
 
@@ -232,7 +233,7 @@ export default function FinalePage() {
             )}
             {tour.bsideEntry?.type === 'heart_only' && (
               <p className="mt-3 text-center text-[13px] text-ink-60">
-                💛 오늘의 마음이 B면에 담겼습니다
+                💛 오늘의 마음을 남겨두었습니다
               </p>
             )}
           </div>

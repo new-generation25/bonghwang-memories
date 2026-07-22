@@ -55,6 +55,21 @@ export interface TrackMission {
  */
 export const UNIVERSAL_PASS_CODE: string | null = '1111'
 
+/**
+ * 빙고 상시 개방 — true면 다섯 소원 완료 전에도 빙고판을 열 수 있다.
+ * 현장 리허설·검수용. ⚠️ 실판매 전 반드시 false로 되돌릴 것
+ * (스펙: 다섯 소원 완료(phase=act2) 시에만 해제).
+ */
+export const BINGO_ALWAYS_OPEN = true
+
+/**
+ * QR 카메라 스캔 사용 여부 — false면 거점 진입이 코드 입력만으로 진행된다.
+ * 카메라를 아예 열지 않으므로 권한 팝업·차단 메시지가 뜨지 않는다
+ * (PC 브라우저·인앱 프리뷰에서 클릭 검수할 때 사용).
+ * ⚠️ 실판매 전 반드시 true로 되돌릴 것 — D4는 QR 스캔 6회가 전제다.
+ */
+export const CAMERA_SCAN_ENABLED = false
+
 export const STATIONS: Record<StationId, Station> = {
   intro: {
     id: 'intro',
@@ -198,7 +213,7 @@ export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
     id: 'M4',
     track: 4,
     type: 'record',
-    title: 'B면에 답장 남기기',
+    title: '나의 육십 초 — 음성 메모',
     reward: { fragment: 'frag_4', coupon: 'cp4' },
     onCompleteAction: 'M4_done',
   },

@@ -16,6 +16,7 @@ import Navigation from '@/components/Navigation'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { BoardCell, buildBoard, countLines } from '@/lib/bingoCells'
+import { BINGO_ALWAYS_OPEN } from '@/lib/tracks'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { markBingoCell, mutateTour, addCoupon } from '@/lib/tourState'
@@ -27,6 +28,7 @@ export default function BingoPage() {
   const cueState = useCue()
   const router = useRouter()
   const [pendingCell, setPendingCell] = useState<BoardCell | null>(null)
+  const [confirmFinish, setConfirmFinish] = useState(false)
 
   const board = useMemo(() => buildBoard(), [])
 
@@ -58,8 +60,8 @@ export default function BingoPage() {
     }
   }, [lines, tour.bingo.lines])
 
-  // ---------- 잠금 화면 ----------
-  if (!tour.bingo.unlocked) {
+  // ---------- 잠금 화면 (BINGO_ALWAYS_OPEN이면 검수용으로 통과) ----------
+  if (!tour.bingo.unlocked && !BINGO_ALWAYS_OPEN) {
     return (
       <div className="min-h-screen bg-cream-base pb-32">
         <header className="appbar px-4 pb-3 pt-3">
@@ -120,6 +122,8 @@ export default function BingoPage() {
     setPendingCell(null)
   }
 
+  // 투어 종료는 되돌릴 수 없다(피날레에서 phase='done' 확정).
+  // 셀 하나 체크에도 확인을 받으면서 종료만 즉시 실행하던 비대칭을 없앤다.
   const handleFinish = () => {
     unlockAudio()
     dispatchTap('FINISH')
@@ -160,7 +164,8 @@ export default function BingoPage() {
 
       <div className="mx-auto max-w-md px-4 py-5">
         {/* 소영의 한마디 (C6_x) 재생 중이면 표시 */}
-        {cueState.cueId?.startsWith('C6') && (
+        {/* 큐 ID는 B6_X_* — 'C6'은 v1 시절 접두사라 영영 거짓이었다 */}
+        {cueState.cueId?.startsWith('B6') && (
           <div className="mb-4">
             <CuePlayer />
           </div>
@@ -221,7 +226,10 @@ export default function BingoPage() {
         </div>
 
         {/* 투어 마치기 */}
-        <button onClick={handleFinish} className="btn-teal w-full text-[15px]">
+        <button
+          onClick={() => setConfirmFinish(true)}
+          className="btn-teal w-full text-[15px]"
+        >
           🎬 투어 마치기 — 우리의 테이프 만들기
         </button>
       </div>
@@ -249,6 +257,39 @@ export default function BingoPage() {
                 className="flex-1 rounded-xl bg-teal py-3 font-display text-[14px] text-cream"
               >
                 발견했어요 ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 투어 종료 확인 — 되돌릴 수 없는 전환이라 한 번 묻는다 */}
+      {confirmFinish && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-shell/80 px-6">
+          <div className="w-full max-w-[320px] rounded-2xl bg-paper p-6 text-center">
+            <div className="text-4xl">🎬</div>
+            <h3 className="mt-2 font-display text-[17px] text-ink">
+              오늘의 투어를 마칠까요?
+            </h3>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-ink-60">
+              지금까지의 기록으로 &lsquo;우리의 테이프&rsquo;를 만듭니다.
+              마치고 나면 골목 빙고로 돌아올 수 없어요.
+            </p>
+            <p className="mt-2 font-mono-retro text-[11px] text-teal">
+              발견 {act2Done} / 20 · 빙고 {lines}줄
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setConfirmFinish(false)}
+                className="flex-1 rounded-xl border border-line bg-cream py-3 text-[13px] text-ink"
+              >
+                더 걸을래요
+              </button>
+              <button
+                onClick={handleFinish}
+                className="flex-1 rounded-xl bg-teal py-3 font-display text-[14px] text-cream"
+              >
+                마칠게요 ✓
               </button>
             </div>
           </div>

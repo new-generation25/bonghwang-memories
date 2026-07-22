@@ -1,11 +1,11 @@
 {
-  "name": "봉황 메모리즈: 아버지의 유산을 찾아서",
+  "name": "봉황 메모리즈 — 봉황1988 EP.1 「아버지의 타임캡슐」",
   "short_name": "봉황 메모리즈",
-  "description": "봉황동의 역사와 문화를 스토리텔링과 게임형 미션을 통해 체험하는 인터랙티브 투어 앱",
+  "description": "골목에 남겨진 카세트테이프와 손글씨 쪽지 한 장. 1988년 아버지가 태어날 딸에게 남긴 다섯 가지 소원을 따라 걷는 90분 오디오 드라마 투어.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F7F3E9",
-  "theme_color": "#8B4513",
+  "background_color": "#F3EAD3",
+  "theme_color": "#2E8A80",
   "orientation": "portrait",
   "scope": "/",
   "icons": [
