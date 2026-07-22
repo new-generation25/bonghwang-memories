@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "check:forbidden": "node scripts/check-forbidden.js",
-    "update-sw-version": "node scripts/update-sw-version.js"
+    "update-sw-version": "node scripts/update-sw-version.js",
+    "gen:audio": "node scripts/generate-audio.mjs"
   },
   "dependencies": {
     "canvas": "^3.1.2",

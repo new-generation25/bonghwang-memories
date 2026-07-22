@@ -1,0 +1,44 @@
+{
+  "_읽어보세요": [
+    "이 파일을 voices.json으로 복사한 뒤 값을 채우세요 (voices.json은 커밋하지 않습니다).",
+    "voice_id는 studio.typecast.ai의 보이스 라이브러리에서 고릅니다.",
+    "  · 내장 보이스는 tc_ 로 시작, 직접 만든 보이스는 uc_ 로 시작합니다.",
+    "아버지는 같은 인물의 30대(young)와 60대(old)를 연기해야 합니다 —",
+    "같은 보이스에 pitch/tempo를 달리 주거나, 아예 다른 보이스를 골라도 됩니다."
+  ],
+
+  "model": "ssfm-v30",
+
+  "roles": {
+    "father_young": {
+      "voice_id": "tc_________________",
+      "설명": "아버지 1988년 — b0_tape, b4_radio. 30대, 무뚝뚝",
+      "output": { "audio_pitch": -1, "audio_tempo": 0.96 }
+    },
+    "father_old": {
+      "voice_id": "tc_________________",
+      "설명": "아버지 현재 — b5_letter, b7_1. 60대, 느리고 갈라진",
+      "output": { "audio_pitch": -2, "audio_tempo": 0.88 }
+    },
+    "soyoung": {
+      "voice_id": "tc_________________",
+      "설명": "소영 37세 — 전 구간 동일 보이스 필수",
+      "output": { "audio_tempo": 1.0 }
+    },
+    "shopkeeper1": {
+      "voice_id": "tc_________________",
+      "설명": "봉황1935 사장님 — 정겨운 어르신",
+      "output": { "audio_tempo": 0.95 }
+    },
+    "shopkeeper2": {
+      "voice_id": "tc_________________",
+      "설명": "방하림 사장님 — 중년 남성, 담담",
+      "output": { "audio_tempo": 0.97 }
+    },
+    "dj": {
+      "voice_id": "tc_________________",
+      "설명": "라디오 DJ — 1988 심야 방송",
+      "output": { "audio_tempo": 0.95 }
+    }
+  }
+}

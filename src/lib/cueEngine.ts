@@ -32,6 +32,7 @@ import {
   mutateTour,
   setCurrentTrack,
 } from './tourState'
+import { timingsFor } from './audioTimings'
 import { STATIONS } from './tracks'
 import { POINTS, awardPoints } from './score'
 import { logEvent } from './analytics'
@@ -196,8 +197,20 @@ export function unlockAudio() {
 // 자막 싱크 — 문장 길이 비례로 현재 줄 계산
 // -----------------------------------------------------------------------------
 
+function subtitleWeights(cue: Cue): number[] {
+  return cue.subtitleLines.map((l) => Math.max(1, l.text.length))
+}
+
 function subtitleIndexAt(cue: Cue, elapsed: number, duration: number): number {
-  const weights = cue.subtitleLines.map((l) => Math.max(1, l.text.length))
+  // 실측 시각이 있으면 추정하지 않는다 (침묵이 긴 번들에서 특히 중요)
+  const measured = timingsFor(cue.audioFile, cue.subtitleLines.length)
+  if (measured) {
+    let i = 0
+    while (i + 1 < measured.length && elapsed >= measured[i + 1]) i++
+    return i
+  }
+
+  const weights = subtitleWeights(cue)
   const total = weights.reduce((a, b) => a + b, 0)
   const progress = duration > 0 ? Math.min(1, elapsed / duration) : 0
   let acc = 0
@@ -206,6 +219,19 @@ function subtitleIndexAt(cue: Cue, elapsed: number, duration: number): number {
     if (progress < acc / total) return i
   }
   return weights.length - 1
+}
+
+/** index번째 자막 줄이 시작하는 시각(초) */
+function elapsedAtSubtitle(cue: Cue, index: number, duration: number): number {
+  const measured = timingsFor(cue.audioFile, cue.subtitleLines.length)
+  // 경계값에서 이전 줄로 되돌아가지 않도록 아주 살짝 넘겨서 잡는다
+  if (measured) return measured[Math.min(index, measured.length - 1)] + 0.01
+
+  const weights = subtitleWeights(cue)
+  const total = weights.reduce((a, b) => a + b, 0)
+  let acc = 0
+  for (let i = 0; i < index; i++) acc += weights[i]
+  return duration * (acc / total) + 0.01
 }
 
 // -----------------------------------------------------------------------------
@@ -352,6 +378,50 @@ export function skipCue() {
   logEvent('bundle_skipped', { id: cue.id, atSec: Math.round(state.elapsed) })
   clearResources()
   finishCue(cue)
+}
+
+/**
+ * FF — 자막 한 줄 건너뛰기.
+ *
+ * 재생 중에도 누를 수 있고, 다음 문장 시작 지점으로 건너뛴다.
+ * 마지막 줄에서 누르면 번들을 끝내 다음 단계로 넘어간다.
+ * (번들 통째로 건너뛰는 skipCue와 달리 D9의 15초 제한을 받지 않는다 —
+ *  한 줄씩 넘기는 건 '빨리감기'지 콘텐츠 스킵이 아니다.)
+ */
+export function skipLine() {
+  if (!state.cueId || state.ended) return
+  const cue = CUES[state.cueId]
+  const last = cue.subtitleLines.length - 1
+  const next = state.subtitleIndex + 1
+
+  // 마지막 줄이면 번들 종료 → 다음 단계
+  if (next > last) {
+    logEvent('bundle_skipped', { id: cue.id, atSec: Math.round(state.elapsed) })
+    clearResources()
+    finishCue(cue)
+    return
+  }
+
+  const duration = state.duration || cue.durationSec
+  const target = elapsedAtSubtitle(cue, next, duration)
+
+  if (audio) {
+    try {
+      audio.currentTime = target
+    } catch {
+      // seek 불가(스트리밍 등) — 자막 인덱스만 앞으로 보낸다
+    }
+  } else {
+    // 합성 클록: 누적값을 목표 지점으로 옮긴다
+    clockAccum = target
+    if (state.playing) clockStartedAt = performance.now()
+  }
+
+  emit({
+    elapsed: target,
+    subtitleIndex: next,
+    skippable: target >= SKIP_AFTER_SEC,
+  })
 }
 
 export function stopCue() {

@@ -43,3 +43,7 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# 음성 생성 — 줄 단위 캐시와 보이스 설정(개인 키 성격)
+.audio-cache/
+scripts/voices.json
