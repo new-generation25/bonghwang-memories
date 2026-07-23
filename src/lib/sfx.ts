@@ -338,8 +338,8 @@ export function playQrOk(): void {
   if (!ac) return
   try {
     const now = ac.currentTime
-    clack(ac, now, 4200, 0.08) // 시작점을 만드는 아주 짧은 잡음
-    tone(ac, now, 2100, 0.16, 0.075)
+    clack(ac, now, 4200, 0.14) // 시작점을 만드는 아주 짧은 잡음
+    tone(ac, now, 2100, 0.3, 0.075)
   } catch {
     /* 소리는 부가 기능이다 */
   }
@@ -360,10 +360,10 @@ export function playBingoLine(): void {
   if (!ac) return
   try {
     const now = ac.currentTime
-    clack(ac, now, 3000, 0.1) // 첫 음의 머리를 세운다
-    tone(ac, now, 784, 0.2, 0.1) // 솔
-    tone(ac, now + 0.09, 1046, 0.2, 0.1) // 도
-    tone(ac, now + 0.18, 1318, 0.22, 0.26) // 미 — 여기서 끝난다
+    clack(ac, now, 3000, 0.16) // 첫 음의 머리를 세운다
+    tone(ac, now, 784, 0.34, 0.1) // 솔
+    tone(ac, now + 0.09, 1046, 0.34, 0.1) // 도
+    tone(ac, now + 0.18, 1318, 0.36, 0.26) // 미 — 여기서 끝난다
   } catch {
     /* 소리는 부가 기능이다 */
   }
@@ -381,7 +381,7 @@ export function playPoint(): void {
   if (!ac) return
   try {
     const now = ac.currentTime
-    tone(ac, now, 1568, 0.12, 0.16)
+    tone(ac, now, 1568, 0.26, 0.16)
   } catch {
     /* 소리는 부가 기능이다 */
   }
@@ -403,8 +403,8 @@ export function playRecStart(): void {
   if (!ac) return
   try {
     const now = ac.currentTime
-    tone(ac, now, 880, 0.14, 0.07)
-    tone(ac, now + 0.13, 880, 0.14, 0.07)
+    tone(ac, now, 880, 0.26, 0.07)
+    tone(ac, now + 0.13, 880, 0.26, 0.07)
   } catch {
     /* 소리는 부가 기능이다 */
   }
@@ -422,7 +422,7 @@ export function playRecStop(): void {
   if (!ac) return
   try {
     const now = ac.currentTime
-    tone(ac, now, 523, 0.14, 0.16)
+    tone(ac, now, 523, 0.26, 0.16)
   } catch {
     /* 소리는 부가 기능이다 */
   }
