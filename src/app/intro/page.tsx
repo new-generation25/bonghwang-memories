@@ -186,10 +186,10 @@ export default function IntroPage() {
             <div className="deck-top">
               <div className="deck-grille" aria-hidden />
               <div className="deck-door">
-                {/* 테이프를 아래로 내려 윗부분만 창에 걸치게 한다 —
-                    창(deck-door)의 overflow:hidden이 나머지를 잘라낸다.
-                    좌우 가운데 정렬은 .deck-door의 flex가 맡는다. */}
-                <div className="shrink-0" style={{ marginTop: 16 }}>
+                {/* 창은 라벨 높이만큼만 뚫려 있다. 나머지는 도어가 가린다 —
+                    테이프가 안에 들어가 있고 일부만 보이는 실물 그대로다. */}
+                <div className="deck-window">
+                <div className="shrink-0" style={{ marginTop: 6 }}>
                   <Cassette
                     title="소영에게 — 1988. 9. 17."
                     headLeft=""
@@ -200,16 +200,20 @@ export default function IntroPage() {
                     scale={0.68}
                   />
                 </div>
+                </div>
               </div>
             </div>
 
             {/* 조작부 — EJECT 노브 · 카운터 · 진행 방향 */}
             <div className="deck-meta">
               <span className="deck-knob" aria-hidden />
+              {/* 네 자리 카운터에 1988 — 실물 데크의 테이프 카운터 자리에
+                  이야기의 연도가 새겨져 있는 셈이다 */}
               <span className="deck-counter" aria-hidden>
-                <i>0</i>
-                <i>0</i>
-                <i>0</i>
+                <i>1</i>
+                <i>9</i>
+                <i>8</i>
+                <i>8</i>
               </span>
               <span className="deck-label">A ▸</span>
             </div>

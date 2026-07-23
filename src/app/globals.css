@@ -1029,26 +1029,42 @@ video::-webkit-media-controls-start-playback-button {
 }
 
 /* 테이프 창 — 도어 안쪽. 테이프는 아래쪽이 잘려 '일부만' 보인다 */
+/* 도어 — 테이프를 덮는 판. 실물처럼 이 판 가운데에 작은 창만 뚫려 있다 */
 .deck-door {
   position: relative;
   flex: 1 1 auto;
   height: 128px;
   border-radius: 9px;
-  padding: 9px 8px 0;
-  /* 테이프를 창 한가운데 둔다. 예전에는 흐름 배치라 오른쪽으로 밀려
-     릴 바깥쪽이 잘렸다(창 207~417 / 테이프 242~458). */
+  padding: 0;
   display: flex;
+  align-items: center;
   justify-content: center;
+  background: linear-gradient(158deg, #e4e1db 0%, #c9c5be 55%, #dad7d0 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+/* 아크릴 창 — 테이프 라벨 부분만 보인다. 나머지는 도어가 가린다 */
+.deck-window {
+  position: relative;
+  width: calc(100% - 22px);
+  height: 74px;
+  border-radius: 5px;
   background: linear-gradient(#0d0b0a, #171413);
   box-shadow:
     inset 0 3px 10px rgba(0, 0, 0, 0.9),
-    0 1px 0 rgba(255, 255, 255, 0.8);
-  /* 핵심 — 창 밖으로 나간 테이프 아랫부분은 잘린다 */
+    0 1px 0 rgba(255, 255, 255, 0.85);
+  display: flex;
+  justify-content: center;
+  /* 핵심 — 창 밖으로 나간 테이프는 잘린다 */
   overflow: hidden;
 }
 
 /* 창 유리 반사 */
-.deck-door::after {
+.deck-window::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1061,7 +1077,7 @@ video::-webkit-media-controls-start-playback-button {
 }
 
 /* 창 안에서 테이프를 위로 끌어올려 윗부분만 노출시킨다 */
-.deck-door .cassette {
+.deck-window .cassette {
   transform-origin: top center;
 }
 
