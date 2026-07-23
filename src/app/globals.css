@@ -755,7 +755,16 @@ a {
   background: rgb(var(--paper));
   border: 1px solid rgb(var(--line));
   transition: all 0.3s ease;
-  min-height: 70px;
+  /*
+    정사각. 전에는 min-height 70px으로 못박아 뒀는데, 폭은 화면에 따라
+    정해지므로(375px에서 한 칸이 57px쯤) 칸이 세로로 길쭉해지고 판 전체가
+    세로로 늘어난 직사각형이 됐다. 빙고판은 정사각으로 읽혀야 가로·세로·
+    대각이 같은 무게로 보인다.
+
+    좁은 기기에서 글자가 눌리지 않게 바닥만 남긴다.
+  */
+  aspect-ratio: 1 / 1;
+  min-height: 52px;
   width: 100%;
   color: rgb(var(--ink));
 }
