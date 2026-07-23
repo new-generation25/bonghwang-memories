@@ -41,12 +41,21 @@ interface CuePlayerProps {
    * 어느 쪽을 눌러야 하는지 헷갈린다.
    */
   endedAction?: { label: string; onClick: () => void }
+  /**
+   * 데크를 감춘다 — 미션이 화면을 덮고 있을 때.
+   *
+   * 데크는 화면 아래에 못박혀 있고 미션 오버레이는 그 위를 덮는다. 그래서
+   * 미션이 뜨면 데크가 막 뒤에 깔린 채 아래쪽 한 줄만 비어져 나왔다 —
+   * 보이는데 눌리지 않는 물건이 된다. 지금 할 일은 미션이니 아예 치운다.
+   */
+  deckHidden?: boolean
 }
 
 export default function CuePlayer({
   fill = false,
   center,
   endedAction,
+  deckHidden = false,
 }: CuePlayerProps = {}) {
   const cueState = useCue()
   const { cueId, playing, elapsed, duration, subtitleIndex, ended, audioAvailable, pendingAutoChain } = cueState
@@ -192,7 +201,11 @@ export default function CuePlayer({
         키인지는 도형이 말한다. 다만 재생이 끝난 뒤의 PLAY만은 다음 단계를
         여는 키라, 무엇이 열리는지 이름을 그대로 새긴다.
       */}
-      {fill ? <div className="deck-dock">{deck}</div> : deck}
+      {fill ? (
+        !deckHidden && <div className="deck-dock">{deck}</div>
+      ) : (
+        deck
+      )}
 
       {!audioAvailable && !ended && (
         <p className="mt-2 text-center font-mono-retro text-[10.5px] text-ink60">

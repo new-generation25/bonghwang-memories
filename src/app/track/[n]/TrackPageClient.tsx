@@ -300,6 +300,9 @@ export default function TrackPageClient({ n }: { n: number }) {
               높이가 내용에 맞춰지므로 미션이 그 아래로 이어진다.
             */
             fill
+            /* 미션이 덮고 있는 동안에는 데크를 치운다 — 막 뒤에 깔려
+               보이기만 하고 눌리지 않는 물건이 된다 */
+            deckHidden={Boolean(interactionNode)}
             center={
               <PlacePhoto name={station.name} photo={station.photo} track={n} />
             }
