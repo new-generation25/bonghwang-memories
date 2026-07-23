@@ -129,7 +129,18 @@ function Slider({
 }
 
 export default function VoiceLabPage() {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  /*
+    재생은 <audio>가 아니라 Web Audio로 한다.
+    구운 결과는 메모리에만 있어서 blob: URL로 넘겨야 하는데, 일부 브라우저
+    (Claude 앱 내장 Electron 등)의 <audio>가 blob:·data: 소스를 거부한다
+    — NotSupportedError가 나고 소리가 안 난다. 파일 자체는 멀쩡해서
+    decodeAudioData로는 잘 열린다. 그래서 디코딩해서 직접 울린다.
+    미리 구운 샘플도 같은 길로 보내 재생·정지 처리를 한 곳에 모은다.
+  */
+  const ctxRef = useRef<AudioContext | null>(null)
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null)
+  /** 한 번 디코딩한 것은 들고 있는다 — 다시 듣기가 즉시 나야 비교가 된다 */
+  const cacheRef = useRef<Map<string, AudioBuffer>>(new Map())
   const urlRef = useRef<string | null>(null)
   const [playing, setPlaying] = useState<string | null>(null)
 
@@ -141,6 +152,8 @@ export default function VoiceLabPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUrl, setLastUrl] = useState<string | null>(null)
+  /** 방금 구운 것이 어떤 설정이었는지 — 슬라이더를 만지작거리면 금세 잊는다 */
+  const [lastLabel, setLastLabel] = useState<string | null>(null)
   const [metas, setMetas] = useState<Record<string, VoiceMeta>>({})
 
   // 보이스별 지원 감정·모델을 받아온다 — 하드코딩하면 보이스를 바꿀 때마다 틀린다
@@ -157,31 +170,72 @@ export default function VoiceLabPage() {
       })
   }, [])
 
+  const audioContext = (): AudioContext => {
+    if (!ctxRef.current) {
+      const Ctor =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext
+      ctxRef.current = new Ctor()
+    }
+    if (ctxRef.current.state === 'suspended') void ctxRef.current.resume()
+    return ctxRef.current
+  }
+
   /** 재생 중인 것을 멈춘다 — 겹쳐 나면 비교가 안 된다 */
   const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current = null
+    if (sourceRef.current) {
+      // onended가 다시 setPlaying(null)을 부르지 않도록 먼저 끊는다
+      sourceRef.current.onended = null
+      try {
+        sourceRef.current.stop()
+      } catch {
+        /* 이미 끝났으면 무시 */
+      }
+      sourceRef.current = null
     }
     setPlaying(null)
   }, [])
 
   useEffect(
     () => () => {
-      audioRef.current?.pause()
+      sourceRef.current?.stop()
+      void ctxRef.current?.close()
       if (urlRef.current) URL.revokeObjectURL(urlRef.current)
     },
     []
   )
 
-  const playUrl = (url: string, key: string) => {
+  const playBuffer = (buf: AudioBuffer, key: string) => {
     stop()
-    const el = new Audio(url)
-    audioRef.current = el
-    el.onended = () => setPlaying(null)
-    el.onerror = () => setPlaying(null)
-    void el.play()
+    const ac = audioContext()
+    const src = ac.createBufferSource()
+    src.buffer = buf
+    src.connect(ac.destination)
+    src.onended = () => setPlaying((p) => (p === key ? null : p))
+    src.start()
+    sourceRef.current = src
     setPlaying(key)
+  }
+
+  /** URL에서 받아 디코딩한 뒤 울린다. 두 번째부터는 캐시에서 바로 나간다 */
+  const playFromUrl = async (url: string, key: string) => {
+    const cached = cacheRef.current.get(key)
+    if (cached) {
+      playBuffer(cached, key)
+      return
+    }
+    setError(null)
+    try {
+      const ac = audioContext()
+      const ab = await (await fetch(url)).arrayBuffer()
+      const buf = await ac.decodeAudioData(ab)
+      cacheRef.current.set(key, buf)
+      playBuffer(buf, key)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '재생 실패')
+      setPlaying(null)
+    }
   }
 
   const playSample = (c: Candidate, a: Age) => {
@@ -190,7 +244,7 @@ export default function VoiceLabPage() {
       stop()
       return
     }
-    playUrl(sampleSrc(c, a), key)
+    void playFromUrl(sampleSrc(c, a), key)
   }
 
   /** 나이를 바꾸면 대사와 출발 설정도 함께 바뀐다 */
@@ -219,12 +273,26 @@ export default function VoiceLabPage() {
         const j = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
         throw new Error(j.error ?? `HTTP ${res.status}`)
       }
-      const blob = await res.blob()
+      const ab = await res.arrayBuffer()
+
+      // 재생용 — 디코딩해서 Web Audio로 울린다
+      const ac = audioContext()
+      const buf = await ac.decodeAudioData(ab.slice(0))
+      cacheRef.current.set('tuned', buf)
+
+      // 내려받기용 — 이쪽은 blob: URL로 충분하다(디코딩을 거치지 않는다)
       if (urlRef.current) URL.revokeObjectURL(urlRef.current)
-      const url = URL.createObjectURL(blob)
+      const url = URL.createObjectURL(new Blob([ab], { type: 'audio/mpeg' }))
       urlRef.current = url
       setLastUrl(url)
-      playUrl(url, 'tuned')
+      setLastLabel(
+        `${current ? `${current.no}번` : ''} · ${age === 'young' ? '젊은' : '늙은'} · ` +
+          `${EMOTION_LABEL[tuning.emotion] ?? tuning.emotion} ` +
+          `${tuning.intensity.toFixed(1)} · ${tuning.tempo.toFixed(2)}× · ` +
+          `${tuning.pitch > 0 ? '+' : ''}${tuning.pitch} · ${buf.duration.toFixed(1)}초`
+      )
+
+      playBuffer(buf, 'tuned')
     } catch (e) {
       setError(e instanceof Error ? e.message : '합성 실패')
     } finally {
@@ -335,6 +403,26 @@ export default function VoiceLabPage() {
           </span>
         </h2>
 
+        {/*
+          비결정적이라는 사실은 반드시 알려야 한다. 자막은 오디오 타임라인에
+          맞춰 넘어가므로, 마음에 안 든다고 한 줄만 다시 구우면 그 줄의 길이가
+          달라져 뒤가 전부 밀린다. 실측: 같은 설정으로 3번 구웠더니
+          4.375 / 4.432 / 4.830초로 10% 넘게 벌어졌다.
+        */}
+        <div className="mt-2 rounded-xl border border-retro-orange/40 bg-sunset-yellow/12 px-4 py-3">
+          <p className="text-[11.5px] leading-relaxed text-ink">
+            <b>같은 설정이라도 구울 때마다 결과가 다릅니다.</b> 같은 값으로 세 번
+            구워보니 길이가 4.38 · 4.43 · 4.83초로 벌어졌습니다(10% 이상).
+            <br />
+            <span className="text-ink-60">
+              그래서 마음에 드는 것이 나오면 <b className="text-ink">그 파일을
+              보관</b>하세요. 나중에 같은 설정으로 다시 굽는다고 같은 소리가
+              나오지 않습니다. 대사 한 줄만 다시 구우면 길이가 달라져 자막이
+              밀립니다.
+            </span>
+          </p>
+        </div>
+
         <div className="card-paper mt-3 p-4">
           <p className="text-[12.5px] font-bold text-ink">
             {current ? `${current.no}번` : ''}
@@ -443,7 +531,7 @@ export default function VoiceLabPage() {
             disabled={busy || !text.trim()}
             className="btn-teal mt-4 w-full text-center disabled:opacity-50"
           >
-            {busy ? '굽는 중…' : '🔊 이 설정으로 굽고 듣기'}
+            {busy ? '굽는 중…' : '🔊 이 설정으로 굽기 — 다 구우면 바로 들립니다'}
           </button>
 
           {error && (
@@ -452,23 +540,37 @@ export default function VoiceLabPage() {
             </p>
           )}
 
+          {/*
+            구운 결과 — 어떤 설정이었는지 함께 적는다. 슬라이더를 계속
+            만지작거리다 보면 방금 들은 것이 어떤 값이었는지 잊는다.
+          */}
           {lastUrl && !busy && (
-            <div className="mt-2 flex gap-2">
-              <button
-                onClick={() =>
-                  playing === 'tuned' ? stop() : playUrl(lastUrl, 'tuned')
-                }
-                className="flex-1 rounded-lg border border-line bg-cream-base px-3 py-2 text-[12px] font-bold text-teal-dk"
-              >
-                {playing === 'tuned' ? '■ 정지' : '▶ 방금 것 다시'}
-              </button>
-              <a
-                href={lastUrl}
-                download={`father_${voiceId}_${age}_${tuning.emotion}.mp3`}
-                className="flex-1 rounded-lg border border-line bg-cream-base px-3 py-2 text-center text-[12px] font-bold text-teal-dk"
-              >
-                ⤓ 내려받기
-              </a>
+            <div className="mt-3 rounded-lg border border-teal/40 bg-teal/8 px-3 py-2.5">
+              <p className="font-mono-retro text-[10px] leading-snug text-teal-dk">
+                구운 것 — {lastLabel}
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    if (playing === 'tuned') {
+                      stop()
+                      return
+                    }
+                    const buf = cacheRef.current.get('tuned')
+                    if (buf) playBuffer(buf, 'tuned')
+                  }}
+                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-[12px] font-bold text-teal-dk"
+                >
+                  {playing === 'tuned' ? '■ 멈추기' : '▶ 다시 듣기'}
+                </button>
+                <a
+                  href={lastUrl}
+                  download={`father_${voiceId}_${age}_${tuning.emotion}.mp3`}
+                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-center text-[12px] font-bold text-teal-dk"
+                >
+                  ⤓ 내려받기
+                </a>
+              </div>
             </div>
           )}
         </div>
