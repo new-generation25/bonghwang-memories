@@ -21,7 +21,6 @@ import PhotoStep from '@/components/mission/PhotoStep'
 import RecorderBside from '@/components/mission/RecorderBside'
 import UnlockGate from '@/components/mission/UnlockGate'
 import { useCue } from '@/hooks/useCue'
-import { useRevealOnChange } from '@/hooks/useRevealOnChange'
 import { useTourState } from '@/hooks/useTourState'
 import { CUES, CueId, FragmentId } from '@/lib/cues'
 import { dispatchQr, dispatchTap, playCue, unlockAudio } from '@/lib/cueEngine'
@@ -134,10 +133,6 @@ export default function TrackPageClient({ n }: { n: number }) {
     const t = window.setTimeout(() => router.replace('/treasure'), 900)
     return () => window.clearTimeout(t)
   }, [interaction?.kind, router])
-  const interactionRef = useRevealOnChange<HTMLDivElement>(
-    interaction?.kind,
-    Boolean(interaction)
-  )
 
   // 훅 호출 뒤에 검사한다 — 훅은 렌더마다 같은 순서로 불려야 한다
   if (!station) {
@@ -335,10 +330,32 @@ export default function TrackPageClient({ n }: { n: number }) {
           </div>
         )}
 
-        {/* 미션·진행 버튼이 열리는 순간 화면 안으로 끌어온다 —
-            자막·카드가 쌓여 이 영역이 스크롤 아래에 묻히기 때문 */}
-        <div ref={interactionRef}>{renderInteraction()}</div>
       </div>
+
+      {/*
+        미션은 이야기 화면 위로 덮는다.
+
+        아래에 이어 붙이면 자막·데크가 쌓인 만큼 미션이 접힌 화면 밖으로
+        밀려서, 정작 할 일을 보려고 스크롤을 내려야 했다. 스크롤로 끌어오는
+        보정을 넣어도 화면이 한 번 출렁인다.
+
+        덮으면 위치가 늘 같다 — 아래에서 올라와 엄지가 닿는 자리에 선다.
+        뒤의 거점 그림은 어두워진 채로 남는다. 사진을 찍거나 세는 동안
+        '여기가 어디였는지'를 계속 보고 있어야 하기 때문이다.
+
+        바탕을 눌러도 닫히지 않는다. 미션은 건너뛰는 것이 아니라 해야
+        다음으로 넘어가는 것이라, 실수로 닫히면 되돌릴 길이 없다.
+      */}
+      {interaction && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-shell/55 px-4 pb-4">
+          <div
+            className="max-h-[82vh] w-full max-w-[380px] overflow-y-auto"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
+            {renderInteraction()}
+          </div>
+        </div>
+      )}
 
       <div className="stripe-band fixed bottom-0 left-0 right-0" />
     </div>

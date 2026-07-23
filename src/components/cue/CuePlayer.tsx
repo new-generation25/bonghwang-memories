@@ -97,19 +97,24 @@ export default function CuePlayer({
           </div>
 
           {/*
-            거점 그림.
+            거점 그림 — 상자 폭을 꽉 채운다.
 
-            크기를 못박는다. 예전에는 남는 높이를 그림에 내줬는데, 그러면
+            크기는 못박는다. 예전에는 남는 높이를 그림에 내줬는데, 그러면
             대사 길이와 미션 유무에 따라 거점마다 그림이 커졌다 작아졌다
             했다. 특히 더빙이 끝나는 순간 눈에 띄게 줄어들어, 화면이
             바뀐 것처럼 보였다.
-          */}
-          <div className="flex justify-center px-3 pb-3">
-            <div className="w-[76%] min-w-[200px] max-w-[280px]">{center}</div>
-          </div>
 
-          {/* 자막은 데크 바로 위 — 듣는 동안 눈이 가장 오래 머무는 자리 */}
-          <div className="border-t border-line px-4 py-3">{subtitles}</div>
+            좁게 두지 않는다. 이 화면에서 눈이 가는 곳은 그림 하나뿐이고,
+            골목에서 실제 간판과 대조하는 것도 이 그림이다.
+          */}
+          <div className="px-3 pb-3">{center}</div>
+
+          {/*
+            자막은 그림 바로 아래. 구분선을 두지 않는다 — 화자·그림·자막이
+            한 덩어리로 읽혀야 하는데, 선이 들어가면 그림과 자막이 다른
+            카드처럼 갈린다.
+          */}
+          <div className="px-4 pb-3">{subtitles}</div>
         </div>
       ) : (
         <>
