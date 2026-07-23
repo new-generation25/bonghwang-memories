@@ -23,6 +23,7 @@ import { putBlob } from '@/lib/blobStore'
 import { dispatchAction } from '@/lib/cueEngine'
 import { logEvent } from '@/lib/analytics'
 import { auth, storage } from '@/lib/firebase'
+import { openStream } from '@/lib/media'
 import { BsideEntry, mutateTour } from '@/lib/tourState'
 
 const MAX_SEC = 60
@@ -32,6 +33,8 @@ type Mode = 'choose' | 'voice' | 'text'
 export default function RecorderBside() {
   const [mode, setMode] = useState<Mode>('choose')
   const [micDeniedToast, setMicDeniedToast] = useState(false)
+  /** 마이크를 못 연 이유 — 그냥 텍스트로 넘겨버리면 왜 안 되는지 알 수 없다 */
+  const [micError, setMicError] = useState('')
 
   // 음성 상태
   const [recording, setRecording] = useState(false)
@@ -92,7 +95,15 @@ export default function RecorderBside() {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const { stream, message } = await openStream({ audio: true })
+      if (!stream) {
+        setMicError(message)
+        setMicDeniedToast(true)
+        setMode('text')
+        setTimeout(() => setMicDeniedToast(false), 6000)
+        return
+      }
+      setMicError('')
       streamRef.current = stream
 
       const audioCtx = new AudioContext()
@@ -137,11 +148,14 @@ export default function RecorderBside() {
           mediaRecorderRef.current.stop()
         }
       }, MAX_SEC * 1000)
-    } catch {
-      // 마이크 거부 → 텍스트 입력으로 무중단 전환 (토스트 1회)
+    } catch (err) {
+      // 여기까지 오면 MediaRecorder 쪽 문제다 — 이유를 남기고 텍스트로 전환
+      setMicError(
+        err instanceof Error ? `녹음기를 열지 못했어요 (${err.name})` : '녹음기를 열지 못했어요'
+      )
       setMicDeniedToast(true)
       setMode('text')
-      setTimeout(() => setMicDeniedToast(false), 4000)
+      setTimeout(() => setMicDeniedToast(false), 6000)
     }
   }
 
@@ -228,9 +242,12 @@ export default function RecorderBside() {
       </div>
 
       {micDeniedToast && (
-        <p className="mt-2 rounded-lg bg-shell/90 px-3 py-2 text-center text-[12px] text-cream">
-          마이크를 사용할 수 없어 글로 남기기로 전환했어요
-        </p>
+        <div className="mt-2 rounded-lg bg-shell/90 px-3 py-2 text-center text-cream">
+          <p className="text-[12px]">마이크를 사용할 수 없어 글로 남기기로 전환했어요</p>
+          {micError && (
+            <p className="mt-1 text-[11px] leading-snug text-cream/80">{micError}</p>
+          )}
+        </div>
       )}
 
       {mode === 'choose' && (

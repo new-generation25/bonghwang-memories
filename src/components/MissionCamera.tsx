@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { MediaFailure, openStream, closeStream } from '@/lib/media'
 
 interface MissionCameraProps {
   onCapture: (imageData: string) => void
@@ -14,6 +15,8 @@ interface MissionCameraProps {
 
 export default function MissionCamera({ onCapture, onClose, overlaySrc }: MissionCameraProps) {
   const [isLoading, setIsLoading] = useState(true)
+  /** 카메라를 못 연 이유 — alert로 띄우고 닫아버리면 원인을 알 수 없다 */
+  const [permissionError, setPermissionError] = useState('')
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -39,80 +42,53 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
       return
     }
 
-    try {
-      // Check for existing permissions first
-      const permissionStatus = await navigator.permissions?.query({ name: 'camera' as PermissionName })
-      console.log('Camera permission status:', permissionStatus?.state)
-      
-      // Try different camera configurations for better compatibility
-      let mediaStream: MediaStream | null = null
-      
-      // First try with environment camera (back camera)
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        })
-        // Save permission granted state
-        localStorage.setItem('cameraPermissionGranted', 'true')
-      } catch (envError) {
-        console.log('Environment camera failed, trying user camera:', envError)
-        // Fallback to user camera (front camera)
+    // 뒤 카메라 → 앞 카메라 → 기본 순으로 시도한다. 세 번 다 getUserMedia를
+    // 부르지만 브라우저는 한 번 허용한 권한을 기억하므로 물어보는 건 최초 1회다.
+    const attempts: MediaStreamConstraints[] = [
+      { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
+      { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } },
+      { video: true },
+    ]
+
+    let mediaStream: MediaStream | null = null
+    let lastMessage = ''
+    let lastFailure: MediaFailure | null = null
+
+    for (const constraints of attempts) {
+      const res = await openStream(constraints)
+      if (res.stream) {
+        mediaStream = res.stream
+        break
+      }
+      lastMessage = res.message
+      lastFailure = res.failure
+      // 권한 거부·비보안 컨텍스트는 다음 시도도 똑같이 실패한다 — 바로 끝낸다
+      if (res.failure === 'denied' || res.failure === 'insecure') break
+    }
+
+    if (!mediaStream) {
+      setPermissionError(lastMessage || '카메라를 열지 못했어요.')
+      if (lastFailure !== 'insecure') setIsLoading(false)
+      return
+    }
+
+    setPermissionError('')
+    setStream(mediaStream)
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = mediaStream
+      const playVideo = async () => {
         try {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-              facingMode: 'user',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
-          })
-          localStorage.setItem('cameraPermissionGranted', 'true')
-        } catch (userError) {
-          console.log('User camera failed, trying basic video:', userError)
-          // Final fallback - basic video request
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: true
-          })
-          localStorage.setItem('cameraPermissionGranted', 'true')
+          await videoRef.current?.play()
+        } catch {
+          /* 자동재생이 막혀도 프레임은 그려진다 */
         }
+        setIsLoading(false)
       }
-      
-      if (mediaStream) {
-        setStream(mediaStream)
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream
-          
-          // Wait for video to be ready
-          const playVideo = async () => {
-            try {
-              await videoRef.current?.play()
-              setIsLoading(false)
-            } catch (playError) {
-              console.log('Video play error:', playError)
-              // Try without play() call
-              setIsLoading(false)
-            }
-          }
-          
-          videoRef.current.onloadedmetadata = () => {
-            playVideo()
-          }
-          
-          // Ensure video is properly loaded
-          if (videoRef.current.readyState >= 2) {
-            playVideo()
-          }
-        }
+      videoRef.current.onloadedmetadata = () => {
+        playVideo()
       }
-    } catch (error) {
-      console.error('Camera access denied:', error)
-      localStorage.setItem('cameraPermissionGranted', 'false')
-      alert('카메라 접근이 거부되었습니다. 브라우저 설정을 확인해주세요.')
-      onClose()
+      if (videoRef.current.readyState >= 2) playVideo()
     }
   }, [isMobile, onClose])
 
@@ -134,9 +110,7 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
     // Cleanup on unmount
     return () => {
       clearTimeout(timer)
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop())
-      }
+      closeStream(stream)
     }
   }, [initCamera, isMobile])
 
@@ -151,21 +125,22 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
 
       if (!context) return
 
-      // Set canvas dimensions to video dimensions
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
+      // 정사각형으로 잘라낸다 — 화면 프리뷰가 정사각형이므로 결과도 같아야
+      // 한다. 가운데를 기준으로 짧은 변에 맞춰 자른다(object-cover와 동일).
+      const side = Math.min(video.videoWidth, video.videoHeight)
+      const sx = (video.videoWidth - side) / 2
+      const sy = (video.videoHeight - side) / 2
 
-      // Draw video frame to canvas
-      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      canvas.width = side
+      canvas.height = side
+      context.drawImage(video, sx, sy, side, side, 0, 0, side, side)
 
       const finalize = () => {
         // Convert to base64
         const imageData = canvas.toDataURL('image/jpeg', 0.8)
 
         // Stop camera stream
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop())
-        }
+        closeStream(stream)
 
         onCapture(imageData)
       }
@@ -283,9 +258,17 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
 
   // Mobile Camera UI
   return (
-    <div className="fixed inset-0 bg-shell z-50 flex flex-col" style={{ touchAction: 'none' }}>
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-shell"
+      style={{
+        touchAction: 'none',
+        // 100vh는 iOS 사파리에서 주소창 높이를 포함해 화면보다 커진다.
+        // 그만큼 하단이 잘려 셔터 버튼이 화면 밖으로 밀려났다.
+        height: '100dvh',
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-shell/85 text-cream">
+      <div className="flex shrink-0 items-center justify-between bg-shell/85 p-4 text-cream">
         <button
           onClick={handleClose}
           className="flex items-center space-x-2 text-cream hover:text-cream"
@@ -297,16 +280,35 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
         <div className="w-16"></div>
       </div>
 
-      {/* Camera view */}
-      <div className="flex-1 relative">
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-shell">
-            <div className="text-cream text-center">
-              <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <p>카메라를 준비하는 중...</p>
+      {/* Camera view — 정사각형 고정. 남는 세로 공간은 위아래로 나눈다 */}
+      <div className="flex flex-1 items-center justify-center overflow-hidden">
+        <div className="relative aspect-square w-full overflow-hidden">
+          {permissionError ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-shell px-6">
+              <div className="text-center text-cream">
+                <div className="text-3xl">📷</div>
+                <p className="mt-2 text-[13px] font-bold">카메라를 열지 못했어요</p>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-cream/80">
+                  {permissionError}
+                </p>
+                <button
+                  onClick={initCamera}
+                  className="mt-4 rounded-xl bg-cream px-5 py-2.5 text-[13px] font-bold text-ink"
+                >
+                  다시 시도
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-shell">
+                <div className="text-cream text-center">
+                  <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p>카메라를 준비하는 중...</p>
+                </div>
+              </div>
+            )
+          )}
         
         <video
           ref={videoRef}
@@ -332,17 +334,18 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
         {/* Guide overlay */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-4 border-2 border-white/50 border-dashed rounded-lg"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="bg-shell/70 text-cream px-4 py-2 rounded-lg text-center">
-              <p className="text-sm">피사체를 가이드 라인 안에 맞춰주세요</p>
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
+            <div className="rounded-lg bg-shell/70 px-3 py-1.5 text-center text-cream">
+              <p className="text-[12px]">피사체를 가이드 라인 안에 맞춰주세요</p>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
       {/* Controls — 셔터가 홈 인디케이터에 걸리지 않도록 안전영역만큼 띄운다 */}
       <div
-        className="bg-shell/85 p-6 flex items-center justify-center"
+        className="flex shrink-0 items-center justify-center bg-shell/85 p-6"
         style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
       >
         <button

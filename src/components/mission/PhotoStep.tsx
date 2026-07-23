@@ -70,29 +70,55 @@ export default function PhotoStep({
       <p className="mt-1 text-[13.5px] leading-relaxed text-ink">{prompt}</p>
 
       {preview ? (
+        /* 문자로 사진 보내는 화면과 같은 구조 — 첨부 썸네일이 입력창 위에
+           얹히고, 오른쪽 원형 버튼으로 보낸다. 익숙한 동작이라 설명이 필요 없다. */
         <div className="mt-3">
-          <div className="polaroid mx-auto max-w-[260px]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="촬영한 사진" className="w-full" />
+          <div className="rounded-2xl border border-line bg-cream p-2.5">
+            <div className="relative w-[92px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={preview}
+                alt="촬영한 사진"
+                className="aspect-square w-full rounded-xl object-cover"
+              />
+              <button
+                onClick={() => {
+                  setPreview(null)
+                  setCameraOpen(true)
+                }}
+                aria-label="사진 지우고 다시 찍기"
+                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-shell text-[13px] font-bold text-cream shadow"
+              >
+                ×
+              </button>
+            </div>
+
+            <div ref={confirmRef} className="cta-band mt-2.5 flex items-end gap-2">
+              <div className="min-h-[42px] flex-1 rounded-full border border-line bg-paper px-4 py-2.5 text-[13px] text-ink-60">
+                사진 1장
+              </div>
+              <button
+                onClick={handleConfirm}
+                disabled={saving}
+                aria-label="소영에게 사진 보내기"
+                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-teal text-cream shadow-sm transition-transform active:scale-95 disabled:opacity-60"
+              >
+                {saving ? (
+                  <span className="block h-4 w-4 animate-spin rounded-full border-2 border-cream border-t-transparent" />
+                ) : (
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+                    <path
+                      d="M3.4 20.4 21 12 3.4 3.6 3.4 10.2 15.5 12 3.4 13.8z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
-          <div ref={confirmRef} className="cta-band mt-3 flex gap-2">
-            <button
-              onClick={() => {
-                setPreview(null)
-                setCameraOpen(true)
-              }}
-              className="flex-1 rounded-xl border border-line bg-cream py-3 text-[13px] text-ink"
-            >
-              다시 찍기
-            </button>
-            <button
-              onClick={handleConfirm}
-              disabled={saving}
-              className="flex-1 rounded-xl bg-teal py-3 font-display text-[14px] text-cream disabled:opacity-60"
-            >
-              {saving ? '보내는 중…' : '소영에게 보내기 ▶'}
-            </button>
-          </div>
+          <p className="mt-1.5 text-center text-[11px] text-ink-60">
+            소영에게 보냅니다
+          </p>
         </div>
       ) : (
         <button
