@@ -44,7 +44,12 @@ const audioToCache = CUE_AUDIO_NAMES.flatMap((name) => [
   '/images/cast/father.png',
   '/images/cast/soyoung.png',
   '/images/cast/shopkeeper1.png',
-  '/images/cast/shopkeeper2.png'
+  '/images/cast/shopkeeper2.png',
+  // 거점 그림 — 골목에서 신호가 약해도 '여기가 맞나' 대조할 수 있어야 한다
+  '/images/place/t1.png',
+  '/images/place/t2.png',
+  '/images/place/t3.png',
+  '/images/place/t4.png'
 ]);
 
 // Install - 정적 자원만 프리캐시하고 즉시 활성화

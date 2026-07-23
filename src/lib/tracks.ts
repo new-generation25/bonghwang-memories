@@ -117,6 +117,7 @@ export const STATIONS: Record<StationId, Station> = {
     qrPayload: 'BH88:T1',
     manualCode: '1935',
     arrivalCue: 'B1_A',
+    photo: '/images/place/t1.png',
   },
   t2: {
     id: 't2',
@@ -127,6 +128,7 @@ export const STATIONS: Record<StationId, Station> = {
     qrPayload: 'BH88:T2',
     manualCode: '0917',
     arrivalCue: 'B2_A',
+    photo: '/images/place/t2.png',
   },
   t3: {
     id: 't3',
@@ -137,6 +139,7 @@ export const STATIONS: Record<StationId, Station> = {
     qrPayload: 'BH88:T3',
     manualCode: '7788',
     arrivalCue: 'B3_A',
+    photo: '/images/place/t3.png',
   },
   t4: {
     id: 't4',
@@ -147,6 +150,7 @@ export const STATIONS: Record<StationId, Station> = {
     qrPayload: 'BH88:T4',
     manualCode: '8890',
     arrivalCue: 'B4_A',
+    photo: '/images/place/t4.png',
   },
   t5: {
     id: 't5',

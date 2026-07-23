@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * 거점 실물 사진 — 정사각.
+ * 거점 그림 — 4:3.
  *
  * 이 화면은 목소리로만 진행된다. 눈이 머물 곳이 자막뿐이면 '지금 어디에
  * 서 있는지'가 흐려진다. 골목에서 고개를 들어 실제 간판을 찾을 때
@@ -26,7 +26,9 @@ export default function PlacePhoto({ name, photo, track }: PlacePhotoProps) {
   return (
     <figure className="mx-auto w-full max-w-[300px]">
       <div className="rounded-sm bg-paper p-2.5 pb-8 shadow-[0_6px_18px_rgba(43,36,32,0.18)]">
-        <div className="relative aspect-square overflow-hidden rounded-sm bg-cream-dp">
+        {/* 4:3 — 간판과 처마가 가로로 넓게 앉는 비율이다.
+            정사각으로 두면 하늘이나 바닥이 그만큼 더 들어와 건물이 작아진다. */}
+        <div className="relative aspect-[4/3] overflow-hidden rounded-sm bg-cream-dp">
           {photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
