@@ -45,6 +45,16 @@ export default function Navigation() {
       path: '/community',
       icon: '👥',
       disabled: false,
+      // 내 설정(닉네임·계정·관리자)이 이 탭 안에 있다는 표시.
+      // 설정은 자주 찾지 않지만 없으면 헤매는 기능이라 진입점을 눈에 띄게 둔다.
+      badge: '⚙️',
+    },
+    {
+      key: 'me',
+      label: '나의 기록',
+      path: '/me',
+      icon: '🧾',
+      disabled: false,
     },
   ]
 
@@ -56,7 +66,8 @@ export default function Navigation() {
     >
       {/* 상단 3색 밴드 — 브랜드 식별 장치 */}
       <div className="stripe-band" />
-      <div className="mx-auto flex max-w-md items-center justify-around px-4 py-2">
+      {/* 탭이 다섯이라 좁은 기기에서는 좌우 여백을 줄여야 라벨이 줄바꿈되지 않는다 */}
+      <div className="mx-auto flex max-w-md items-center justify-around px-1.5 py-2">
         {navItems.map((item) => {
           const isActive = pathname === item.path
           const isDisabled = item.disabled
@@ -66,7 +77,7 @@ export default function Navigation() {
               key={item.key}
               onClick={() => !isDisabled && router.push(item.path)}
               disabled={isDisabled}
-              className={`relative flex transform flex-col items-center rounded-lg px-3 py-2 transition-all duration-150 active:scale-95 ${
+              className={`relative flex transform flex-col items-center rounded-lg px-2 py-2 transition-all duration-150 active:scale-95 ${
                 isDisabled
                   ? 'cursor-not-allowed opacity-40'
                   : isActive
@@ -75,13 +86,23 @@ export default function Navigation() {
               }`}
             >
               <span className="mb-1 text-xl">{item.icon}</span>
-              <span className="font-handwriting text-xs font-bold">
+              <span className="whitespace-nowrap font-handwriting text-[11px] font-bold">
                 {item.label}
               </span>
 
               {isDisabled && (
                 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rec text-xs text-cream">
                   🔒
+                </span>
+              )}
+
+              {/* 설정 진입 표시 — 잠금 배지와 겹치지 않도록 잠긴 탭에는 띄우지 않는다 */}
+              {!isDisabled && item.badge && (
+                <span
+                  className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-cream text-[10px] shadow-sm ring-1 ring-line"
+                  aria-hidden
+                >
+                  {item.badge}
                 </span>
               )}
             </button>

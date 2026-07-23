@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import AuthModal from '@/components/AuthModal'
 import PostComposer from '@/components/PostComposer'
@@ -17,14 +18,16 @@ import { useAuth } from '@/contexts/AuthContext'
 import { activeBonusMissions } from '@/lib/bonusMissions'
 import { RankingEntry, fetchRankings, findMyRank } from '@/lib/rankings'
 import { localPointTotal, POINTS_EVENT } from '@/lib/points'
-import MyPoints from '@/components/MyPoints'
+import SettingsSheet from '@/components/SettingsSheet'
 
 export default function FriendsPage() {
+  const router = useRouter()
   const { profile, loading: authLoading, available } = useAuth()
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showAuth, setShowAuth] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [rankings, setRankings] = useState<RankingEntry[]>([])
   const [myScore, setMyScore] = useState(0)
 
@@ -73,9 +76,15 @@ export default function FriendsPage() {
             <h1 className="appbar-title text-[19px]">소영의 친구들</h1>
             {!authLoading &&
               (profile ? (
-                <span className="shrink-0 pb-1 text-[11px] font-bold">
+                // 닉네임이 곧 내 설정 진입점 — 톱니바퀴를 붙여 누를 수 있음을 알린다
+                <button
+                  onClick={() => setShowSettings(true)}
+                  aria-label="내 설정 열기"
+                  className="flex shrink-0 items-center gap-1 rounded-full bg-cream/20 px-3 py-1 pb-1 text-[11px] font-bold"
+                >
+                  <span aria-hidden>⚙️</span>
                   {profile.nickname} 기록자
-                </span>
+                </button>
               ) : (
                 <button
                   onClick={() => setShowAuth(true)}
@@ -89,9 +98,6 @@ export default function FriendsPage() {
       </header>
 
       <div className="mx-auto max-w-md px-4 py-5">
-        {/* 내 포인트 — 화면 맨 위. 들어오자마자 내 점수가 보여야 한다 */}
-        <MyPoints />
-
         {/* 일시한정 보너스 미션 */}
         {bonuses.length > 0 && (
           <div className="mb-5 space-y-2">
@@ -128,10 +134,14 @@ export default function FriendsPage() {
               <h2 className="font-vintage text-sm font-black text-teal-dk">
                 🏆 기록자 랭킹
               </h2>
-              <span className="font-mono-retro text-[10px] text-ink-60">
+              {/* 내 점수·순위 상세는 '나의 기록'에서 본다 — 여기선 위치만 알려준다 */}
+              <button
+                onClick={() => router.push('/me')}
+                className="font-mono-retro text-[10px] text-teal underline decoration-dotted underline-offset-2"
+              >
                 내 {myScore.toLocaleString()}P
-                {myRank ? ` · ${myRank}위` : ''}
-              </span>
+                {myRank ? ` · ${myRank}위` : ''} ›
+              </button>
             </div>
 
             {rankings.length === 0 ? (
@@ -248,6 +258,11 @@ export default function FriendsPage() {
           setShowAuth(false)
           loadPosts()
         }}
+      />
+
+      <SettingsSheet
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
       />
 
       <Navigation />

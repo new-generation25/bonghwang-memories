@@ -76,8 +76,9 @@ export default function QRGate({
 
   const handleManualSubmit = () => {
     setError('')
-    // 만능 통과 코드(검수용) — QR을 찍은 것으로 처리 (tracks.ts 참고, 실판매 전 비활성화)
-    if (UNIVERSAL_PASS_CODE !== null && code === UNIVERSAL_PASS_CODE) {
+    // 관리자 통과 코드 — 빌드 종류와 무관하게 항상 통과시킨다.
+    // 현장에서 QR이 훼손됐을 때 운영자가 즉시 열어줘야 하기 때문이다(tracks.ts).
+    if (code === UNIVERSAL_PASS_CODE) {
       acceptCurrent()
       return
     }

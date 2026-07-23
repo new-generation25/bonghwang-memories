@@ -62,10 +62,17 @@ const REHEARSAL =
   process.env.NEXT_PUBLIC_REHEARSAL === '1'
 
 /**
- * 만능 통과 코드 — 코드 입력창에 이 값을 넣으면 지금 차례인 거점의
+ * 관리자 통과 코드 — 코드 입력창에 이 값을 넣으면 지금 차례인 거점의
  * QR을 스캔한 것으로 통과한다.
+ *
+ * 위의 리허설 장치들과 달리 빌드 종류를 가리지 않고 항상 살아 있다.
+ * 운영자가 현장에서 QR이 훼손됐거나 참여자 기기가 카메라를 못 열 때
+ * 즉시 통과시켜야 하는데, 그 순간에 배포 설정을 바꿀 수는 없기 때문이다.
+ *
+ * 대가로 이 값을 아는 사람은 누구나 걷지 않고 다음 거점을 열 수 있다.
+ * 참여자에게 노출되지 않도록 운영자만 알고 있어야 한다.
  */
-export const UNIVERSAL_PASS_CODE: string | null = REHEARSAL ? '1111' : null
+export const UNIVERSAL_PASS_CODE: string = '1111'
 
 /**
  * 빙고 상시 개방 — true면 다섯 소원 완료 전에도 빙고판을 열 수 있다.

@@ -73,8 +73,30 @@ export default function CallScreen({
         </div>
       </div>
 
-      {/* 중앙 — 문자 말풍선으로 흐르는 자막 2줄 */}
-      <div className="call-screen-body" aria-live="polite">
+      {/*
+        중앙 — 문자 말풍선으로 흐르는 자막 2줄.
+        누르면 다음 줄로 건너뛴다(FF). 화면에서 가장 넓고 자연스럽게 눈이 가는
+        자리라, 아래의 작은 '다음 줄' 버튼보다 여기를 먼저 누른다.
+      */}
+      <div
+        className="call-screen-body"
+        aria-live="polite"
+        {...(!ended && onSkip
+          ? {
+              role: 'button' as const,
+              tabIndex: 0,
+              'aria-label': '다음 줄로 건너뛰기',
+              onClick: onSkip,
+              onKeyDown: (e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onSkip()
+                }
+              },
+              style: { cursor: 'pointer' },
+            }
+          : {})}
+      >
         {prev && (
           <div className="call-bubble faded">
             {prev.speaker && <span className="call-bubble-tag">{prev.speaker} </span>}
@@ -88,6 +110,12 @@ export default function CallScreen({
             )}
             {current.text}
           </div>
+        )}
+
+        {!ended && onSkip && (
+          <p className="mt-3 text-center font-mono-retro text-[10px] text-cream/35">
+            화면을 누르면 다음 줄 ⏩
+          </p>
         )}
       </div>
 
