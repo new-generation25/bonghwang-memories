@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
 import CuePlayer from '@/components/cue/CuePlayer'
-import SurveyCard from '@/components/SurveyCard'
+import SurveyLink from '@/components/SurveyLink'
 import MyPoints from '@/components/MyPoints'
 import { ep2Discount, localPointTotal, POINTS_EVENT } from '@/lib/points'
 import { useCue } from '@/hooks/useCue'
@@ -222,8 +222,9 @@ export default function FinalePage() {
         {/* 오늘 모은 포인트 — 설문 바로 위. 설문 200P가 눈에 보여야 응답한다 */}
         <MyPoints />
 
-        {/* 완주 설문 — 기억이 선명할 때 받는다 */}
-        <SurveyCard />
+        {/* 설문은 별도 화면으로 뺐다 — 피날레는 오늘을 돌아보는 자리라
+            문항이 끼어들면 여운이 끊긴다. 여기서는 안내만 한다. */}
+        <SurveyLink />
 
         {/* 우리의 테이프 앨범 */}
         {(photoUrls.length > 0 || tour.bsideEntry) && (
