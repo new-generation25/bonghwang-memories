@@ -215,6 +215,10 @@ export default function ScriptBakePage() {
   )
 
   const [prefix, setPrefix] = useState('b0_tape')
+  /** 앱에 반영할 대상 큐 — 큐에서 불러왔을 때만 정해진다 */
+  const [cueId, setCueId] = useState<CueId | null>('B0_TAPE')
+  const [applied, setApplied] = useState<string[] | null>(null)
+  const [applying, setApplying] = useState(false)
   const [block, setBlock] = useState(
     CUES.B0_TAPE.subtitleLines.map((l) => l.text).join('\n')
   )
@@ -316,8 +320,10 @@ export default function ScriptBakePage() {
 
   /** 큐를 골라 대본 칸을 채운다 — 줄 나누기는 따로 눌러야 한다 */
   const loadCue = (id: CueId) => {
+    setCueId(id)
     setPrefix(CUES[id].audioFile)
     setBlock(CUES[id].subtitleLines.map((l) => l.text).join('\n'))
+    setApplied(null)
   }
 
   const patch = (id: number, p: Partial<Row>) =>
@@ -486,6 +492,54 @@ export default function ScriptBakePage() {
       if (i < done.length - 1) at += gap
     })
     return merged
+  }
+
+  /**
+   * 앱에 반영 — 음원·자막 시각·길이·대사를 한 번에 갱신한다.
+   *
+   * 손으로 나눠 하면 반드시 하나를 빠뜨린다. 실제로 음원만 바꾸고 자막
+   * 시각을 그대로 둬서 자막이 통째로 어긋난 적이 있다. 그래서 묶었다.
+   */
+  const applyToApp = async () => {
+    if (!cueId || !allDone) return
+    setApplying(true)
+    setApplied(null)
+    try {
+      const wav = toWav(mergedAll())
+      const bytes = new Uint8Array(await wav.arrayBuffer())
+      // 한 번에 넘기면 인자 수 제한에 걸린다 — 조각내서 잇는다
+      let bin = ''
+      const CH = 0x8000
+      for (let i = 0; i < bytes.length; i += CH) {
+        bin += String.fromCharCode.apply(
+          null,
+          Array.prototype.slice.call(bytes.subarray(i, i + CH))
+        )
+      }
+      const res = await fetch('/api/debug/apply-cue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cueId,
+          audioFile: safe(prefix),
+          durationSec: totalSec,
+          // 쉼 표기는 굽기용 지시라 자막에 남기지 않는다 —
+          // 화면에 '(0.3)'이 그대로 보이면 안 된다
+          lines: rows.map((r, i) => ({
+            text: r.text.replace(PAUSE_RE, ' ').replace(/\s+/g, ' ').trim(),
+            start: Number(timeline[i].start.toFixed(2)),
+          })),
+          wavBase64: btoa(bin),
+        }),
+      })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j.error ?? `HTTP ${res.status}`)
+      setApplied(j.changed as string[])
+    } catch (e) {
+      setApplied([`❌ ${e instanceof Error ? e.message : '반영 실패'}`])
+    } finally {
+      setApplying(false)
+    }
   }
 
   return (
@@ -855,6 +909,43 @@ export default function ScriptBakePage() {
               >
                 ⤓ {safe(prefix)}_full.wav
               </button>
+            </div>
+
+            {/*
+              앱 반영 — 음원·자막 시각·길이·대사를 한 번에 갱신한다.
+              나눠서 하면 반드시 하나를 빠뜨리고, 그러면 자막이 어긋난다.
+            */}
+            <div className="mt-4 rounded-xl border border-teal/40 bg-teal/8 px-3.5 py-3">
+              <p className="text-[12px] font-bold text-ink">앱에 반영</p>
+              <p className="mt-0.5 text-[10.5px] leading-snug text-ink-60">
+                {cueId ? (
+                  <>
+                    <b className="text-ink">{cueId}</b>의 음원·자막 시각·길이·대사를
+                    한 번에 갱신합니다. 자막 싱크를 따로 맞출 필요가 없습니다.
+                  </>
+                ) : (
+                  '큐에서 불러온 대본만 반영할 수 있습니다 — 위에서 큐를 골라주세요.'
+                )}
+              </p>
+              <button
+                onClick={applyToApp}
+                disabled={!cueId || applying}
+                className="btn-teal mt-2 w-full text-center text-[12.5px] disabled:opacity-40"
+              >
+                {applying ? '반영 중…' : `▶ ${cueId ?? '큐 미선택'} 에 반영하기`}
+              </button>
+              {applied && (
+                <ul className="mt-2 space-y-0.5">
+                  {applied.map((c) => (
+                    <li
+                      key={c}
+                      className="font-mono-retro text-[10px] leading-snug text-teal-dk"
+                    >
+                      {c.startsWith('❌') ? c : `✅ ${c}`}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <p className="mt-4 text-[12px] font-bold text-ink">자막 시작 시각</p>
