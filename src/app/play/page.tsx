@@ -16,6 +16,7 @@ import QRGate from '@/components/QRGate'
 import { useProximityNotice } from '@/hooks/useProximityNotice'
 import { useTourState } from '@/hooks/useTourState'
 import { dispatchQr } from '@/lib/cueEngine'
+import { useSuperAdmin } from '@/lib/superAdmin'
 import { Station, TRACK_STATIONS, stationByTrack } from '@/lib/tracks'
 
 /**
@@ -55,6 +56,18 @@ export default function PlayerHomePage() {
     router.push(`/track/${station.track}`)
   }
 
+  /*
+    슈퍼관리자는 소원 줄을 눌러 그 거점으로 바로 들어간다.
+
+    거점 QR은 현장에 붙어 있어 책상에서는 통과할 수 없고, 뒤쪽 거점을
+    고칠 때마다 앞의 넷을 순서대로 걸어올 수는 없다. 조작 패널에도 같은
+    이동이 있지만, 어느 소원인지 이름을 보고 고르는 자리는 여기다.
+
+    들어가는 길은 참여자와 같다 — QR을 찍었을 때와 같은 handleStationEnter를
+    탄다. 따로 만들면 그 경로에서만 나는 버그를 못 잡는다.
+  */
+  const superAdmin = useSuperAdmin()
+
   // pb-32 — 하단 탭바(84px)와 안전영역을 덮는 여백. 탭바를 쓰는 화면 공통값
   return (
     <div className="flex min-h-screen flex-col bg-cream-base pb-32">
@@ -92,13 +105,18 @@ export default function PlayerHomePage() {
           return (
             <div
               key={station.id}
+              onClick={superAdmin ? () => handleStationEnter(station) : undefined}
+              role={superAdmin ? 'button' : undefined}
+              tabIndex={superAdmin ? 0 : undefined}
               className={`mt-2 flex items-center gap-3 rounded-xl border px-4 py-3 ${
                 done
                   ? 'border-teal/40 bg-teal/10'
                   : isNext
                     ? 'border-sunset-yellow bg-paper shadow-sm'
-                    : 'border-line bg-paper/60 opacity-60'
-              }`}
+                    : // 슈퍼관리자에게는 흐리게 두지 않는다 — 눌리는 줄이라
+                      // 잠긴 것처럼 보이면 안 된다
+                      `border-line bg-paper/60 ${superAdmin ? '' : 'opacity-60'}`
+              } ${superAdmin ? 'cursor-pointer active:scale-[0.99]' : ''}`}
             >
               {/*
                 A면의 몇 번째 곡. 바로 위 카세트 라벨에 SIDE A가 찍혀 있어
@@ -117,7 +135,10 @@ export default function PlayerHomePage() {
                     ? '소원 완료'
                     : isNext
                       ? `다음 거점 — ${station.name}`
-                      : '잠김'}
+                      : superAdmin
+                        ? // 잠겨 있지만 눌러서 들어갈 수 있다는 것을 말해준다
+                          `🔓 ${station.name} — 눌러서 입장`
+                        : '잠김'}
                 </p>
               </div>
 
@@ -128,7 +149,11 @@ export default function PlayerHomePage() {
               */}
               {isNext && (
                 <button
-                  onClick={() => setShowScanner(true)}
+                  onClick={(e) => {
+                    // 줄 전체가 눌리는 슈퍼관리자 모드에서 두 번 걸리지 않게
+                    e.stopPropagation()
+                    setShowScanner(true)
+                  }}
                   aria-label={`${station.name} 거점 QR 스캔`}
                   /*
                     실물 QR처럼 검정. 티얼은 이 앱의 구조색이라 앱바·탭·버튼이
