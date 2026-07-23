@@ -177,6 +177,23 @@ a {
   );
 }
 
+/*
+ * 슈퍼관리자 — 앱바를 레드로 갈아 끼운다.
+ *
+ * 맨 위 띠만으로는 스크롤 중에 눈에 안 들어온다. 앱바는 모든 화면에 있고
+ * 면적이 넓어서, 색이 다르면 "지금 보통 상태가 아니다"가 먼저 읽힌다.
+ * 트랙 화면의 셸 블랙 헤더(.trackbar)는 그대로 둔다 — 카세트 몸체라
+ * 색이 곧 의미인 자리다. 그 화면에서는 위의 띠가 알린다.
+ */
+.super-admin .appbar {
+  background: rgb(var(--rec-red));
+}
+
+/* 제목 그림자도 따라간다 — 티얼 그림자가 레드 위에 남으면 탁해 보인다 */
+.super-admin .appbar-title {
+  text-shadow: 2px 2px 0 rgba(120, 26, 26, 0.55);
+}
+
 .appbar-title {
   font-family: 'Black Han Sans', sans-serif;
   transform: skewX(-4deg);

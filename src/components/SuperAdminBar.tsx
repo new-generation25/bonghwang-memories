@@ -13,7 +13,7 @@
  * raw로 써 넣으면 조각 없이 B면이 열리는 조합이 나온다.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { dispatchQr } from '@/lib/cueEngine'
 import { setSuperAdmin, useSuperAdmin } from '@/lib/superAdmin'
@@ -34,6 +34,22 @@ export default function SuperAdminBar() {
   const on = useSuperAdmin()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+
+  /*
+   * 앱바 색을 바꾼다.
+   *
+   * 띠는 화면 맨 위 한 줄이라 스크롤 중에는 눈에 잘 안 들어온다. 앱바는
+   * 모든 화면에 있고 면적이 넓어서, 색이 다르면 어느 화면에 있든 "지금
+   * 보통 상태가 아니다"가 먼저 읽힌다. 티얼(구조색) → 레드.
+   *
+   * 클래스를 <html>에 걸어 CSS가 .appbar를 한 번에 덮게 한다. 앱바를 쓰는
+   * 화면이 여럿이라 컴포넌트마다 색을 넘기면 하나를 빠뜨린다.
+   */
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle('super-admin', on)
+    return () => root.classList.remove('super-admin')
+  }, [on])
 
   if (!on) return null
 

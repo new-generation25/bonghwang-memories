@@ -21,6 +21,7 @@
 
 import { useEffect, useState } from 'react'
 import { isAdminUser } from './admin'
+import { subscribeAuth } from './auth'
 import { BINGO_ALWAYS_OPEN } from './tracks'
 
 const STORAGE_KEY = 'bh_super_admin'
@@ -77,10 +78,22 @@ export function subscribeSuperAdmin(listener: Listener): () => void {
  *
  * 서버 렌더에서는 항상 false로 시작한다. localStorage를 첫 그림에 읽으면
  * 서버와 결과가 달라 하이드레이션이 어긋난다.
+ *
+ * 로그인 상태도 함께 본다. Firebase는 새로고침 때 세션을 비동기로 되살리는데,
+ * 그 전에는 currentUser가 null이라 isSuperAdmin()이 false로 나온다. 스위치만
+ * 구독하면 그 false가 그대로 굳어서, 켜 둔 채 새로고침하면 꺼진 것처럼 보인다.
  */
 export function useSuperAdmin(): boolean {
   const [on, setOn] = useState(false)
-  useEffect(() => subscribeSuperAdmin(() => setOn(isSuperAdmin())), [])
+  useEffect(() => {
+    const recheck = () => setOn(isSuperAdmin())
+    const offSwitch = subscribeSuperAdmin(recheck)
+    const offAuth = subscribeAuth(recheck)
+    return () => {
+      offSwitch()
+      offAuth()
+    }
+  }, [])
   return on
 }
 
