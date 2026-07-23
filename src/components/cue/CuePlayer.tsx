@@ -27,11 +27,24 @@ interface CuePlayerProps {
    * 인트로는 쪽지·플레이어와 함께 흐르는 화면이라 기존 카드 배치를 쓴다.
    */
   fill?: boolean
-  /** fill일 때 가운데에 넣을 것 — 거점 사진 */
+  /** 가운데에 넣을 것 — 거점 그림 */
   center?: React.ReactNode
+  /**
+   * 재생이 끝난 뒤 PLAY 키가 할 일.
+   *
+   * 없으면 PLAY는 눌리지 않는 키로 남는다. 있으면 그 키가 다음 단계를
+   * 여는 버튼이 된다 — 화면 아래에 따로 띠 버튼을 두지 않기 위해서다.
+   * 카세트 패널이 바로 위에 있는데 아래에 또 '▶ 재생'이 있으면
+   * 어느 쪽을 눌러야 하는지 헷갈린다.
+   */
+  endedAction?: { label: string; onClick: () => void }
 }
 
-export default function CuePlayer({ fill = false, center }: CuePlayerProps = {}) {
+export default function CuePlayer({
+  fill = false,
+  center,
+  endedAction,
+}: CuePlayerProps = {}) {
   const cueState = useCue()
   const { cueId, playing, elapsed, duration, subtitleIndex, ended, audioAvailable, pendingAutoChain } = cueState
 
@@ -102,6 +115,17 @@ export default function CuePlayer({ fill = false, center }: CuePlayerProps = {})
         <>
           {frame}
           {progressBar}
+          {/*
+            미션이 뜬 뒤에도 거점 그림은 남긴다.
+            음성이 끝났다고 그림이 사라지면 '여기가 어디였지'가 다시 흐려진다 —
+            정작 미션(사진 찍기·세기)을 하려고 주변을 둘러보는 건 그때다.
+            대신 미션이 화면 밖으로 밀리지 않게 크기를 줄인다.
+          */}
+          {center && (
+            <div className="mx-auto mt-3 w-[62%] min-w-[180px] max-w-[240px]">
+              {center}
+            </div>
+          )}
           {subtitles}
         </>
       )}
@@ -122,7 +146,16 @@ export default function CuePlayer({ fill = false, center }: CuePlayerProps = {})
           keys={[
             { kind: 'rew', label: '다시듣기', onClick: replayCue, ariaLabel: '다시듣기' },
             ended
-              ? { kind: 'play' }
+              ? endedAction
+                ? {
+                    // 다음 단계를 여는 키 — 눈에 띄게 살린다
+                    kind: 'play',
+                    label: endedAction.label,
+                    onClick: endedAction.onClick,
+                    accent: 'go',
+                    ariaLabel: endedAction.label,
+                  }
+                : { kind: 'play' }
               : playing
                 ? { kind: 'pause', onClick: pauseCue, ariaLabel: '일시정지' }
                 : { kind: 'play', onClick: resumeCue, ariaLabel: '재생' },

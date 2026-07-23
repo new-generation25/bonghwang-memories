@@ -148,6 +148,24 @@ export default function TrackPageClient({ n }: { n: number }) {
     )
   }
 
+  /**
+   * 재생이 끝난 뒤 데크의 PLAY 키가 맡을 일.
+   *
+   * 이야기를 이어 여는 동작은 카세트 키가 맡는 게 맞다 — 화면 아래에
+   * 같은 뜻의 띠 버튼을 또 두면 둘 중 무엇을 눌러야 하는지 헷갈린다.
+   * 가게 주인에게 여쭤보기처럼 '재생'이 아닌 행동은 띠로 남겨둔다.
+   */
+  const deckAction =
+    interaction?.kind === 'resume'
+      ? {
+          label: '이어서 재생',
+          onClick: () => {
+            unlockAudio()
+            dispatchTap('RESUME')
+          },
+        }
+      : undefined
+
   const renderInteraction = () => {
     if (!interaction) return null
     switch (interaction.kind) {
@@ -187,20 +205,13 @@ export default function TrackPageClient({ n }: { n: number }) {
       case 'unlock':
         return <UnlockGate />
       case 'resume':
-        // Track 4 — 정지해둔 자리(소원 끝)에서 라디오를 이어 재생 (D9 사용자 탭)
-        return (
-          <div className="cta-band mt-4" style={{ animation: 'slideUp 0.4s ease-out' }}>
-            <button
-              onClick={() => {
-                unlockAudio()
-                dispatchTap('RESUME')
-              }}
-              className="btn-shell w-full py-3 text-[15px]"
-            >
-              ▶ 이어서 재생 — 정지해둔 자리부터
-            </button>
-          </div>
-        )
+        /*
+          Track 4 — 정지해둔 자리에서 라디오를 이어 재생 (D9 사용자 탭).
+          여기서는 아무것도 그리지 않는다. 바로 위 카세트 패널의 PLAY 키가
+          그 일을 한다(deckAction) — 패널 아래에 또 '▶ 재생' 띠를 두면
+          어느 쪽을 눌러야 하는지 헷갈린다.
+        */
+        return null
       case 'ask':
         // Track 5 — 가게 주인에게 여쭤보기 (증언 반전)
         return (
@@ -282,6 +293,7 @@ export default function TrackPageClient({ n }: { n: number }) {
             center={
               <PlacePhoto name={station.name} photo={station.photo} track={n} />
             }
+            endedAction={deckAction}
           />
         ) : resumable ? (
           <div className="rounded-2xl border border-line bg-paper p-5 text-center">
