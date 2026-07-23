@@ -100,8 +100,13 @@ export default function PlayerHomePage() {
                     : 'border-line bg-paper/60 opacity-60'
               }`}
             >
+              {/*
+                A면의 몇 번째 곡. 바로 위 카세트 라벨에 SIDE A가 찍혀 있어
+                A1·A2로 이어 읽힌다. 'T1'은 트랙의 약자였지만 그 뜻이
+                글자만으로는 읽히지 않았다.
+              */}
               <span className="font-mono-retro text-[13px] text-ink-60">
-                {done ? '✓' : `T${station.track}`}
+                {done ? '✓' : `A${station.track}`}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13.5px] font-bold text-ink">

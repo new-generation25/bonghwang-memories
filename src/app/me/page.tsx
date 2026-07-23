@@ -16,7 +16,9 @@ import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import MyPoints from '@/components/MyPoints'
 import AuthModal from '@/components/AuthModal'
+import CouponCard from '@/components/CouponCard'
 import SettingsSheet from '@/components/SettingsSheet'
+import { couponSpec } from '@/lib/coupons'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import {
@@ -35,6 +37,14 @@ export default function MyRecordPage() {
   const [history, setHistory] = useState<PointEntry[]>([])
   const [showAuth, setShowAuth] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+
+  /*
+    쿠폰 코드의 사용자 부분.
+    로그인 전에도 투어를 걸을 수 있으므로 uid가 없을 수 있다. 그때는
+    기기에 남는 투어 시작 시각으로 대신한다 — 같은 기기에서는 같은 코드가
+    나오고, 다른 참여자와 겹치지도 않는다.
+  */
+  const couponUid = profile?.uid ?? `local-${tour.startTime ?? 0}`
 
   // 적립은 화면을 보는 중에도 일어난다(설문 응답 등) — 이벤트로 따라간다
   useEffect(() => {
@@ -151,15 +161,17 @@ export default function MyRecordPage() {
               아직 받은 쿠폰이 없어요 — 소원을 이루면 이야기가게 쿠폰이 쌓입니다.
             </p>
           ) : (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {tour.coupons.map((c) => (
-                <span
-                  key={c}
-                  className="rounded-lg border border-dashed border-rec px-2.5 py-1 font-mono-retro text-[11px] text-rec"
-                >
-                  {c}
-                </span>
-              ))}
+            /*
+              쿠폰 코드만 늘어놓던 것을 실제로 쓸 수 있는 카드로 바꿨다.
+              'cp1'이라는 글자를 가게에 보여줄 수는 없다 — 어느 가게에서
+              무엇을 받는지, 그리고 찍을 QR이 있어야 쿠폰 구실을 한다.
+            */
+            <div className="mt-2">
+              {tour.coupons.map((c) => {
+                const spec = couponSpec(c)
+                if (!spec) return null
+                return <CouponCard key={c} spec={spec} uid={couponUid} />
+              })}
             </div>
           )}
         </div>

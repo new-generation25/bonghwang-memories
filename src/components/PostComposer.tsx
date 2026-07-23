@@ -85,7 +85,7 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
       setFile(picked)
       if (previewUrl) URL.revokeObjectURL(previewUrl)
       setPreviewUrl(URL.createObjectURL(picked))
-      if (!missionTitle) setMissionTitle(`TRACK ${track} · 오늘의 기록`)
+      if (!missionTitle) setMissionTitle(`A${track} · 오늘의 기록`)
       setJourneyOpen(false)
     } catch {
       setError('여정 사진을 불러오지 못했어요.')

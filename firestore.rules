@@ -144,5 +144,24 @@ service cloud.firestore {
         allow delete: if isOwner(resource.data.authorUid);
       }
     }
+
+    // ───────── 골목 가게 쿠폰 사용 기록 ─────────
+    //
+    // 문서 id가 쿠폰 코드다. 있으면 이미 쓴 것, 없으면 아직 안 쓴 것.
+    // 이 컬렉션이 '한 번만 사용'을 실제로 보장하는 곳이다 — 코드 안의
+    // 체크값은 오타를 잡을 뿐 위조를 막지 못한다(클라이언트에서 만든다).
+    //
+    // 가게 사장님에게 계정을 만들게 하면 현장에서 쓰이지 않으므로
+    // 로그인을 요구하지 않는다. 대신 할 수 있는 일을 좁힌다:
+    //  · 만들기만 되고 고치거나 지우지 못한다 → 쓴 것을 되돌릴 수 없다
+    //  · 지우는 것은 관리자만 → 잘못 찍었을 때 되돌릴 길은 남긴다
+    match /couponUses/{code} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['couponId', 'shop', 'userTag', 'usedAt'])
+                    && request.resource.data.usedAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
   }
 }

@@ -96,7 +96,11 @@ export default function QRGate({
           className="absolute left-1/2 z-[60] -translate-x-1/2 rounded-full bg-cream/95 px-5 py-2.5 text-[13px] font-bold text-ink shadow-lg"
           style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
         >
-          QR이 안 보이나요? 코드 입력
+          {/* 두 줄로 나눈다 — 한 줄이면 좁은 기기에서 낱말 가운데가 갈렸다 */}
+          <span className="block leading-tight">QR이 안 보이나요?</span>
+          <span className="block leading-tight underline underline-offset-2">
+            코드 입력
+          </span>
         </button>
       </div>
     )

@@ -16,6 +16,7 @@
     "firebase": "^12.5.0",
     "jsqr": "^1.4.0",
     "next": "^14.2.18",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sharp": "^0.34.3"
@@ -24,6 +25,7 @@
     "@breezystack/lamejs": "^1.2.7",
     "@playwright/test": "^1.54.1",
     "@types/node": "^20.10.5",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "autoprefixer": "^10.4.16",

@@ -247,7 +247,7 @@ export default function TrackPageClient({ n }: { n: number }) {
       <header className="mx-auto flex w-full max-w-[380px] items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-mono-retro text-[10.5px] tracking-[0.25em] text-teal">
-            TRACK {n} / 5 · {station.name}
+            A{n} / 5 · {station.name}
           </p>
           <h1 className="mt-0.5 font-display text-[18px] leading-snug text-ink">
             {station.wish}

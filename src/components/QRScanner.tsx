@@ -11,7 +11,23 @@ interface QRScannerProps {
 export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const [stream, setStream] = useState<MediaStream | null>(null)
+  /**
+   * 정리용 스트림 참조.
+   *
+   * state만 쓰면 언마운트 정리 함수가 처음 값(null)을 붙잡은 채로 남아
+   * 트랙이 꺼지지 않는다. 그러면 스캔이 끝나 다음 화면으로 넘어간 뒤에도
+   * 아이폰 상태표시줄에 카메라 사용 표시가 계속 켜져 있다.
+   * 권한은 한 번 허용하면 유지되므로, 쓰지 않을 때 꺼도 다시 묻지 않는다.
+   */
+  const streamRef = useRef<MediaStream | null>(null)
+
+  /** 카메라를 완전히 끈다 — 트랙을 멈추고 video에서도 떼어낸다 */
+  const stopCamera = useCallback(() => {
+    scanningRef.current = false
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    streamRef.current = null
+    if (videoRef.current) videoRef.current.srcObject = null
+  }, [])
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scanningRef = useRef<boolean>(false)
@@ -52,7 +68,7 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
       }
       
       if (mediaStream) {
-        setStream(mediaStream)
+        streamRef.current = mediaStream
         
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream
@@ -116,11 +132,9 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
         })
 
         if (code && code.data) {
-          scanningRef.current = false
-          // Stop camera stream
-          if (stream) {
-            stream.getTracks().forEach(track => track.stop())
-          }
+          // 넘어가기 전에 끈다 — 읽은 뒤에도 켜져 있으면 다음 화면에서
+          // 상태표시줄의 카메라 표시만 남는다
+          stopCamera()
           onScanSuccess(code.data)
           return
         }
@@ -130,7 +144,9 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
     }
 
     scan()
-  }, [stream, onScanSuccess])
+    // stream은 더 이상 읽지 않는다 — 정리는 streamRef가 맡는다.
+    // 이 콜백은 영상이 재생된 뒤 직접 불리므로 스트림 변화에 묶일 필요가 없다.
+  }, [onScanSuccess, stopCamera])
 
   // Initialize on mount
   useEffect(() => {
@@ -142,18 +158,12 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
     // Cleanup on unmount
     return () => {
       clearTimeout(timer)
-      scanningRef.current = false
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop())
-      }
+      stopCamera()
     }
-  }, [initCamera])
+  }, [initCamera, stopCamera])
 
   const handleClose = () => {
-    scanningRef.current = false
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-    }
+    stopCamera()
     onClose()
   }
 
@@ -209,15 +219,21 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
           style={{ background: '#000' }}
         />
 
-        {/* Scanning overlay */}
+        {/*
+          스캔 오버레이.
+
+          조준 틀을 화면 세로 38% 자리에 둔다. 가운데(50%)에 두면 QR을
+          맞추려고 팔을 들 때 안내 문구와 겹치고, 벽 높이에 붙은 실물 QR을
+          겨누려면 어차피 카메라가 위를 향한다.
+        */}
         <div className="absolute inset-0 pointer-events-none">
           {/* Dark overlay with hole in center */}
           <div className="absolute inset-0 bg-shell/50">
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-white rounded-lg"></div>
+            <div className="absolute top-[38%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-white rounded-lg"></div>
           </div>
-          
+
           {/* Scanning corners */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64">
+          <div className="absolute top-[38%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64">
             {/* Top-left corner */}
             <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-sunset rounded-tl-lg"></div>
             {/* Top-right corner */}
@@ -231,22 +247,15 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
             <div className="absolute top-0 left-2 right-2 h-0.5 bg-sunset animate-pulse"></div>
           </div>
 
-          {/* Instructions */}
-          <div className="absolute bottom-32 left-4 right-4">
-            <div className="bg-shell/70 text-cream p-4 rounded-lg text-center">
-              <p className="text-lg font-bold mb-2">QR 코드를 찾아주세요</p>
-              <p className="text-sm opacity-80 mb-3">
-                QR 코드를 화면 중앙의 사각형 안에 맞춰주세요
-              </p>
-              
-              {/* Test button for development */}
-              <button 
-                onClick={() => onScanSuccess('test-qr-code-data')}
-                className="bg-teal hover:bg-teal-dk text-cream px-4 py-2 rounded-lg text-sm font-bold"
-              >
-                🧪 테스트용 QR 스캔
-              </button>
-            </div>
+          {/*
+            안내 — 틀 바로 아래.
+            찍는 버튼은 두지 않는다. 인식되면 스스로 넘어가므로 누를 일이 없고,
+            버튼이 있으면 '눌러야 되는 것'으로 오해해 QR을 맞춰두고도 기다린다.
+          */}
+          <div className="absolute left-6 right-6 top-[calc(38%+9.5rem)]">
+            <p className="text-center text-[15px] font-bold text-cream drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+              QR 코드를 사각형 안에 맞춰주세요
+            </p>
           </div>
         </div>
       </div>
