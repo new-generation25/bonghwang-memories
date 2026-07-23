@@ -189,7 +189,9 @@ export default function IntroPage() {
                 {/* 창은 라벨 높이만큼만 뚫려 있다. 나머지는 도어가 가린다 —
                     테이프가 안에 들어가 있고 일부만 보이는 실물 그대로다. */}
                 <div className="deck-window">
-                <div className="shrink-0" style={{ marginTop: 6 }}>
+                {/* 라벨 윗머리를 창 위로 3px 밀어올린다 — 라벨이 창을
+                    가득 채워야 몸체의 검은 부분이 드러나지 않는다 */}
+                <div className="shrink-0" style={{ marginTop: -14 }}>
                   <Cassette
                     title="소영에게 — 1988. 9. 17."
                     headLeft=""

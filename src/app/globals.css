@@ -1047,11 +1047,20 @@ video::-webkit-media-controls-start-playback-button {
   overflow: hidden;
 }
 
-/* 아크릴 창 — 테이프 라벨 부분만 보인다. 나머지는 도어가 가린다 */
+/*
+  아크릴 창 — 라벨과 릴만 보인다.
+
+  창의 목적은 무슨 테이프인지(라벨)와 잘 돌아가는지(릴)를 확인하는 것이다.
+  그래서 창을 라벨보다 조금 작게 잡아 라벨이 창을 가득 채우게 한다. 창이
+  라벨보다 크면 카세트 몸체의 검은 플라스틱과 그 바깥이 함께 보인다.
+
+  치수는 scale 0.68 기준 실측값이다 — 라벨 174x75 안쪽으로 3px씩 물린다.
+  릴(창 기준 44~64px)이 통째로 들어와 회전이 보인다.
+*/
 .deck-window {
   position: relative;
-  width: calc(100% - 22px);
-  height: 74px;
+  width: 168px;
+  height: 69px;
   border-radius: 5px;
   background: linear-gradient(#0d0b0a, #171413);
   box-shadow:
