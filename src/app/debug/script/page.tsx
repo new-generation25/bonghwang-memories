@@ -184,13 +184,22 @@ function toWav(buf: AudioBuffer): Blob {
   return new Blob([ab], { type: 'audio/wav' })
 }
 
-function download(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+/**
+ * 개발 폴더에 바로 저장한다.
+ *
+ * 브라우저 내려받기를 쓰면 저장 대화상자가 떠서 사람이 눌러야 한다.
+ * 한 줄 고칠 때마다 그러면 작업이 안 된다. 서버가 파일로 떨구고
+ * 저장된 경로만 돌려받는다. 위치는 public/audio/_raw/bake/ 로,
+ * gitignore 대상이라 작업물이 저장소에 섞이지 않는다.
+ */
+async function saveToRepo(blob: Blob, name: string): Promise<string> {
+  const res = await fetch(`/api/debug/save?name=${encodeURIComponent(name)}`, {
+    method: 'POST',
+    body: blob,
+  })
+  const j = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(j.error ?? `HTTP ${res.status}`)
+  return `${j.saved} (${j.kb}KB)`
 }
 
 let nextId = 1
@@ -217,6 +226,17 @@ export default function ScriptBakePage() {
   const [bakingAll, setBakingAll] = useState(false)
   /** 빈 칸이면 안 보낸다 — 그때는 매번 새로 뽑는다 */
   const [seed, setSeed] = useState('')
+  /** 마지막 저장 결과 — 어디에 떨어졌는지 보여준다 */
+  const [saved, setSaved] = useState<string | null>(null)
+
+  const save = async (blob: Blob, name: string) => {
+    try {
+      setSaved(`저장 중… ${name}`)
+      setSaved(`✅ ${await saveToRepo(blob, name)}`)
+    } catch (e) {
+      setSaved(`❌ ${e instanceof Error ? e.message : '저장 실패'}`)
+    }
+  }
 
   const meta = metas[voiceId]
   const emotions = meta?.emotions ?? ['normal']
@@ -641,14 +661,15 @@ export default function ScriptBakePage() {
                 </button>
                 {done.length > 0 && (
                   <button
-                    onClick={() =>
-                      done.forEach((r) =>
-                        download(
+                    onClick={async () => {
+                      for (const r of done) {
+                        await save(
                           r.file!.blob,
                           fileName(r, rows.findIndex((x) => x.id === r.id) + 1)
                         )
-                      )
-                    }
+                      }
+                      setSaved(`✅ ${done.length}줄 저장 — public/audio/_raw/bake/`)
+                    }}
                     className="rounded-lg border border-line bg-paper px-3 py-1.5 text-[11.5px] font-bold text-teal-dk"
                   >
                     ⤓ 전부 저장
@@ -656,6 +677,13 @@ export default function ScriptBakePage() {
                 )}
               </div>
             </div>
+
+            {/* 저장 결과 — 대화상자 없이 어디에 떨어졌는지 알려준다 */}
+            {saved && (
+              <p className="mt-2 rounded-lg border border-line bg-paper px-3 py-2 font-mono-retro text-[10.5px] leading-snug text-ink-60">
+                {saved}
+              </p>
+            )}
 
             <div className="mt-2 space-y-2">
               {rows.map((r, no) => {
@@ -787,7 +815,7 @@ export default function ScriptBakePage() {
                             {playing === r.id ? '■ 멈추기' : '▶ 듣기'}
                           </button>
                           <button
-                            onClick={() => download(r.file!.blob, fileName(r, no + 1))}
+                            onClick={() => void save(r.file!.blob, fileName(r, no + 1))}
                             title={fileName(r, no + 1)}
                             className="shrink-0 rounded-lg border border-line bg-cream-base px-2.5 py-1.5 text-[11.5px] font-bold text-teal-dk"
                           >
@@ -820,7 +848,9 @@ export default function ScriptBakePage() {
                 {playing === 'all' ? '■ 멈추기' : '▶ 이어서 듣기'}
               </button>
               <button
-                onClick={() => download(toWav(mergedAll()), `${safe(prefix)}_full.wav`)}
+                onClick={() =>
+                  void save(toWav(mergedAll()), `${safe(prefix)}_full.wav`)
+                }
                 className="flex-1 rounded-lg border border-line bg-cream-base px-3 py-2 text-[12px] font-bold text-teal-dk"
               >
                 ⤓ {safe(prefix)}_full.wav

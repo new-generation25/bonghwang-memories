@@ -184,7 +184,9 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: 'young',
     trigger: { type: 'user_tap', ref: 'PLAY' },
     audioFile: 'b0_tape',
-    durationSec: 60,
+    // 실제 파일 길이 46.08초 — /debug/script에서 줄별로 구워 이어붙인 값이다.
+    // 자막은 오디오 타임라인에 맞춰 넘어가므로 이 값이 어긋나면 자막이 밀린다.
+    durationSec: 46,
     subtitleLines: [
       { text: '…잘 돌아가나, 이거. 어험.' },
       { text: '소영아. 아빠다. 곧 나온다더라. 이름은 정해놨다. 강소영. 아빠가 지었다.' },
