@@ -8,8 +8,24 @@
 
 import type { AdminUser, AdminPointEntry, AdminSurveyResponse } from './admin'
 
-/** 상품가 — 매출 집계 기준. 업그레이드 상품이 생기면 여기에 추가한다 */
-export const TICKET_PRICE = 15000
+/**
+ * 가격 체계 (브랜드 v2.1 §5).
+ *
+ * 투어 자체는 무료다 — 참여자 수가 곧 매출이던 구조는 더 이상 맞지 않는다.
+ * 매출은 '완주 리워드'를 구매한 사람에게서만 나오고, 그중 4,000원은
+ * 골목 가게 쿠폰으로 나가므로 실제로 남는 현금은 1,000원이다.
+ */
+export const REWARD_PRICE = 5000
+/** 리워드 중 골목 가게 쿠폰으로 나가는 몫 */
+export const REWARD_COUPON_VALUE = 4000
+/** 리워드 1건당 순현금 (5,000 − 4,000) */
+export const REWARD_NET = REWARD_PRICE - REWARD_COUPON_VALUE
+
+/**
+ * @deprecated 무료 모델 전환 전의 티켓가(15,000원).
+ * 남은 참조를 전부 옮기기 전까지만 둔다 — 새 코드에서 쓰지 말 것.
+ */
+export const TICKET_PRICE = REWARD_PRICE
 
 export const startOfDay = (t: number) => {
   const d = new Date(t)

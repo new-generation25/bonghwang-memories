@@ -43,7 +43,7 @@ export default function QRGate({
 
   const accept = (station: Station | null): boolean => {
     if (!station) {
-      setError('봉황1988 거점 QR이 아니에요. 입구의 QR을 다시 확인해주세요.')
+      setError('봉황 메모리즈 거점 QR이 아니에요. 입구의 QR을 다시 확인해주세요.')
       return false
     }
     if (!allowedStations.includes(station.id)) {

@@ -1,5 +1,5 @@
 /**
- * 봉황1988 EP.1 「아버지의 타임캡슐」 — 오디오 번들 데이터 (구현명세서 v2).
+ * 봉황 메모리즈 EP.1 「아버지의 믹스테이프」 — 오디오 번들 데이터 (구현명세서 v2).
  *
  * 재생 단위는 '번들'이다(D13 — 짧은 컷 나열 금지). 번들 안의 호흡은
  * 오디오 파일 내부의 사이(pause)로 구현하고, 자막은 문장 단위로 싱크한다.
@@ -142,7 +142,9 @@ export const BINGO_LOCKED_MESSAGE = '다섯 소원 후 열립니다'
 
 /** S40 — 피날레 화면 텍스트 템플릿 (§6 — 4+1개) */
 export const S40_TEXT = {
-  title: (serial: string) => `소영의 곁을 지킨 친구이자, 이 약속의 기록자 No.${serial}`,
+  // '약속의 기록자'는 내부 세계관·상표 용어라 소비자 화면에 노출하지 않는다(브랜드 v2.1 §1).
+  // 사용자 칭호는 '기록자'로 통일한다.
+  title: (serial: string) => `소영의 곁을 지킨 친구, 기록자 No.${serial}`,
   journey: (date: string, partySize: number) =>
     `${date} — ${partySize}명이 소영과 함께 봉황동의 이야기를 이었습니다.`,
   stats: (elapsed: string, bingoCount: number) =>

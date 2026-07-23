@@ -188,17 +188,18 @@ export default function LandingPage() {
             MEMO<span>RIES</span>
           </h1>
 
-          <div className="sub-band">봉황1988 EP.1 — 아버지의 타임캡슐</div>
+          {/* 대제목이 이미 봉황 메모리즈다 — 밴드는 에피소드만 (브랜드 v2.1 §1) */}
+          <div className="sub-band">EP.1 「아버지의 믹스테이프」</div>
 
+          {/* 후킹 스티커 — 이야기·미션은 전부 무료다(브랜드 v2.1 §5) */}
           <div className="price-stick">
-            <span>한 팀</span>
-            <b>15,000</b>
-            <span>원</span>
+            <b>무료</b>
+            <span>시작</span>
           </div>
 
           <div className="cass-hold">
             <Cassette
-              title="아버지의 타임캡슐"
+              title="아버지의 믹스테이프"
               headLeft="LOCAL MEMORIES"
               headRight="REC"
               side="A"
@@ -240,15 +241,69 @@ export default function LandingPage() {
 
           {showInfo && (
             <div className="absolute inset-x-0 bottom-0">
-              <ul
-                className="space-y-1.5 rounded-xl border border-line bg-paper px-4 py-3 text-[12px] leading-relaxed text-ink shadow-lg"
+              <div
+                className="rounded-xl border border-line bg-paper px-4 py-3 shadow-lg"
                 style={{ animation: 'guide-pull-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) both' }}
               >
-                <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 필수</li>
-                <li>📼 다섯 거점 · 다섯 소원 · 숨겨진 B면 트랙</li>
-                <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 테이프&rsquo;</li>
-                <li>🎟 골목 빙고 — 포인트와 아이템</li>
-              </ul>
+                <ul className="space-y-1.5 text-[12px] leading-relaxed text-ink">
+                  <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 필수</li>
+                  <li>📼 다섯 거점 · 다섯 소원 · 숨겨진 B면 트랙</li>
+                  <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 테이프&rsquo;</li>
+                  <li>🎟 골목 빙고 — 포인트와 아이템</li>
+                </ul>
+
+                {/* 무료·완주 리워드 비교 (브랜드 v2.1 §5) */}
+                <table className="mt-3 w-full border-t border-line pt-2 text-[11.5px] text-ink">
+                  <thead>
+                    <tr className="text-ink-60">
+                      <th className="py-1 text-left font-normal">　</th>
+                      <th className="py-1 text-center font-bold text-teal-dk">무료</th>
+                      <th className="py-1 text-center font-bold text-teal-dk">
+                        완주 리워드
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t border-line/60">
+                      <td className="py-1">이야기·미션 전체</td>
+                      <td className="py-1 text-center">○</td>
+                      <td className="py-1 text-center">○</td>
+                    </tr>
+                    <tr className="border-t border-line/60">
+                      <td className="py-1">디지털 완주 인증</td>
+                      <td className="py-1 text-center">○</td>
+                      <td className="py-1 text-center">○</td>
+                    </tr>
+                    <tr className="border-t border-line/60">
+                      <td className="py-1">골목 가게 쿠폰</td>
+                      <td className="py-1 text-center text-ink-60">—</td>
+                      <td className="py-1 text-center font-bold">4,000원</td>
+                    </tr>
+                    <tr className="border-t border-line/60">
+                      <td className="py-1">완주 기념품</td>
+                      <td className="py-1 text-center text-ink-60">—</td>
+                      <td className="py-1 text-center font-bold">○</td>
+                    </tr>
+                    <tr className="border-t border-line/60">
+                      <td className="py-1 font-bold">금액</td>
+                      <td className="py-1 text-center font-bold">0원</td>
+                      <td className="py-1 text-center font-bold">5,000원</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* 지급 시점·환불 — 세계관 용어 대신 일반 용어로 (§5 필수) */}
+                <p className="mt-2 text-[10.5px] leading-relaxed text-ink-60">
+                  쿠폰과 기념품은 <b className="text-ink">투어를 완주하신 뒤</b>{' '}
+                  드립니다.{' '}
+                  <a
+                    href="/refund"
+                    className="underline decoration-dotted underline-offset-2"
+                  >
+                    환불 규정
+                  </a>
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -260,6 +315,15 @@ export default function LandingPage() {
           {showInfo ? '봉황 메모리즈 이용 안내 ▼' : '봉황 메모리즈 이용 안내 ▲'}
         </button>
 
+        {/* 첫 화면 주차장 안내 (브랜드 v2.1 §6) */}
+        <a
+          href="https://map.naver.com/p/search/김해%20봉황동%20공영주차장"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="mt-2 block w-full rounded-xl border border-line bg-paper px-4 py-2.5 text-center text-[12px] font-bold text-teal-dk"
+        >
+          🅿 주차장 안내 보기
+        </a>
       </div>
 
       {/*
@@ -279,13 +343,18 @@ export default function LandingPage() {
             }}
           >
             <div className="mx-auto w-full max-w-[380px]">
+              {/* 전환 띠 — 무료로 걷되, 완주하면 무엇을 받는지 (브랜드 v2.1 §5) */}
+              <p className="mb-2 rounded-lg bg-sunset-yellow/25 px-3 py-1.5 text-center text-[11.5px] font-bold leading-snug text-shell">
+                완주하면 4,000원 쿠폰 + 완주 기념품
+              </p>
+
               {resumeTarget ? (
                 <>
                   <button
                     onClick={() => router.push(resumeTarget)}
                     className="btn-teal w-full text-center text-[15px]"
                   >
-                    {finished ? '다시 둘러보기 ▶' : '이어서 걷기 ▶'}
+                    {finished ? '다시 둘러보기 ▶' : '▶ 이어서 걷기'}
                     <small className="mt-0.5 block text-[10px] font-normal opacity-85">
                       {resumeLabel}
                     </small>
@@ -308,9 +377,9 @@ export default function LandingPage() {
                   onClick={handleStart}
                   className="btn-teal w-full text-center text-[15px]"
                 >
-                  시작하기 ▶
+                  ▶ 무료로 이야기 열기
                   <small className="mt-0.5 block text-[10px] font-normal opacity-85">
-                    실제 결제 없이 바로 시작합니다 (테스트)
+                    이야기와 미션은 전부 무료입니다
                   </small>
                 </button>
               )}

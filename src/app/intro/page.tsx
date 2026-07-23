@@ -166,7 +166,7 @@ export default function IntroPage() {
   return (
     <div className="flex min-h-screen flex-col bg-cream-base px-4 py-8">
       <p className="text-center font-mono-retro text-[11px] tracking-[0.25em] text-teal">
-        EP.1 아버지의 타임캡슐
+        EP.1 아버지의 믹스테이프
       </p>
 
       {step === 'discovery' && (

@@ -87,8 +87,8 @@ export default function DownloadPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-cream-base px-6">
       <Cassette
-        title="아버지의 타임캡슐"
-        headLeft="BONGHWANG 1988"
+        title="아버지의 믹스테이프"
+        headLeft="LOCAL MEMORIES"
         headRight="LOADING"
         side="A"
         progress={progress}

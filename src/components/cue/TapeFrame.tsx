@@ -22,8 +22,8 @@ export default function TapeFrame({ cue, playing, progress }: TapeFrameProps) {
   return (
     <div className="flex flex-col items-center">
       <Cassette
-        title="아버지의 타임캡슐"
-        headLeft="BONGHWANG 1988"
+        title="아버지의 믹스테이프"
+        headLeft="LOCAL MEMORIES"
         headRight={`SIDE ${side}`}
         side={side}
         progress={progress}

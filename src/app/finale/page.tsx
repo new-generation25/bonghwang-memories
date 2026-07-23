@@ -119,7 +119,7 @@ export default function FinalePage() {
     ctx.fillStyle = '#262422'
     ctx.font = 'bold 40px "Black Han Sans", sans-serif'
     ctx.textAlign = 'center'
-    ctx.fillText('봉황1988 · 아버지의 타임캡슐', 360, 110)
+    ctx.fillText('봉황 메모리즈 · 아버지의 믹스테이프', 360, 110)
     ctx.font = '24px "Noto Sans KR", sans-serif'
     ctx.fillText(S40_TEXT.title(serial), 360, 170)
     ctx.fillText(S40_TEXT.journey(dateStr, 1), 360, 210)
@@ -170,7 +170,7 @@ export default function FinalePage() {
         {/* 완성된 테이프 */}
         <div className="flex justify-center">
           <Cassette
-            title="아버지의 타임캡슐"
+            title="아버지의 믹스테이프"
             headLeft="A면 소원 · B면 편지"
             headRight="DONE"
             side="done"

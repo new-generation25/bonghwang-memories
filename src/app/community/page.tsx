@@ -68,7 +68,7 @@ export default function FriendsPage() {
       {/* 앱바 — 티얼 구조색 */}
       <header className="appbar px-4 pb-3 pt-3">
         <div className="mx-auto max-w-md">
-          <span className="appbar-badge">BONGHWANG 1988 · 함께 걸은 사람들</span>
+          <span className="appbar-badge">LOCAL MEMORIES · 함께 걸은 사람들</span>
           <div className="mt-1 flex items-end justify-between gap-3">
             <h1 className="appbar-title text-[19px]">소영의 친구들</h1>
             {!authLoading &&

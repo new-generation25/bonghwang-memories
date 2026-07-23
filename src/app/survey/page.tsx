@@ -24,7 +24,7 @@ export default function SurveyPage() {
       <header className="appbar px-4 pb-3 pt-3">
         <div className="mx-auto max-w-md">
           <span className="appbar-badge">
-            BONGHWANG 1988 · 완주 설문 · +{POINT_TABLE.survey}P
+            LOCAL MEMORIES · 완주 설문 · +{POINT_TABLE.survey}P
           </span>
           <div className="mt-1 flex items-end justify-between gap-3">
             <h1 className="appbar-title text-[19px]">오늘, 어떠셨어요?</h1>

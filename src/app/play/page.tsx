@@ -52,8 +52,8 @@ export default function PlayerHomePage() {
       {/* 카세트 히어로 — 릴 게이지 = 트랙 진행률 */}
       <div className="mt-3 flex justify-center">
         <Cassette
-          title="아버지의 타임캡슐"
-          headLeft="BONGHWANG 1988"
+          title="아버지의 믹스테이프"
+          headLeft="LOCAL MEMORIES"
           headRight={completedCount >= 5 ? 'SIDE A ✓' : 'SIDE A'}
           side={completedCount >= 5 ? 'done' : 'A'}
           progress={progress}
