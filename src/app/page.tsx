@@ -318,15 +318,6 @@ export default function LandingPage() {
           {showInfo ? '봉황 메모리즈 이용 안내 ▼' : '봉황 메모리즈 이용 안내 ▲'}
         </button>
 
-        {/* 첫 화면 주차장 안내 (브랜드 v2.1 §6) */}
-        <a
-          href="https://map.naver.com/p/search/김해%20봉황동%20공영주차장"
-          target="_blank"
-          rel="noreferrer noopener"
-          className="mt-2 block w-full rounded-xl border border-line bg-paper px-4 py-2.5 text-center text-[12px] font-bold text-teal-dk"
-        >
-          🅿 주차장 안내 보기
-        </a>
       </div>
 
       {/*

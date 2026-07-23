@@ -386,15 +386,29 @@ function Shell({ children, onRefresh }: { children: React.ReactNode; onRefresh?:
   return (
     <div className="min-h-screen bg-cream-base pb-16">
       <header className="appbar px-4 pb-3 pt-4">
-        <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <div>
-            <span className="appbar-badge">ADMIN</span>
-            <h1 className="appbar-title mt-1 text-[19px]">콘트롤 패널</h1>
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {/*
+              나가는 길. 이 화면에는 하단 탭바가 없어서, 들어오면 브라우저
+              뒤로가기 말고는 앱으로 돌아갈 방법이 없었다. 홈 화면에서 띄운
+              PWA에는 그 뒤로가기 버튼조차 없다.
+            */}
+            <Link
+              href="/community"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cream/20 text-[15px] text-cream"
+              aria-label="앱으로 돌아가기"
+            >
+              ←
+            </Link>
+            <div className="min-w-0">
+              <span className="appbar-badge">ADMIN</span>
+              <h1 className="appbar-title mt-1 text-[19px]">콘트롤 패널</h1>
+            </div>
           </div>
           {onRefresh && (
             <button
               onClick={onRefresh}
-              className="rounded-lg bg-cream/20 px-3 py-1.5 text-[12px] font-bold text-cream"
+              className="shrink-0 rounded-lg bg-cream/20 px-3 py-1.5 text-[12px] font-bold text-cream"
             >
               새로고침
             </button>
