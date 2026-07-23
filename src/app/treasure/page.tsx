@@ -37,6 +37,8 @@ export default function BingoPage() {
   const router = useRouter()
   const [pendingCell, setPendingCell] = useState<BoardCell | null>(null)
   const [confirmFinish, setConfirmFinish] = useState(false)
+  /** 2막 여는 대사가 끝난 직후 한 번 띄우는 안내 */
+  const [welcome, setWelcome] = useState(false)
 
   const board = useMemo(() => buildBoard(), [])
 
@@ -82,6 +84,20 @@ export default function BingoPage() {
       playBingoLine()
     }
   }, [lines, tour.bingo.lines])
+
+  /*
+    2막 여는 대사(B6_0)가 끝나면 안내를 한 번 띄운다.
+
+    소영이 "골목마다 내 어릴 적 얘기가 숨어 있어"까지 말하고 카드가 사라지면
+    빙고판만 남는데, 그 순간 무엇을 해야 하는지 아무도 말해주지 않는다.
+    칸을 눌러 기록하는 놀이라는 것을 그때 한 번만 알려준다.
+
+    셀 한마디(B6_X_*)에는 띄우지 않는다 — 그건 이미 하고 있는 일에 대한
+    반응이라 같은 안내를 반복하면 잔소리가 된다.
+  */
+  useEffect(() => {
+    if (cueState.cueId === 'B6_0' && cueState.ended) setWelcome(true)
+  }, [cueState.cueId, cueState.ended])
 
   // ---------- 잠금 화면 (리허설 빌드·슈퍼관리자는 통과) ----------
   if (!tour.bingo.unlocked && !bingoOpen()) {
@@ -216,9 +232,17 @@ export default function BingoPage() {
       </div>
 
       <div className="mx-auto max-w-md px-4 py-5">
-        {/* 소영의 한마디 (C6_x) 재생 중이면 표시 */}
-        {/* 큐 ID는 B6_X_* — 'C6'은 v1 시절 접두사라 영영 거짓이었다 */}
-        {cueState.cueId?.startsWith('B6') && (
+        {/*
+          소영의 한마디 — 말하는 동안에만 띄운다.
+
+          예전에는 큐가 끝난 뒤에도 통화 카드가 남아서, 빙고판 위에 다 끝난
+          대사와 눌리지 않는 데크가 계속 얹혀 있었다. 한 화면에 '듣는 것'과
+          '고르는 것'이 겹치니 지금 무엇을 하는 화면인지가 흐려진다.
+
+          끝나면 카드를 내리고, 대신 할 일을 한 줄로 알린다(아래 안내).
+          큐 ID는 B6_X_* — 'C6'은 v1 시절 접두사라 영영 거짓이었다.
+        */}
+        {cueState.cueId?.startsWith('B6') && !cueState.ended && (
           <div className="mb-4">
             <CuePlayer />
           </div>
@@ -288,6 +312,34 @@ export default function BingoPage() {
       </div>
 
       {/* 셀 완료 확인 */}
+      {/*
+        2막 시작 안내 — 대사가 끝나고 빙고판만 남은 그 순간에 한 번.
+        칸을 채우는 확인 대화상자와 같은 생김새를 쓴다. 이 화면에서 무언가
+        물어보는 창은 하나의 모양이어야 한다.
+      */}
+      {welcome && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-shell/80 px-6">
+          <div className="w-full max-w-[320px] rounded-2xl bg-paper p-6 text-center">
+            <div className="text-4xl">🗺️</div>
+            <h3 className="mt-2 font-display text-[17px] text-ink">
+              골목의 숨겨진 이야기를
+              <br />더 발견해 보세요
+            </h3>
+            <p className="mt-2 text-[12.5px] leading-relaxed text-ink-60">
+              마음에 드는 곳을 만나면 그 칸을 눌러 기록으로 남기세요.
+              <br />
+              가로·세로·대각선 5칸을 이으면 빙고입니다.
+            </p>
+            <button
+              onClick={() => setWelcome(false)}
+              className="mt-4 w-full rounded-xl bg-teal py-3 font-display text-[14px] text-cream"
+            >
+              둘러보기 ▶
+            </button>
+          </div>
+        </div>
+      )}
+
       {pendingCell && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-shell/80 px-6">
           <div className="w-full max-w-[320px] rounded-2xl bg-paper p-6 text-center">
