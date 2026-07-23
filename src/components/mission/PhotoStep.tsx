@@ -38,8 +38,15 @@ export default function PhotoStep({
   const confirmRef = useRevealOnChange<HTMLDivElement>(preview, Boolean(preview))
   const [saving, setSaving] = useState(false)
 
-  const handleCapture = async (imageData: string) => {
+  /** 방향 센서가 붙어 찍혔으면 AR, 아니면 정적 프레임 폴백(D11) */
+  const [arActive, setArActive] = useState(false)
+
+  const handleCapture = async (
+    imageData: string,
+    meta?: { arActive: boolean }
+  ) => {
     setCameraOpen(false)
+    setArActive(Boolean(meta?.arActive))
     setPreview(imageData)
   }
 
@@ -51,7 +58,7 @@ export default function PhotoStep({
       await putDataUrl(idbKey, preview)
       mutateTour((prev) => ({
         photos: [...prev.photos, { track, idbKey, takenAt: Date.now() }],
-        ...(overlaySrc ? { arFallbackUsed: true } : {}),
+        ...(overlaySrc && !arActive ? { arFallbackUsed: true } : {}),
       }))
     } catch {
       // 저장 실패해도 진행은 막지 않는다 — 사진은 앨범 연출용

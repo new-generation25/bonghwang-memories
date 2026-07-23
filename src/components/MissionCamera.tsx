@@ -2,18 +2,25 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { MediaFailure, openStream, closeStream } from '@/lib/media'
+import { useArOverlay } from '@/hooks/useArOverlay'
 
 interface MissionCameraProps {
-  onCapture: (imageData: string) => void
+  /**
+   * meta.arActive — 촬영 순간 방향 센서가 실제로 붙어 있었는지.
+   * D11의 '폴백 사용' 판정에 쓴다. 오버레이가 고정된 채 찍혔으면 폴백이다.
+   */
+  onCapture: (imageData: string, meta?: { arActive: boolean }) => void
   onClose: () => void
   /**
-   * AR 폴백(D11) — 화면과 촬영 결과에 합성되는 오버레이 이미지(예: 능소화 프레임).
-   * WebAR이 실패하거나 없는 환경에서 정적 프레임으로 대신한다.
+   * 화면과 촬영 결과에 합성되는 오버레이 이미지(예: 능소화).
+   * 방향 센서가 있으면 폰을 움직일 때 같이 흐르고(AR), 없으면 고정된
+   * 프레임으로 남는다 — 그게 D11 폴백이다.
    */
   overlaySrc?: string
 }
 
 export default function MissionCamera({ onCapture, onClose, overlaySrc }: MissionCameraProps) {
+  const ar = useArOverlay(Boolean(overlaySrc))
   const [isLoading, setIsLoading] = useState(true)
   /** 카메라를 못 연 이유 — alert로 띄우고 닫아버리면 원인을 알 수 없다 */
   const [permissionError, setPermissionError] = useState('')
@@ -142,14 +149,29 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
         // Stop camera stream
         closeStream(stream)
 
-        onCapture(imageData)
+        onCapture(imageData, { arActive: ar.active })
       }
 
       // 오버레이(능소화 프레임 등)를 사진에 합성 — 실패해도 원본으로 진행
       if (overlaySrc) {
         const overlay = new Image()
         overlay.onload = () => {
-          context.drawImage(overlay, 0, 0, canvas.width, canvas.height)
+          // 화면에서 본 그대로 찍혀야 한다 — 프리뷰와 같은 변환을 그대로 쓴다
+          const t = ar.transformRef.current
+          context.save()
+          context.translate(
+            canvas.width / 2 + t.x * canvas.width,
+            canvas.height / 2 + t.y * canvas.height
+          )
+          context.rotate((t.rotate * Math.PI) / 180)
+          context.drawImage(
+            overlay,
+            -canvas.width / 2,
+            -canvas.height / 2,
+            canvas.width,
+            canvas.height
+          )
+          context.restore()
           finalize()
         }
         overlay.onerror = finalize
@@ -174,7 +196,8 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
       ctx.font = '20px sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText('모의 촬영 (PC 테스트)', canvas.width / 2, canvas.height / 2)
-      const finalize = () => onCapture(canvas.toDataURL('image/jpeg', 0.85))
+      const finalize = () =>
+        onCapture(canvas.toDataURL('image/jpeg', 0.85), { arActive: false })
       if (overlaySrc) {
         const overlay = new Image()
         overlay.onload = () => {
@@ -322,26 +345,47 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
         />
 
         {/* AR 폴백 오버레이 — 화면 프리뷰에도 겹쳐 보여준다 */}
-        {overlaySrc && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={overlaySrc}
-            alt=""
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-          />
-        )}
+          {overlaySrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={overlaySrc}
+              alt=""
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+              style={{
+                transform: `translate(${ar.transform.x * 100}%, ${ar.transform.y * 100}%) rotate(${ar.transform.rotate}deg)`,
+                transition: ar.active ? 'none' : 'transform 0.3s ease-out',
+                willChange: 'transform',
+              }}
+            />
+          )}
 
         {/* Guide overlay */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-4 border-2 border-white/50 border-dashed rounded-lg"></div>
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
             <div className="rounded-lg bg-shell/70 px-3 py-1.5 text-center text-cream">
-              <p className="text-[12px]">피사체를 가이드 라인 안에 맞춰주세요</p>
+              <p className="text-[12px]">
+                {overlaySrc && ar.active
+                  ? '폰을 천천히 움직여 능소화를 담아보세요'
+                  : '피사체를 가이드 라인 안에 맞춰주세요'}
+              </p>
             </div>
           </div>
         </div>
         </div>
       </div>
+
+      {/* iOS는 사용자가 눌러야 방향 센서를 켤 수 있다 */}
+      {overlaySrc && ar.needsPermission && (
+        <div className="flex shrink-0 justify-center px-4 pb-1">
+          <button
+            onClick={ar.requestAccess}
+            className="rounded-full bg-sunset-yellow px-4 py-2 text-[12.5px] font-bold text-ink"
+          >
+            🌺 능소화 깨우기
+          </button>
+        </div>
+      )}
 
       {/* Controls — 셔터가 홈 인디케이터에 걸리지 않도록 안전영역만큼 띄운다 */}
       <div
