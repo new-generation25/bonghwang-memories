@@ -22,13 +22,15 @@
   --rec-red: 217 58 43;      /* #D93A2B 넘버 레드 — REC 전용 */
 
   /*
-    소영의 쪽지 전용 — 바랜 분홍 편지지.
-    P3 원색은 아니지만 쪽지는 이 세계에서 유일하게 '소영이 남긴 물건'이라
-    크림 일색인 화면에서 한눈에 구별돼야 한다. 채도를 낮춰 레트로 팔레트
-    안에 앉히고, 테두리는 조금 더 진한 같은 계열로 잡는다.
+    소영이 남긴 종이 전용 — 연두 포스트잇.
+    P3 원색은 아니지만, 소영이 남긴 물건은 크림 일색인 화면에서 한눈에
+    구별돼야 한다. 채도를 낮춰 레트로 팔레트 안에 앉히고, 테두리는
+    같은 계열의 조금 더 진한 색으로 잡는다.
+    쪽지(.note-paper)와 키 위 메모(.key-sticker)가 같은 색을 쓴다 —
+    둘 다 소영이 붙여둔 종이라 같은 물건으로 읽혀야 한다.
   */
-  --note-pink: 248 226 226;      /* #F8E2E2 */
-  --note-pink-line: 226 186 186; /* #E2BABA */
+  --note-green: 226 240 199;      /* #E2F0C7 */
+  --note-green-line: 186 212 145; /* #BAD491 */
 
   /* 중립 */
   --paper: 255 253 247;      /* #FFFDF7 */
@@ -1328,8 +1330,9 @@ video::-webkit-media-controls-start-playback-button {
   right: -14px;
   z-index: 6;
   transform: rotate(-5deg);
-  background: rgb(var(--cream));
-  border: 1px solid rgb(var(--line));
+  /* 쪽지와 같은 연두 — 소영이 붙여둔 종이라는 같은 신호 */
+  background: rgb(var(--note-green));
+  border: 1px solid rgb(var(--note-green-line));
   border-radius: 3px;
   padding: 1px 8px 0;
   font-family: 'Nanum Pen Script', cursive;
@@ -1542,8 +1545,8 @@ video::-webkit-media-controls-start-playback-button {
   position: relative;
   /* 배경·테두리를 여기서 잡는다 — 호출부의 bg-cream/border-line보다
      나중에 오는 규칙이라 유틸리티 클래스를 그대로 두고도 덮인다 */
-  background: rgb(var(--note-pink));
-  border-color: rgb(var(--note-pink-line));
+  background: rgb(var(--note-green));
+  border-color: rgb(var(--note-green-line));
 }
 
 .note-paper::before {

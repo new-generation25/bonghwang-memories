@@ -23,7 +23,7 @@ import { useTourHydrated, useTourState } from '@/hooks/useTourState'
 import {
   CUES,
   S02_DISCOVERY_TEXT,
-  NOTE_FRONT_TEXT,
+  NOTE_FRONT_LINES,
   NOTE_PHONE_LABEL,
 } from '@/lib/cues'
 import {
@@ -242,8 +242,21 @@ export default function IntroPage() {
             className="note-paper mt-6 rounded-sm border px-5 py-4 shadow-sm"
             style={{ transform: 'rotate(-1.2deg)' }}
           >
-            <p className="font-pen text-[19px] leading-relaxed text-ink">
-              {NOTE_FRONT_TEXT}
+            {/* 줄은 대본이 잡는다 — 손글씨라 아무 데서나 접히면 안 된다.
+                마지막 줄(서명)만 오른쪽으로 보낸다. */}
+            {/* break-keep — 세 번째 줄은 폭을 넘겨 한 번 더 접히는데,
+                기본 규칙으로는 '있/습니다'처럼 낱말 가운데가 갈라진다 */}
+            <p className="font-pen text-[19px] leading-relaxed text-ink break-keep">
+              {NOTE_FRONT_LINES.map((line, i) => (
+                <span
+                  key={line}
+                  className={`block${
+                    i === NOTE_FRONT_LINES.length - 1 ? ' mt-1 text-right' : ''
+                  }`}
+                >
+                  {line}
+                </span>
+              ))}
             </p>
           </div>
         </div>
