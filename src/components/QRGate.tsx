@@ -14,6 +14,7 @@ import { useState } from 'react'
 import QRScanner from '@/components/QRScanner'
 import type { StationId } from '@/lib/cues'
 import { submitOnEnter } from '@/lib/submitOnEnter'
+import { canSkipOrder, useSuperAdmin } from '@/lib/superAdmin'
 import {
   CAMERA_SCAN_ENABLED,
   Station,
@@ -40,13 +41,16 @@ export default function QRGate({
   )
   const [error, setError] = useState('')
   const [code, setCode] = useState('')
+  const superAdmin = useSuperAdmin()
 
   const accept = (station: Station | null): boolean => {
     if (!station) {
       setError('봉황 메모리즈 거점 QR이 아니에요. 입구의 QR을 다시 확인해주세요.')
       return false
     }
-    if (!allowedStations.includes(station.id)) {
+    // 슈퍼관리자는 차례가 아닌 거점도 연다 — 뒤쪽 거점을 고칠 때
+    // 앞의 거점 QR을 현장에서 찍어올 수는 없다
+    if (!canSkipOrder() && !allowedStations.includes(station.id)) {
       setError(`아직 ${station.name} 차례가 아니에요. 소영의 안내를 따라가 주세요.`)
       return false
     }
@@ -115,6 +119,16 @@ export default function QRGate({
         <p className="mt-1 text-[12px] leading-relaxed text-ink-60">
           거점 안내판에 적힌 4자리 코드를 입력해주세요.
         </p>
+
+        {/* 슈퍼관리자 — 거점 QR은 현장에 붙어 있어 책상에서는 찍을 수 없다 */}
+        {superAdmin && (
+          <button
+            onClick={acceptCurrent}
+            className="mt-3 w-full rounded-xl border border-rec bg-rec/10 py-2.5 text-[12.5px] font-bold text-rec"
+          >
+            🔓 QR 없이 통과 — 지금 차례 거점으로
+          </button>
+        )}
 
         {!CAMERA_SCAN_ENABLED && UNIVERSAL_PASS_CODE && (
           <p className="mt-2 rounded-lg bg-sunset-yellow/20 px-3 py-2 text-[11.5px] leading-relaxed text-ink">

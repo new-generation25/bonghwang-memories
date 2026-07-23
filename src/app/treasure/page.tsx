@@ -16,7 +16,7 @@ import Navigation from '@/components/Navigation'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { BoardCell, buildBoard, countLines } from '@/lib/bingoCells'
-import { BINGO_ALWAYS_OPEN } from '@/lib/tracks'
+import { bingoOpen, useSuperAdmin } from '@/lib/superAdmin'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { markBingoCell, mutateTour, addCoupon } from '@/lib/tourState'
@@ -30,6 +30,8 @@ import { logEvent } from '@/lib/analytics'
 
 export default function BingoPage() {
   const tour = useTourState()
+  // 모드를 켜면 잠금 화면이 그 자리에서 열려야 한다
+  useSuperAdmin()
   const cueState = useCue()
   const router = useRouter()
   const [pendingCell, setPendingCell] = useState<BoardCell | null>(null)
@@ -75,8 +77,8 @@ export default function BingoPage() {
     }
   }, [lines, tour.bingo.lines])
 
-  // ---------- 잠금 화면 (BINGO_ALWAYS_OPEN이면 검수용으로 통과) ----------
-  if (!tour.bingo.unlocked && !BINGO_ALWAYS_OPEN) {
+  // ---------- 잠금 화면 (리허설 빌드·슈퍼관리자는 통과) ----------
+  if (!tour.bingo.unlocked && !bingoOpen()) {
     return (
       <div className="min-h-screen bg-cream-base pb-32">
         <header className="appbar px-4 pb-3 pt-3">

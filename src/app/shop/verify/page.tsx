@@ -30,6 +30,8 @@ type State =
   | { kind: 'used'; coupon: ParsedCoupon; at: string }
   | { kind: 'invalid'; reason: string }
   | { kind: 'offline'; coupon: ParsedCoupon }
+  /** 슈퍼관리자가 시험 삼아 받은 코드 — 사용 처리하지 않는다 */
+  | { kind: 'test'; coupon: ParsedCoupon }
 
 function ShopVerifyInner() {
   const params = useSearchParams()
@@ -41,6 +43,14 @@ function ShopVerifyInner() {
     const parsed = parseCouponCode(code)
     if (!parsed) {
       setState({ kind: 'invalid', reason: '이 앱의 쿠폰 코드가 아닙니다.' })
+      return
+    }
+
+    // 시험용 코드는 여기서 멈춘다. 사용 기록을 만들지 않으므로 몇 번을
+    // 찍어도 코드가 소진되지 않는다 — 실제 쿠폰은 한 번 찍으면 끝이라
+    // 이 갈림이 없으면 확인 흐름을 시험할 때마다 쿠폰 하나를 태운다.
+    if (parsed.isTest) {
+      setState({ kind: 'test', coupon: parsed })
       return
     }
 
@@ -190,6 +200,28 @@ function ShopVerifyInner() {
               <br />
               다만 이미 쓴 쿠폰인지 확인이 안 됩니다. 통신이 되는 곳에서 다시
               찍어 주세요.
+            </p>
+          </div>
+        )}
+
+        {/*
+          시험용 코드. 사장님이 볼 일은 없지만, 만에 하나 손님이 이 코드를
+          들고 왔을 때 "드리면 안 되는 것"이 분명해야 한다.
+        */}
+        {state.kind === 'test' && (
+          <div className="mt-10 rounded-2xl border-2 border-dashed border-ink-60 bg-cream px-5 py-10 text-center">
+            <p className="text-[44px] leading-none" aria-hidden>
+              🧪
+            </p>
+            <p className="mt-4 font-display text-[20px] text-ink">
+              시험용 코드입니다
+            </p>
+            <p className="mt-3 text-[13px] leading-relaxed text-ink-60">
+              앱을 점검하며 만든 코드라 실제 쿠폰이 아닙니다.
+              <br />
+              {state.coupon.spec.shop} · {state.coupon.spec.benefit}
+              <br />
+              <b className="text-ink">혜택을 드리지 않으셔도 됩니다.</b>
             </p>
           </div>
         )}

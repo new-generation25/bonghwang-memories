@@ -12,7 +12,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTourState } from '@/hooks/useTourState'
-import { BINGO_ALWAYS_OPEN } from '@/lib/tracks'
+import { bingoOpen, useSuperAdmin } from '@/lib/superAdmin'
 
 interface NavItem {
   key: string
@@ -29,6 +29,8 @@ export default function Navigation() {
   const pathname = usePathname()
   const tour = useTourState()
   const [lockedNotice, setLockedNotice] = useState<string | null>(null)
+  // 모드를 켜고 끄면 잠긴 탭이 그 자리에서 열리고 닫혀야 한다
+  useSuperAdmin()
 
   // 안내는 잠깐 떠 있다 사라진다 — 걷는 중에 보는 화면이라 손으로 닫게 하지 않는다
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function Navigation() {
       path: '/treasure',
       // 골목을 돌며 도장을 찍는 놀이라 도장(🏮 등)보다 격자가 직관적이다
       icon: '🎟️',
-      disabled: !tour.bingo.unlocked && !BINGO_ALWAYS_OPEN,
+      disabled: !tour.bingo.unlocked && !bingoOpen(),
       lockedMessage: "'다섯 가지 소원' 이야기를 완료해야 열립니다.",
     },
     {

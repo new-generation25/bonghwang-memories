@@ -84,15 +84,31 @@ function checksum(couponId: string, uid: string): string {
   return encode(hash32(`bh1:${couponId}:${uid}`), 4)
 }
 
-/** 참여자 화면에 띄울 쿠폰 코드 */
-export function makeCouponCode(couponId: string, uid: string): string {
-  return `BH1-${couponId.toUpperCase()}-${userTag(uid)}-${checksum(couponId, uid)}`
+/**
+ * 참여자 화면에 띄울 쿠폰 코드.
+ *
+ * test를 주면 접두사가 BH1T가 된다. 슈퍼관리자가 순서를 건너뛰며 받은
+ * 쿠폰이 그것이다 — 확인 화면이 알아보고 사용 기록을 남기지 않는다.
+ *
+ * 표식이 필요한 이유는 되돌릴 수 없어서다. 사용 기록은 만들기만 되고
+ * 고치거나 지울 수 없어서(관리자만 삭제), 시험 삼아 한 번 찍으면 그
+ * 코드는 영영 '사용됨'이 된다. 코드는 uid로 정해지므로 다시 만들 수도 없다.
+ */
+export function makeCouponCode(
+  couponId: string,
+  uid: string,
+  test = false
+): string {
+  const prefix = test ? 'BH1T' : 'BH1'
+  return `${prefix}-${couponId.toUpperCase()}-${userTag(uid)}-${checksum(couponId, uid)}`
 }
 
 export interface ParsedCoupon {
   couponId: string
   userTag: string
   spec: CouponSpec
+  /** 시험용 코드 — 사용 기록을 남기지 않는다 */
+  isTest: boolean
 }
 
 /**
@@ -101,10 +117,10 @@ export interface ParsedCoupon {
  */
 export function parseCouponCode(raw: string): ParsedCoupon | null {
   const code = raw.trim().toUpperCase()
-  const m = code.match(/^BH1-([A-Z0-9]+)-([2-9A-Z]{6})-([2-9A-Z]{4})$/)
+  const m = code.match(/^BH1(T?)-([A-Z0-9]+)-([2-9A-Z]{6})-([2-9A-Z]{4})$/)
   if (!m) return null
 
-  const [, rawId, tag, check] = m
+  const [, testFlag, rawId, tag, check] = m
   const couponId = rawId.toLowerCase()
   const spec = COUPONS[couponId]
   if (!spec) return null
@@ -113,7 +129,7 @@ export function parseCouponCode(raw: string): ParsedCoupon | null {
   // 형식만 확인하고, 진짜 검증은 사용 기록(Firestore)이 맡는다.
   if (!/^[2-9A-Z]{4}$/.test(check)) return null
 
-  return { couponId, userTag: tag, spec }
+  return { couponId, userTag: tag, spec, isTest: testFlag === 'T' }
 }
 
 /** 쿠폰 QR에 담을 값 — 가게 기기가 열 확인 화면 주소 */

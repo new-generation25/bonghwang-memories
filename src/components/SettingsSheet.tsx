@@ -11,10 +11,11 @@
  * 저장에 실패하면 걸어온 기록이 사라지므로 그 사실을 화면에 알린다.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { isAdminUser } from '@/lib/admin'
+import { setSuperAdmin, superAdminSwitch } from '@/lib/superAdmin'
 import NicknameEditor from '@/components/NicknameEditor'
 
 interface SettingsSheetProps {
@@ -28,6 +29,12 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
   const [showNickname, setShowNickname] = useState(false)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const [superOn, setSuperOn] = useState(false)
+
+  // 시트가 열릴 때 저장값을 읽는다 — 첫 그림에 읽으면 서버 렌더와 어긋난다
+  useEffect(() => {
+    if (isOpen) setSuperOn(superAdminSwitch())
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -108,18 +115,57 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
 
               {/* 관리자 전용 — 참여자에게는 항목이 아예 보이지 않는다 */}
               {isAdminUser() && (
-                <button
-                  onClick={() => {
-                    onClose()
-                    router.push('/admin')
-                  }}
-                  className="flex w-full items-center justify-between rounded-xl border border-teal bg-teal/10 px-4 py-3 text-left"
-                >
-                  <span className="text-[13px] font-bold text-teal-dk">
-                    🛠 관리자 콘솔
-                  </span>
-                  <span className="text-[12px] text-teal-dk">›</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      onClose()
+                      router.push('/admin')
+                    }}
+                    className="flex w-full items-center justify-between rounded-xl border border-teal bg-teal/10 px-4 py-3 text-left"
+                  >
+                    <span className="text-[13px] font-bold text-teal-dk">
+                      🛠 관리자 콘솔
+                    </span>
+                    <span className="text-[12px] text-teal-dk">›</span>
+                  </button>
+
+                  {/*
+                    켜면 순서를 무시하고, 끄면 참여자와 똑같이 진행한다.
+                    끄는 것으로 되감기지는 않는다 — 그 안내는 띠 안에 있다.
+                  */}
+                  <button
+                    onClick={() => {
+                      const next = !superOn
+                      setSuperOn(next)
+                      setSuperAdmin(next)
+                    }}
+                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left ${
+                      superOn ? 'border-rec bg-rec/10' : 'border-line bg-cream'
+                    }`}
+                  >
+                    <span className="min-w-0">
+                      <span
+                        className={`block text-[13px] font-bold ${
+                          superOn ? 'text-rec' : 'text-ink'
+                        }`}
+                      >
+                        🔓 슈퍼관리자 모드
+                      </span>
+                      <span className="block text-[11px] text-ink-60">
+                        {superOn
+                          ? '진행 순서를 무시하고 있습니다'
+                          : '참여자와 같은 순서로 진행합니다'}
+                      </span>
+                    </span>
+                    <span
+                      className={`ml-3 shrink-0 rounded-lg px-2.5 py-1 font-mono-retro text-[10.5px] tracking-wider ${
+                        superOn ? 'bg-rec text-cream' : 'bg-cream-dp text-ink-60'
+                      }`}
+                    >
+                      {superOn ? 'ON' : 'OFF'}
+                    </span>
+                  </button>
+                </>
               )}
 
               {profile && (

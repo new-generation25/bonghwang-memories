@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import PointToast from '@/components/PointToast'
+import SuperAdminBar from '@/components/SuperAdminBar'
 
 export const metadata: Metadata = {
   title: '봉황 메모리즈 — 봉황 메모리즈 EP.1 「아버지의 믹스테이프」',
@@ -227,6 +228,8 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <PointToast />
+          {/* 켜져 있을 때만 그려진다 — 참여자에게는 존재하지 않는 것과 같다 */}
+          <SuperAdminBar />
         </AuthProvider>
       </body>
     </html>

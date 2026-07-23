@@ -33,6 +33,7 @@ import {
   setCurrentTrack,
 } from './tourState'
 import { timingsFor } from './audioTimings'
+import { canSkipCueNow } from './superAdmin'
 import { STATIONS } from './tracks'
 import { award } from './points'
 import { logEvent } from './analytics'
@@ -264,7 +265,9 @@ function tick(cue: Cue, elapsed: number, duration: number) {
     elapsed,
     duration,
     subtitleIndex: subtitleIndexAt(cue, elapsed, duration),
-    skippable: elapsed >= SKIP_AFTER_SEC,
+    // 슈퍼관리자는 기다리지 않는다 — 뒤쪽 큐를 고칠 때마다 앞 대사를
+    // 15초씩 앉아서 들을 수는 없다
+    skippable: elapsed >= SKIP_AFTER_SEC || canSkipCueNow(),
   })
   if (elapsed >= duration) finishCue(cue)
 }
@@ -420,7 +423,7 @@ export function skipLine() {
   emit({
     elapsed: target,
     subtitleIndex: next,
-    skippable: target >= SKIP_AFTER_SEC,
+    skippable: target >= SKIP_AFTER_SEC || canSkipCueNow(),
   })
 }
 

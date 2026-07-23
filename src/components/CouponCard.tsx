@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { CouponSpec, couponQrPayload, makeCouponCode } from '@/lib/coupons'
+import { useSuperAdmin } from '@/lib/superAdmin'
 
 interface CouponCardProps {
   spec: CouponSpec
@@ -24,7 +25,16 @@ interface CouponCardProps {
 export default function CouponCard({ spec, uid, used = false }: CouponCardProps) {
   const [open, setOpen] = useState(false)
   const [qr, setQr] = useState<string | null>(null)
-  const code = makeCouponCode(spec.id, uid)
+  // 슈퍼관리자가 건너뛰며 받은 쿠폰은 시험용 코드로 낸다 — 가게 확인
+  // 화면이 알아보고 사용 기록을 남기지 않아 코드가 소진되지 않는다
+  const superAdmin = useSuperAdmin()
+  const code = makeCouponCode(spec.id, uid, superAdmin)
+
+  // 코드가 바뀌면 그려둔 QR을 버린다. 모드를 켜고 끄면 시험용/실제 코드가
+  // 갈리는데, 캐시를 그대로 두면 펼쳐놓은 QR이 옛 코드로 남는다.
+  useEffect(() => {
+    setQr(null)
+  }, [code])
 
   useEffect(() => {
     if (!open || qr) return
