@@ -1063,25 +1063,50 @@ video::-webkit-media-controls-start-playback-button {
   height: 69px;
   border-radius: 5px;
   background: linear-gradient(#0d0b0a, #171413);
+  /*
+    도어에 파인 자국. 빛이 위에서 오므로 위쪽 바깥은 어둡고 아래쪽 바깥은
+    밝다 — 이 두 줄이 '뚫린 구멍'으로 읽히게 하는 핵심이다.
+    바깥으로 번지는 옅은 그림자가 도어 면에 깊이를 얹는다.
+  */
   box-shadow:
-    inset 0 3px 10px rgba(0, 0, 0, 0.9),
-    0 1px 0 rgba(255, 255, 255, 0.85);
+    0 -1px 1px rgba(0, 0, 0, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.95),
+    0 2px 5px rgba(0, 0, 0, 0.16),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   /* 핵심 — 창 밖으로 나간 테이프는 잘린다 */
   overflow: hidden;
 }
 
-/* 창 유리 반사 */
+/*
+  유리와 깊이.
+
+  inset 그림자는 배경 위·자식 아래에 그려진다. 라벨이 창을 가득 채우자
+  깊이감이 통째로 가려져, 테이프가 도어 위에 붙인 스티커처럼 떠 보였다.
+  그래서 테이프를 덮는 층을 따로 두고 여기에 그림자와 반사를 함께 얹는다.
+*/
 .deck-window::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    108deg,
-    rgba(255, 255, 255, 0.16) 0 16%,
-    rgba(255, 255, 255, 0) 32% 100%
-  );
+  border-radius: inherit;
+  background:
+    /* 비스듬히 스치는 유리 반사 */
+    linear-gradient(
+      108deg,
+      rgba(255, 255, 255, 0.17) 0 14%,
+      rgba(255, 255, 255, 0.04) 26%,
+      rgba(255, 255, 255, 0) 34% 100%
+    ),
+    /* 아크릴 너머라 살짝 어둡다 — 위쪽이 더 깊다 */
+    linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.08) 45%, rgba(0, 0, 0, 0.16));
+  /* 창틀이 테이프에 드리우는 그림자 — 안쪽으로 들어가 있다는 신호 */
+  box-shadow:
+    inset 0 7px 9px -4px rgba(0, 0, 0, 0.8),
+    inset 0 -5px 8px -4px rgba(0, 0, 0, 0.55),
+    inset 5px 0 8px -5px rgba(0, 0, 0, 0.65),
+    inset -5px 0 8px -5px rgba(0, 0, 0, 0.65);
   pointer-events: none;
 }
 
