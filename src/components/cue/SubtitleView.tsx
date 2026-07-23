@@ -59,7 +59,9 @@ export default function SubtitleView({
   return (
     <div className="mt-3">
       {/*
-        고정 높이 — 글 세 줄(현재 자막 2줄 + 직전 자막 1줄) + 줄 간격 + 상하 여백.
+        고정 높이 — 글 네 줄 + 줄 간격 + 상하 여백.
+        데크를 화면 아래에 못박으면서 생긴 자리를 자막에 준다. 세 줄일 때는
+        문장이 조금만 길어도 직전 자막이 곧바로 밀려 나갔다.
         min-height로 두면 문장 길이에 따라 상자가 늘었다 줄었다 하면서
         아래 데크 버튼이 계속 움직인다. 높이를 못박아 버튼 위치를 고정한다.
 
@@ -69,7 +71,7 @@ export default function SubtitleView({
       */}
       <div
         className={`flex flex-col justify-end overflow-hidden rounded-lg bg-black/5 px-4 py-3 ${fontClass}`}
-        style={{ height: 'calc(4.875em + 6px + 1.5rem)' }}
+        style={{ height: 'calc(6.5em + 6px + 1.5rem)' }}
         aria-live="polite"
       >
         {prev && renderLine(prev, subtitleIndex - 1, { current: false })}

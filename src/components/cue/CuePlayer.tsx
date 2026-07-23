@@ -9,7 +9,7 @@
  */
 
 import { CUES } from '@/lib/cues'
-import { pauseCue, replayCue, resumeCue, skipLine } from '@/lib/cueEngine'
+import { endCue, pauseCue, replayCue, resumeCue, skipLine } from '@/lib/cueEngine'
 import { useCue } from '@/hooks/useCue'
 import CallFrame from './CallFrame'
 import DeckControls from './DeckControls'
@@ -78,6 +78,58 @@ export default function CuePlayer({
     />
   )
 
+  const deck = needsTap ? (
+    <DeckControls
+      className="mt-3"
+      keys={[
+        { kind: 'rew' },
+        { kind: 'play', label: '탭해서 계속', onClick: resumeCue },
+        { kind: 'ff' },
+        { kind: 'stop' },
+      ]}
+    />
+  ) : (
+    <DeckControls
+      className="mt-3"
+      keys={[
+        { kind: 'rew', onClick: replayCue, ariaLabel: '다시듣기' },
+        ended
+          ? endedAction
+            ? {
+                // 다음 단계를 여는 키 — 눈에 띄게 살린다
+                kind: 'play',
+                label: endedAction.label,
+                onClick: endedAction.onClick,
+                accent: 'go',
+                ariaLabel: endedAction.label,
+              }
+            : { kind: 'play' }
+          : playing
+            ? { kind: 'pause', onClick: pauseCue, ariaLabel: '일시정지' }
+            : { kind: 'play', onClick: resumeCue, ariaLabel: '재생' },
+        {
+          // FF — 재생 중에도 한 줄씩 넘긴다. 마지막 줄이면 다음 단계로.
+          kind: 'ff',
+          onClick: ended ? undefined : skipLine,
+          ariaLabel: '다음 줄로 건너뛰기',
+          title: '다음 문장으로 — 마지막 문장에서는 다음으로 넘어갑니다',
+        },
+        {
+          /*
+            STOP — 지금 이야기를 끝내고 다음으로 넘긴다.
+            실물 데크에서 STOP은 늘 눌리는 키다. 눌리지 않는 STOP은 고장 난
+            기계로 읽힌다. 끝내는 방식은 끝까지 들은 것과 같아서(endCue),
+            미션이 열려야 할 자리에서는 미션이 열린다.
+          */
+          kind: 'stop',
+          onClick: ended ? undefined : endCue,
+          ariaLabel: '건너뛰고 다음으로',
+          title: '지금 이야기를 끝내고 다음으로 넘어갑니다',
+        },
+      ]}
+    />
+  )
+
   return (
     <div className={fill ? '' : 'rounded-2xl border border-line bg-paper p-4 shadow-sm'}>
       {fill ? (
@@ -134,47 +186,13 @@ export default function CuePlayer({
         </>
       )}
 
-      {needsTap ? (
-        <DeckControls
-          className="mt-3"
-          keys={[
-            { kind: 'rew' },
-            { kind: 'play', label: '탭해서 계속', onClick: resumeCue },
-            { kind: 'ff' },
-            { kind: 'stop' },
-          ]}
-        />
-      ) : (
-        <DeckControls
-          className="mt-3"
-          keys={[
-            { kind: 'rew', label: '다시듣기', onClick: replayCue, ariaLabel: '다시듣기' },
-            ended
-              ? endedAction
-                ? {
-                    // 다음 단계를 여는 키 — 눈에 띄게 살린다
-                    kind: 'play',
-                    label: endedAction.label,
-                    onClick: endedAction.onClick,
-                    accent: 'go',
-                    ariaLabel: endedAction.label,
-                  }
-                : { kind: 'play' }
-              : playing
-                ? { kind: 'pause', onClick: pauseCue, ariaLabel: '일시정지' }
-                : { kind: 'play', onClick: resumeCue, ariaLabel: '재생' },
-            {
-              // FF — 재생 중에도 한 줄씩 넘긴다. 마지막 줄이면 다음 단계로.
-              kind: 'ff',
-              label: '다음 줄',
-              onClick: ended ? undefined : skipLine,
-              ariaLabel: '다음 줄로 건너뛰기',
-              title: '다음 문장으로 — 마지막 문장에서는 다음으로 넘어갑니다',
-            },
-            { kind: 'stop' },
-          ]}
-        />
-      )}
+      {/*
+        각인은 실물 데크 그대로 REW · PLAY · FF · STOP이다. 한글 설명을
+        새기면 키마다 글자 수가 달라 네 칸의 무게가 어긋난다 — 무엇을 하는
+        키인지는 도형이 말한다. 다만 재생이 끝난 뒤의 PLAY만은 다음 단계를
+        여는 키라, 무엇이 열리는지 이름을 그대로 새긴다.
+      */}
+      {fill ? <div className="deck-dock">{deck}</div> : deck}
 
       {!audioAvailable && !ended && (
         <p className="mt-2 text-center font-mono-retro text-[10.5px] text-ink60">

@@ -248,7 +248,8 @@ export default function TrackPageClient({ n }: { n: number }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-cream-base px-4 pb-16 pt-5">
+    /* pb-28 — 화면 아래에 못박은 데크(.deck-dock)에 내용이 가리지 않을 만큼 */
+    <div className="flex min-h-screen flex-col bg-cream-base px-4 pb-28 pt-5">
       {/* 헤더 — 미션 진행 중에도 이 화면을 벗어날 수 있어야 한다.
           탭바는 몰입을 깨서 두지 않되, 플레이어로 가는 길은 항상 열어둔다. */}
       <header className="mx-auto flex w-full max-w-[380px] items-start gap-3">

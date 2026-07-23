@@ -41,6 +41,9 @@ import { logEvent } from './analytics'
 /** D9 — 스킵 허용 시점(초) */
 export const SKIP_AFTER_SEC = 15
 
+/** 거점에 들어서고 첫 대사가 나오기까지의 사이 */
+const ENTRY_LEAD_MS = 500
+
 const BASE_PATH = '/audio'
 const EXTENSIONS = ['m4a', 'mp3'] as const
 
@@ -427,6 +430,26 @@ export function skipLine() {
   })
 }
 
+/**
+ * STOP — 지금 큐를 끝내고 다음 단계로 넘긴다.
+ *
+ * skipCue와 달리 15초(D9) 조건을 보지 않는다. 그 조건은 인트로의 '통화
+ * 끊기'가 지킨다 — 처음 듣는 사람이 이야기를 통째로 건너뛰지 않게 막는
+ * 장치다. 데크의 STOP은 성격이 다르다. 실물 데크에서 STOP은 늘 눌리는
+ * 키이고, 눌리지 않는 STOP은 고장 난 기계로 읽힌다.
+ *
+ * 끝내는 방식은 끝까지 들은 것과 같다 — ui 지시자를 실행하고, 완료를
+ * 기록하고, 이어지는 큐가 있으면 연결한다. 여기서 대충 멈추면 미션이
+ * 열리지 않아 그 자리에서 진행이 막힌다.
+ */
+export function endCue() {
+  if (!state.cueId || state.ended) return
+  const cue = CUES[state.cueId]
+  logEvent('bundle_skipped', { id: cue.id, atSec: Math.round(state.elapsed) })
+  clearResources()
+  finishCue(cue)
+}
+
 export function stopCue() {
   cancelPendingChain()
   clearResources()
@@ -521,7 +544,14 @@ export function dispatchQr(station: StationId): boolean {
     setCurrentTrack(st.track as 1 | 2 | 3 | 4 | 5)
     logEvent('track_arrived', { n: st.track })
   }
-  void playCue(cue.id)
+  /*
+    반 박자 두고 시작한다.
+
+    QR을 찍자마자 소리가 나면 화면이 아직 거점 화면으로 바뀌기 전이라,
+    첫 문장이 이전 화면 위에서 들린다. 카세트도 PLAY를 누르고 테이프가
+    헤드에 닿기까지 잠깐이 있다 — 그 사이가 '이제 시작한다'를 만든다.
+  */
+  window.setTimeout(() => void playCue(cue.id), ENTRY_LEAD_MS)
   return true
 }
 

@@ -1276,6 +1276,34 @@ video::-webkit-media-controls-start-playback-button {
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.45);
 }
 
+/*
+ * 데크 좌대 — 거점 화면에서 키를 화면 맨 아래에 못박는다.
+ *
+ * 걸으면서 한 손으로 쓰는 화면이라 키가 엄지에 닿는 자리에 늘 있어야
+ * 한다. 대사 길이에 따라 데크가 오르내리면 누르려던 자리에 다른 키가 온다.
+ *
+ * 좌대를 크림으로 덮는다. 뒤에 흐르는 내용이 키 밑으로 비쳐 지나가면
+ * 물리 패널이 종이 위에 얹힌 느낌이 사라진다.
+ */
+.deck-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  padding: 0 16px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(
+    180deg,
+    rgba(243, 234, 211, 0) 0,
+    rgb(var(--bg-base)) 14px
+  );
+}
+
+.deck-dock > * {
+  margin: 0 auto;
+  max-width: 380px;
+}
+
 /* 물리 키 — 크기는 전부 같고, 조작 가능 여부는 색으로만 구분한다.
    실물 데크의 세로 빗살 무늬(브러시드 메탈)를 표면에 넣는다. */
 .deck-key {
@@ -1286,8 +1314,13 @@ video::-webkit-media-controls-start-playback-button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  height: 46px;
+  gap: 5px;
+  /*
+    실물 데크의 키는 폭보다 세로가 길거나 최소한 정사각이다. 46px일 때는
+    납작한 띠라 '누르는 물건'보다 '탭 바'에 가까웠다. 자막을 네 줄로 늘리고
+    남은 자리를 여기에 준다.
+  */
+  height: 62px;
   padding: 0;
   border: 1px solid #6a655e;
   border-radius: 3px;
