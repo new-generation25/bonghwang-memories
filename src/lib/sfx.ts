@@ -259,6 +259,34 @@ function tone(
 }
 
 /**
+ * 소리를 낼 준비가 된 뒤에 예약한다.
+ *
+ * audioContext()는 멈춘 컨텍스트에 resume()을 걸지만 기다리지 않는다.
+ * 그런데 suspended·interrupted 상태의 currentTime은 멈춰 있어서, 그 값을
+ * 기준으로 예약한 소리는 재생이 시작되는 시점과 어긋나 그냥 사라진다.
+ *
+ * 카메라를 쓰고 돌아왔을 때가 정확히 그렇다 — iOS가 카메라에 오디오 세션을
+ * 내주면서 컨텍스트를 interrupted로 내린다. 사진을 찍는 순간의 셔터음이
+ * 바로 그 상태에서 울려야 해서, 이 갈림이 없으면 촬영음만 영영 안 들린다.
+ *
+ * 되살아난 뒤의 currentTime으로 다시 계산해 예약한다.
+ */
+function schedule(play: (ac: AudioContext, now: number) => void): void {
+  if (isSfxMuted()) return
+  const ac = audioContext()
+  if (!ac) return
+  const run = () => {
+    try {
+      play(ac, ac.currentTime)
+    } catch {
+      /* 소리는 부가 기능이다 */
+    }
+  }
+  if (ac.state === 'running') run()
+  else void ac.resume().then(run).catch(run)
+}
+
+/**
  * 셔터 — 사진을 찍는 순간의 '찰칵'.
  *
  * 녹음 조각을 쓰지 않고 합성한다. 데크 키는 화면의 주인공이라 진짜 기구
@@ -273,17 +301,11 @@ function tone(
  * 느끼므로, 뒤가 더 크면 셔터가 늦게 눌린 것처럼 들린다.
  */
 export function playShutter(): void {
-  if (isSfxMuted()) return
-  const ac = audioContext()
-  if (!ac) return
-  try {
-    const now = ac.currentTime
+  schedule((ac, now) => {
     clack(ac, now, 5200, 0.34) // 막이 열린다 — 짧고 밝게
     clack(ac, now + 0.055, 3400, 0.2) // 닫힌다 — 조금 낮게
     clack(ac, now + 0.078, 1500, 0.09) // 기구가 돌아가는 여운
-  } catch {
-    /* 소리는 부가 기능이다 */
-  }
+  })
 }
 
 /**
@@ -301,11 +323,7 @@ export function playShutter(): void {
  *  4) 걸쇠가 물리는 '탁' + 통이 울리는 여운
  */
 export function playCassetteFlip(): void {
-  if (isSfxMuted()) return
-  const ac = audioContext()
-  if (!ac) return
-  try {
-    const now = ac.currentTime
+  schedule((ac, now) => {
     clack(ac, now, 2900, 0.32) // 뚜껑
     clack(ac, now + 0.03, 1400, 0.12) // 뚜껑이 끝까지 젖혀지며 부딪는 소리
 
@@ -318,9 +336,7 @@ export function playCassetteFlip(): void {
     const seat = drag + 0.16
     clack(ac, seat, 2200, 0.26) // 걸쇠
     lowNoise(ac, seat, 420, 0.2, 0.14) // 케이스가 울리는 여운
-  } catch {
-    /* 소리는 부가 기능이다 */
-  }
+  })
 }
 
 /**
@@ -333,16 +349,10 @@ export function playCassetteFlip(): void {
  * 모르게 스르륵 들어와서, 찍힌 순간과 소리가 어긋난 것처럼 느껴진다.
  */
 export function playQrOk(): void {
-  if (isSfxMuted()) return
-  const ac = audioContext()
-  if (!ac) return
-  try {
-    const now = ac.currentTime
+  schedule((ac, now) => {
     clack(ac, now, 4200, 0.14) // 시작점을 만드는 아주 짧은 잡음
     tone(ac, now, 2100, 0.3, 0.075)
-  } catch {
-    /* 소리는 부가 기능이다 */
-  }
+  })
 }
 
 /**
@@ -355,18 +365,12 @@ export function playQrOk(): void {
  * 셋 다 같은 길이면 아직 더 올라갈 것처럼 들려 끊긴 느낌이 된다.
  */
 export function playBingoLine(): void {
-  if (isSfxMuted()) return
-  const ac = audioContext()
-  if (!ac) return
-  try {
-    const now = ac.currentTime
+  schedule((ac, now) => {
     clack(ac, now, 3000, 0.16) // 첫 음의 머리를 세운다
     tone(ac, now, 784, 0.34, 0.1) // 솔
     tone(ac, now + 0.09, 1046, 0.34, 0.1) // 도
     tone(ac, now + 0.18, 1318, 0.36, 0.26) // 미 — 여기서 끝난다
-  } catch {
-    /* 소리는 부가 기능이다 */
-  }
+  })
 }
 
 /**
@@ -376,15 +380,9 @@ export function playBingoLine(): void {
  * 음계를 쓰되 한 음이고 훨씬 작다 — 크게 만들면 몇 번 만에 성가셔진다.
  */
 export function playPoint(): void {
-  if (isSfxMuted()) return
-  const ac = audioContext()
-  if (!ac) return
-  try {
-    const now = ac.currentTime
+  schedule((ac, now) => {
     tone(ac, now, 1568, 0.26, 0.16)
-  } catch {
-    /* 소리는 부가 기능이다 */
-  }
+  })
 }
 
 /**
@@ -398,16 +396,10 @@ export function playPoint(): void {
  * 길게 끌면 녹음 앞머리에 신호음이 그대로 남는다.
  */
 export function playRecStart(): void {
-  if (isSfxMuted()) return
-  const ac = audioContext()
-  if (!ac) return
-  try {
-    const now = ac.currentTime
+  schedule((ac, now) => {
     tone(ac, now, 880, 0.26, 0.07)
     tone(ac, now + 0.13, 880, 0.26, 0.07)
-  } catch {
-    /* 소리는 부가 기능이다 */
-  }
+  })
 }
 
 /**
@@ -417,15 +409,9 @@ export function playRecStart(): void {
  * 신호를 덜 낸 것처럼 느껴져 계속 말하게 된다.
  */
 export function playRecStop(): void {
-  if (isSfxMuted()) return
-  const ac = audioContext()
-  if (!ac) return
-  try {
-    const now = ac.currentTime
+  schedule((ac, now) => {
     tone(ac, now, 523, 0.26, 0.16)
-  } catch {
-    /* 소리는 부가 기능이다 */
-  }
+  })
 }
 
 /**
@@ -439,17 +425,11 @@ export function playRecStop(): void {
  * 여기서만 그럴 값이 있다.
  */
 export function playStamp(): void {
-  if (isSfxMuted()) return
-  const ac = audioContext()
-  if (!ac) return
-  try {
-    const now = ac.currentTime
+  schedule((ac, now) => {
     clack(ac, now, 1200, 0.22) // 고무가 종이를 때린다
     lowNoise(ac, now, 180, 0.5, 0.26) // 책상이 울린다
     clack(ac, now + 0.11, 2400, 0.07) // 도장을 뗀다
-  } catch {
-    /* 소리는 부가 기능이다 */
-  }
+  })
 }
 
 /**
@@ -457,10 +437,8 @@ export function playStamp(): void {
  * 실패해도 조용히 넘어간다 — 효과음 때문에 조작이 막히면 안 된다.
  */
 export function playDeckKey(kind: SfxKind = 'play'): void {
-  if (isSfxMuted()) return
-  const ac = audioContext()
-  if (!ac) return
-  try {
+  // 카메라를 쓰고 돌아온 직후에도 눌리는 키다 — 같은 관문을 지난다
+  schedule((ac) => {
     if (sample) {
       playSample(ac, sample, kind)
       return
@@ -469,7 +447,5 @@ export function playDeckKey(kind: SfxKind = 'play'): void {
     // 여기서 기다리면 소리가 늦게 나 눌린 느낌이 사라진다.
     fallbackClick(ac, kind)
     void loadSample(ac)
-  } catch {
-    /* 소리는 부가 기능이다 */
-  }
+  })
 }
