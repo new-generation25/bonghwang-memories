@@ -20,6 +20,7 @@ import {
   syncUserStats,
 } from '@/lib/tourSync'
 import { clearLocalPoints, flushPendingPoints } from '@/lib/points'
+import { markAdminAccount } from '@/lib/admin'
 import { resetTour } from '@/lib/tourState'
 
 interface AuthContextValue {
@@ -92,6 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // 로그인 전에 쌓인 적립을 올린다 — 투어 도중 로그인하는 경우가 있다
           await flushPendingPoints(user.uid)
           await syncUserStats(user.uid)
+          // 관리자 계정이면 문서에 표시를 남긴다. 랭킹처럼 남이 보는
+          // 화면에서 관리자를 빼려면 토큰이 아니라 문서에 있어야 한다.
+          await markAdminAccount(user.uid)
         } catch {
           // 동기화 실패로 투어를 막지 않는다 — localStorage가 원본이다
         }

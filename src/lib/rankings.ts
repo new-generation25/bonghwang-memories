@@ -18,6 +18,15 @@ export interface RankingEntry {
 
 const FETCH_LIMIT = 50
 
+/**
+ * 관리자 계정 몫의 여유분.
+ *
+ * 관리자를 걸러내고 나면 목록이 그만큼 짧아진다. 50등까지 채워 보여주려면
+ * 조금 더 읽어 두고 잘라내야 한다. Firestore는 where !=와 orderBy를 같이
+ * 쓰려면 색인이 필요해서, 읽고 나서 거르는 편이 간단하다.
+ */
+const FETCH_MARGIN = 5
+
 export async function fetchRankings(): Promise<RankingEntry[]> {
   if (!db) return []
   const { collection, getDocs, limit, orderBy, query } = await import(
@@ -26,10 +35,16 @@ export async function fetchRankings(): Promise<RankingEntry[]> {
   const q = query(
     collection(db, 'users'),
     orderBy('totalPoints', 'desc'),
-    limit(FETCH_LIMIT)
+    limit(FETCH_LIMIT + FETCH_MARGIN)
   )
   const snap = await getDocs(q)
   return snap.docs
+    .filter((d) => {
+      // 관리자는 순서를 건너뛰며 앱을 시험하므로 포인트가 쉽게 쌓인다.
+      // 참여자가 보는 목록이라 여기서 뺀다 — 기록 자체는 남아 있고,
+      // 콘트롤 패널에서는 '포함해서 보기'로 볼 수 있다.
+      return !(d.data() as { isAdmin?: boolean }).isAdmin
+    })
     .map((d) => {
       const data = d.data() as {
         userId?: string
@@ -52,6 +67,7 @@ export async function fetchRankings(): Promise<RankingEntry[]> {
       }
     })
     .filter((e) => e.totalPoints > 0)
+    .slice(0, FETCH_LIMIT)
 }
 
 /** 내 순위 — 상위 목록 안에 있으면 등수, 없으면 null(목록 밖) */

@@ -31,7 +31,9 @@ const FOCUS = {
   'father.png': { src: '강민수.png', cx: 0.5, cy: 0.34, zoom: 1.85 },
   'soyoung.png': { src: '강소영.png', cx: 0.5, cy: 0.33, zoom: 1.8 },
   'shopkeeper1.png': { src: '봉황1935사장님.png', cx: 0.5, cy: 0.4, zoom: 1.75 },
-  'shopkeeper2.png': { src: '카페탱자사장님.png', cx: 0.5, cy: 0.38, zoom: 1.8 },
+  // 받은 파일이 카페탱자 사장님이라 T5(방하림) 자리에 다른 사람 얼굴이 떠 있었다.
+  // 대사(B5_T2)는 방하림에서만 성립하므로, 그림 쪽을 방하림 사장님으로 바꿨다.
+  'shopkeeper2.png': { src: '방하림 사장님.png', cx: 0.5, cy: 0.36, zoom: 1.8 },
 }
 
 // ── PNG 읽기 (RGBA8 · 인터레이스 없음만 다룬다) ───────────────────

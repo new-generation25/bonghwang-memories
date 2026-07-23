@@ -23,8 +23,10 @@ import {
   AdminSurveyResponse,
   AdminUser,
   TICKET_PRICE,
+  adminUids,
   averageDurationMin,
   cellPopularity,
+  excludeAdmins,
   fetchAllPoints,
   fetchPosts,
   fetchSurveyResponses,
@@ -48,6 +50,10 @@ export default function AdminPage() {
     'idle' | 'loading' | 'ready' | 'denied' | 'error'
   >('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  // 관리자 기록도 참여자와 똑같이 남는다. 지우지 않고 여기서만 뺀다.
+  // 기본이 '제외'인 이유는 실수의 방향이다 — 포함이 기본이면 누를 때까지
+  // 틀린 숫자가 보이고, 그대로 사업자에게 보여주게 된다.
+  const [includeAdmin, setIncludeAdmin] = useState(false)
 
   const load = useCallback(async () => {
     setState('loading')
@@ -80,25 +86,42 @@ export default function AdminPage() {
     void load()
   }, [loading, profile, load])
 
-  const stats = useMemo(() => periodStats(users), [users])
-  const steps = useMemo(() => funnel(users), [users])
-  const popular = useMemo(() => cellPopularity(points), [points])
-  const hours = useMemo(() => hourlyStarts(users), [users])
-  const avgMin = useMemo(() => averageDurationMin(users), [users])
-  const survey = useMemo(() => surveySummary(responses), [responses])
+  /** 관리자 계정 수 — 뺄 것이 없으면 띠를 띄우지 않는다 */
+  const adminCount = useMemo(() => adminUids(users).size, [users])
+
+  /**
+   * 집계에 넣을 자료. 관리자 기록을 뺀 뒤 넘긴다.
+   *
+   * 여기 한 곳에서만 거른다. 아래 집계 함수들은 무엇이 걸러졌는지 모른 채
+   * 받은 배열만 계산한다 — 새 지표를 추가해도 거르는 것을 잊을 자리가 없다.
+   */
+  const view = useMemo(() => {
+    const all = { users, points, responses, posts }
+    return includeAdmin ? all : excludeAdmins(all)
+  }, [users, points, responses, posts, includeAdmin])
+
+  const stats = useMemo(() => periodStats(view.users), [view])
+  const steps = useMemo(() => funnel(view.users), [view])
+  const popular = useMemo(() => cellPopularity(view.points), [view])
+  const hours = useMemo(() => hourlyStarts(view.users), [view])
+  const avgMin = useMemo(() => averageDurationMin(view.users), [view])
+  const survey = useMemo(() => surveySummary(view.responses), [view])
   const ranking = useMemo(
-    () => [...users].filter((u) => u.totalPoints > 0).sort((a, b) => b.totalPoints - a.totalPoints),
-    [users]
+    () =>
+      [...view.users]
+        .filter((u) => u.totalPoints > 0)
+        .sort((a, b) => b.totalPoints - a.totalPoints),
+    [view]
   )
   const pointsByReason = useMemo(() => {
     const out: Record<string, { count: number; sum: number }> = {}
-    for (const p of points) {
+    for (const p of view.points) {
       out[p.reason] = out[p.reason] ?? { count: 0, sum: 0 }
       out[p.reason].count++
       out[p.reason].sum += p.points
     }
     return out
-  }, [points])
+  }, [view])
 
   if (loading || state === 'idle' || state === 'loading') {
     return <Shell><p className="text-[13px] text-ink-60">불러오는 중…</p></Shell>
@@ -146,10 +169,43 @@ export default function AdminPage() {
     )
   }
 
-  const totalRevenue = users.filter((u) => u.paid).length * TICKET_PRICE
+  const paidCount = view.users.filter((u) => u.paid).length
+  const totalRevenue = paidCount * TICKET_PRICE
 
   return (
     <Shell onRefresh={load}>
+      {/* ───── 관리자 데이터 제외 ───── */}
+      {adminCount > 0 && (
+        <button
+          onClick={() => setIncludeAdmin((v) => !v)}
+          className={`mb-4 flex w-full items-center justify-between rounded-xl border px-3.5 py-2.5 text-left ${
+            includeAdmin
+              ? 'border-rec/40 bg-rec/5'
+              : 'border-line bg-paper'
+          }`}
+        >
+          <span className="min-w-0">
+            <span className="block text-[12.5px] font-bold text-ink">
+              {includeAdmin
+                ? '관리자 데이터 포함됨'
+                : `관리자 데이터 제외됨 · ${adminCount}명`}
+            </span>
+            <span className="block text-[11px] text-ink-60">
+              {includeAdmin
+                ? '시험 삼아 만든 기록이 숫자에 섞여 있습니다'
+                : '기록은 남아 있습니다 — 눌러서 볼 수 있습니다'}
+            </span>
+          </span>
+          <span
+            className={`ml-3 shrink-0 rounded-lg px-2.5 py-1 font-mono-retro text-[10.5px] tracking-wider ${
+              includeAdmin ? 'bg-rec text-cream' : 'bg-cream-dp text-ink-60'
+            }`}
+          >
+            {includeAdmin ? '제외하기' : '포함해서 보기'}
+          </span>
+        </button>
+      )}
+
       {/* ───── 기간별 참여·매출 ───── */}
       <Section title="참여 · 매출" hint="결제 완료 기준">
         <div className="grid grid-cols-3 gap-2">
@@ -165,7 +221,7 @@ export default function AdminPage() {
           ))}
         </div>
         <div className="mt-2 grid grid-cols-3 gap-2">
-          <Metric label="누적 참여" value={`${users.filter((u) => u.paid).length}팀`} />
+          <Metric label="누적 참여" value={`${paidCount}팀`} />
           <Metric label="누적 매출" value={won(totalRevenue)} />
           <Metric label="평균 소요" value={avgMin ? `${avgMin}분` : '—'} />
         </div>
@@ -273,7 +329,7 @@ export default function AdminPage() {
               )
             })}
             <button
-              onClick={() => exportShopReport(popular, users)}
+              onClick={() => exportShopReport(popular, view.users)}
               className="mt-3 w-full rounded-lg border border-teal/50 bg-teal/5 py-2 text-[12px] font-bold text-teal-dk"
             >
               📄 가게 제공용 리포트 내려받기 (CSV)
@@ -304,8 +360,8 @@ export default function AdminPage() {
       </Section>
 
       {/* ───── 설문 ───── */}
-      <Section title="완주 설문" hint={`응답 ${responses.length}건`}>
-        {responses.length === 0 ? (
+      <Section title="완주 설문" hint={`응답 ${view.responses.length}건`}>
+        {view.responses.length === 0 ? (
           <Empty>아직 응답이 없습니다.</Empty>
         ) : (
           <>
@@ -349,7 +405,7 @@ export default function AdminPage() {
               )
             })}
             <button
-              onClick={() => exportSurveyCsv(responses)}
+              onClick={() => exportSurveyCsv(view.responses)}
               className="mt-3 w-full rounded-lg border border-line bg-paper py-2 text-[12px] font-bold text-ink"
             >
               📄 설문 원자료 내려받기 (CSV)
@@ -359,11 +415,11 @@ export default function AdminPage() {
       </Section>
 
       {/* ───── 게시글 ───── */}
-      <Section title="커뮤니티 글" hint={`${posts.length}건`}>
-        {posts.length === 0 ? (
+      <Section title="커뮤니티 글" hint={`${view.posts.length}건`}>
+        {view.posts.length === 0 ? (
           <Empty>아직 글이 없습니다.</Empty>
         ) : (
-          posts.slice(0, 20).map((p) => (
+          view.posts.slice(0, 20).map((p) => (
             <div key={p.id} className="mt-2 rounded-lg border border-line bg-paper p-2.5 first:mt-0">
               <div className="flex items-center justify-between">
                 <span className="text-[11.5px] font-bold text-teal-dk">{p.authorNickname}</span>
