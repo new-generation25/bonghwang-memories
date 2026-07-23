@@ -13,7 +13,10 @@ import AuthModal from '@/components/AuthModal'
 import Cassette from '@/components/Cassette'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
-import { mutateTour } from '@/lib/tourState'
+import { mutateTour, resetTour } from '@/lib/tourState'
+import { clearLocalPoints } from '@/lib/points'
+import { pushTour } from '@/lib/tourSync'
+import { auth } from '@/lib/firebase'
 import { logEvent } from '@/lib/analytics'
 
 export default function LandingPage() {
@@ -64,6 +67,25 @@ export default function LandingPage() {
       )
       setTimeout(() => setLogoutNote(''), 7000)
     }
+  }
+
+  /**
+   * 이 기기의 기록을 지우고 처음으로 되돌린다.
+   *
+   * 되돌릴 수 없는 조작이라 한 번 묻는다. 로그인 상태면 서버에 올려두고
+   * 지우므로 다시 로그인하면 그대로 돌아온다.
+   */
+  const handleRestart = async () => {
+    const signedIn = Boolean(profile)
+    const message = signedIn
+      ? '이 기기의 진행 기록을 지우고 처음부터 시작할까요?\n계정에 저장되어 있어 다시 로그인하면 돌아옵니다.'
+      : '이 기기의 진행 기록을 지우고 처음부터 시작할까요?\n로그인하지 않은 기록이라 되돌릴 수 없습니다.'
+    if (!window.confirm(message)) return
+
+    const uid = auth?.currentUser?.uid
+    if (uid) await pushTour(uid)
+    resetTour()
+    clearLocalPoints()
   }
 
   const finished = tour.phase === 'done'
@@ -242,15 +264,29 @@ export default function LandingPage() {
           >
             <div className="mx-auto w-full max-w-[380px]">
               {resumeTarget ? (
-                <button
-                  onClick={() => router.push(resumeTarget)}
-                  className="btn-teal w-full text-center text-[15px]"
-                >
-                  {finished ? '다시 둘러보기 ▶' : '이어서 걷기 ▶'}
-                  <small className="mt-0.5 block text-[10px] font-normal opacity-85">
-                    {resumeLabel}
-                  </small>
-                </button>
+                <>
+                  <button
+                    onClick={() => router.push(resumeTarget)}
+                    className="btn-teal w-full text-center text-[15px]"
+                  >
+                    {finished ? '다시 둘러보기 ▶' : '이어서 걷기 ▶'}
+                    <small className="mt-0.5 block text-[10px] font-normal opacity-85">
+                      {resumeLabel}
+                    </small>
+                  </button>
+                  {/*
+                    이 화면은 기기에 남은 기록만 보고 '이어서 걷기'를 띄운다.
+                    로그인과 무관하게 동작해야 하기 때문이다(등록 전에도 걸을
+                    수 있다). 그 대신 남의 기록이나 지난 검수 기록이 남아 있을
+                    때 빠져나올 길이 필요하다.
+                  */}
+                  <button
+                    onClick={handleRestart}
+                    className="mt-2 w-full text-center font-mono-retro text-[10px] text-ink-60 underline"
+                  >
+                    처음부터 시작하기
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={handleStart}
