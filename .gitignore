@@ -47,3 +47,9 @@ next-env.d.ts
 # 음성 생성 — 줄 단위 캐시와 보이스 설정(개인 키 성격)
 .audio-cache/
 scripts/voices.json
+
+# 일회성 TTS 실험 — 앱과 무관한 개인 작업물이라 저장소에 올리지 않는다.
+# 도구(tts-once.mjs)는 API 키를 다루고, 산출물은 프로젝트 에셋이 아니다.
+scripts/tts-once.mjs
+tts-out/
+*.sample.mp3

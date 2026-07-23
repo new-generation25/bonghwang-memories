@@ -24,10 +24,10 @@ interface Variant {
 
 const VARIANTS: Variant[] = [
   { id: 'current', name: 'A · 현재', desc: '지금 앱에 들어간 소리 (비교 기준)' },
-  { id: 'latch', name: 'B · 묵직한 걸쇠', desc: '저역을 낮추고 몸통 공명을 얹음' },
-  { id: 'metal', name: 'C · 금속 래치', desc: '쇠 걸쇠가 걸리는 짧은 링잉 추가' },
-  { id: 'twostage', name: 'D · 두 단 걸림', desc: '눌림 → 걸림, 두 번 나눠 걸리는 기계식' },
-  { id: 'deep', name: 'E · 깊은 저역', desc: '서브베이스까지 내려 가장 무겁게' },
+  { id: 'latch', name: 'B · 딸깍 (기본)', desc: '앞 딸 + 뒤 깍, 간격 38ms' },
+  { id: 'metal', name: 'C · 찰칵 (금속)', desc: '쇠 걸쇠 — 밝고 단단한 두 음' },
+  { id: 'twostage', name: 'D · 딸깍 (간격 넓게)', desc: '두 음 사이 60ms — 또렷하게 갈림' },
+  { id: 'deep', name: 'E · 딸깍 (묵직)', desc: '두 음 + 낮은 몸통 — 큰 기구 느낌' },
 ]
 
 function makeContext(): AudioContext | null {
@@ -44,17 +44,24 @@ function makeContext(): AudioContext | null {
   }
 }
 
-/** 노이즈 버스트 — 부딪는 성분. lowpass로 깎으면 두툼해진다 */
-function clack(
+/**
+ * 접점음 한 번 — '딸' 또는 '깍'에 해당하는 아주 짧은 소리.
+ *
+ * 실제 기계식 키의 클릭은 길이가 10ms 안팎이다. 이보다 길면 '치익'이 되고,
+ * 사인파로 만들면 '툭'하는 북소리가 된다. 그래서 노이즈를 대역통과로 좁게
+ * 깎아 아주 빠르게 죽인다.
+ */
+function tick(
   ac: AudioContext,
   at: number,
   opts: { ms: number; freq: number; q: number; gain: number; type?: BiquadFilterType }
 ) {
-  const len = Math.floor(ac.sampleRate * (opts.ms / 1000))
+  const len = Math.max(2, Math.floor(ac.sampleRate * (opts.ms / 1000)))
   const buf = ac.createBuffer(1, len, ac.sampleRate)
   const data = buf.getChannelData(0)
   for (let i = 0; i < len; i++) {
-    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3)
+    // 지수 감쇠 — 앞부분만 남기고 뚝 끊어야 '딱' 소리가 된다
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 6)
   }
   const src = ac.createBufferSource()
   src.buffer = buf
@@ -69,32 +76,15 @@ function clack(
 
   src.connect(filter).connect(g).connect(ac.destination)
   src.start(at)
-  src.stop(at + opts.ms / 1000 + 0.02)
+  src.stop(at + opts.ms / 1000 + 0.01)
 }
 
-/** 저역 툭 — 기구가 걸리는 성분 */
-function thump(
-  ac: AudioContext,
-  at: number,
-  opts: { freq: number; drop: number; gain: number; decay: number }
-) {
-  const osc = ac.createOscillator()
-  osc.type = 'sine'
-  osc.frequency.setValueAtTime(opts.freq, at)
-  osc.frequency.exponentialRampToValueAtTime(opts.freq * opts.drop, at + opts.decay * 0.7)
-
-  const g = ac.createGain()
-  g.gain.setValueAtTime(0.0001, at)
-  g.gain.exponentialRampToValueAtTime(opts.gain, at + 0.006)
-  g.gain.exponentialRampToValueAtTime(0.0001, at + opts.decay)
-
-  osc.connect(g).connect(ac.destination)
-  osc.start(at)
-  osc.stop(at + opts.decay + 0.02)
-}
-
-/** 몸통 공명 — 케이스가 함께 울리는 성분. 무게감의 핵심 */
-function body(
+/**
+ * 짧은 공명 — 접점 뒤에 남는 여운.
+ * 금속이면 높게(1~2kHz), 케이스 울림이면 낮게(150~350Hz) 준다.
+ * 감쇠를 짧게 유지해야 '딸깍'의 윤곽이 흐려지지 않는다.
+ */
+function ping(
   ac: AudioContext,
   at: number,
   opts: { freq: number; gain: number; decay: number; type?: OscillatorType }
@@ -105,7 +95,7 @@ function body(
 
   const g = ac.createGain()
   g.gain.setValueAtTime(0.0001, at)
-  g.gain.exponentialRampToValueAtTime(opts.gain, at + 0.004)
+  g.gain.exponentialRampToValueAtTime(opts.gain, at + 0.002)
   g.gain.exponentialRampToValueAtTime(0.0001, at + opts.decay)
 
   osc.connect(g).connect(ac.destination)
@@ -113,44 +103,98 @@ function body(
   osc.stop(at + opts.decay + 0.02)
 }
 
+/**
+ * 두 음 클릭 — 앞은 크게, 뒤는 작게, 사이는 짧게.
+ * 키를 누를 때 걸쇠가 걸리고(딸), 곧바로 되튀는(깍) 실제 동작이다.
+ */
+function twoTone(
+  ac: AudioContext,
+  at: number,
+  o: {
+    gapMs: number
+    freq: number
+    q?: number
+    gain?: number
+    /** 뒤 음의 크기 비율 — 항상 앞보다 작다 */
+    tailRatio?: number
+    type?: BiquadFilterType
+    resonance?: { freq: number; gain: number; decay: number; type?: OscillatorType }
+  }
+) {
+  const q = o.q ?? 1.1
+  const gain = o.gain ?? 0.3
+  const tail = o.tailRatio ?? 0.42
+  const gap = o.gapMs / 1000
+
+  // 앞 — '딸'
+  tick(ac, at, { ms: 11, freq: o.freq, q, gain, type: o.type })
+  // 뒤 — '깍'. 더 짧고 작고 살짝 낮게
+  tick(ac, at + gap, {
+    ms: 7,
+    freq: o.freq * 0.78,
+    q,
+    gain: gain * tail,
+    type: o.type,
+  })
+
+  if (o.resonance) {
+    ping(ac, at + 0.001, o.resonance)
+  }
+}
+
 function playVariant(ac: AudioContext, id: VariantId) {
   const t = ac.currentTime + 0.01
 
   switch (id) {
     case 'current':
-      clack(ac, t, { ms: 35, freq: 2600, q: 0.8, gain: 0.16 })
-      thump(ac, t + 0.004, { freq: 148, drop: 0.55, gain: 0.1, decay: 0.09 })
+      // 비교 기준 — 기존의 '툭'(노이즈 + 사인 저역)
+      tick(ac, t, { ms: 35, freq: 2600, q: 0.8, gain: 0.16 })
+      ping(ac, t + 0.004, { freq: 148, gain: 0.1, decay: 0.09, type: 'sine' })
       break
 
     case 'latch':
-      // 노이즈를 어둡게, 저역을 낮게, 몸통을 얹어 두툼하게
-      clack(ac, t, { ms: 48, freq: 1500, q: 0.7, gain: 0.2 })
-      thump(ac, t + 0.005, { freq: 92, drop: 0.5, gain: 0.22, decay: 0.16 })
-      body(ac, t + 0.006, { freq: 210, gain: 0.1, decay: 0.13 })
+      // 딸깍 기본 — 나무·플라스틱 접점의 단단한 두 음
+      twoTone(ac, t, {
+        gapMs: 38,
+        freq: 2400,
+        gain: 0.32,
+        resonance: { freq: 320, gain: 0.05, decay: 0.05 },
+      })
       break
 
     case 'metal':
-      // 쇠 걸쇠 — 짧고 높은 링잉을 얹되 저역으로 받쳐 얇아지지 않게
-      clack(ac, t, { ms: 40, freq: 1900, q: 0.9, gain: 0.18 })
-      thump(ac, t + 0.005, { freq: 104, drop: 0.5, gain: 0.19, decay: 0.14 })
-      body(ac, t + 0.004, { freq: 1180, gain: 0.055, decay: 0.1, type: 'square' })
-      body(ac, t + 0.004, { freq: 240, gain: 0.08, decay: 0.12 })
+      // 찰칵 — 쇠 걸쇠. 대역을 높이고 금속 링잉을 얹는다
+      twoTone(ac, t, {
+        gapMs: 32,
+        freq: 3400,
+        q: 1.5,
+        gain: 0.3,
+        tailRatio: 0.5,
+        resonance: { freq: 1850, gain: 0.045, decay: 0.06, type: 'square' },
+      })
       break
 
     case 'twostage':
-      // 누르는 순간(작게) → 걸리는 순간(크게). 기계식 데크의 실제 동작
-      clack(ac, t, { ms: 22, freq: 1200, q: 0.6, gain: 0.09, type: 'lowpass' })
-      clack(ac, t + 0.055, { ms: 52, freq: 1400, q: 0.7, gain: 0.22 })
-      thump(ac, t + 0.058, { freq: 88, drop: 0.48, gain: 0.24, decay: 0.18 })
-      body(ac, t + 0.06, { freq: 195, gain: 0.11, decay: 0.15 })
+      // 간격을 넓혀 두 음이 또렷하게 갈리는 느낌
+      twoTone(ac, t, {
+        gapMs: 60,
+        freq: 2300,
+        gain: 0.32,
+        tailRatio: 0.38,
+        resonance: { freq: 300, gain: 0.05, decay: 0.05 },
+      })
       break
 
     case 'deep':
-      // 서브베이스까지 — 가장 무겁다. 작은 스피커에서는 저역이 덜 들릴 수 있다
-      clack(ac, t, { ms: 55, freq: 1100, q: 0.6, gain: 0.2, type: 'lowpass' })
-      thump(ac, t + 0.005, { freq: 64, drop: 0.5, gain: 0.3, decay: 0.24 })
-      body(ac, t + 0.006, { freq: 170, gain: 0.13, decay: 0.18 })
-      body(ac, t + 0.008, { freq: 320, gain: 0.06, decay: 0.1 })
+      // 묵직한 딸깍 — 대역을 낮추고 케이스 울림을 조금 더
+      twoTone(ac, t, {
+        gapMs: 42,
+        freq: 1600,
+        q: 0.9,
+        gain: 0.34,
+        tailRatio: 0.45,
+        resonance: { freq: 180, gain: 0.085, decay: 0.075 },
+      })
       break
   }
 }
@@ -222,10 +266,12 @@ export default function SfxLabPage() {
 
         <div className="card-paper mt-6 p-4">
           <p className="text-[12px] leading-relaxed text-ink-60">
-            무게를 만드는 요소는 셋입니다 — <b className="text-ink">저역 주파수</b>를
-            낮추고, <b className="text-ink">감쇠</b>를 늘리고,{' '}
-            <b className="text-ink">몸통 공명</b>을 얹는 것. A(현재)는 저역이
-            148Hz라 얇고, E는 64Hz까지 내려 가장 묵직합니다.
+            B~E는 모두 <b className="text-ink">두 음</b>입니다 — 걸쇠가 걸리는
+            &lsquo;딸&rsquo;(크게)과 되튀는 &lsquo;깍&rsquo;(작게). 뒤 음은 앞의
+            40~50% 크기이고, 사이는 32~60ms로 짧습니다.
+            <br />
+            A(현재)만 사인파 &lsquo;툭&rsquo;이라 북소리처럼 들립니다 — 차이를
+            비교해 보세요.
           </p>
         </div>
 
