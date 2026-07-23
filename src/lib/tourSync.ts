@@ -125,16 +125,23 @@ export async function pullTour(uid: string): Promise<boolean> {
 }
 
 /** 현재 진행도를 서버에 저장한다 */
-export async function pushTour(uid: string): Promise<void> {
-  if (!isFirebaseReady() || !db) return
+/**
+ * 서버에 진행도를 올린다. 성공 여부를 돌려준다 —
+ * 로그아웃 때 로컬을 지워도 되는지 판단해야 하기 때문이다.
+ * 저장되지 않았는데 지우면 걸어온 90분이 사라진다.
+ */
+export async function pushTour(uid: string): Promise<boolean> {
+  if (!isFirebaseReady() || !db) return false
   try {
     await setDoc(
       tourDoc(uid),
       { ...toSynced(getTourState()), uid, updatedAt: serverTimestamp() },
       { merge: true }
     )
+    return true
   } catch {
-    // 저장 실패는 조용히 넘긴다 — 원본은 localStorage에 있다
+    // 원본은 localStorage에 있으므로 흐름은 막지 않는다
+    return false
   }
 }
 

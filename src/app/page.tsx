@@ -42,19 +42,35 @@ export default function LandingPage() {
       case 'act2':
         return '/treasure'
       case 'done':
-        return '/finale'
+        // 완주 후 '다시 둘러보기'는 골목 빙고로 — 아직 못 채운 칸이 남아 있고
+        // 보너스 미션도 여기서 이어진다. 피날레는 이미 본 화면이다.
+        return '/treasure'
       default:
         return '/download'
     }
   })()
 
-  /** 한 곳이라도 걸었으면 되돌아볼 것이 있다 */
-  const hasWalked = tour.tracksCompleted.length > 0 || tour.phase === 'done'
+  /**
+   * 로그아웃 — 서버 저장이 확인돼야 이 기기의 기록이 지워진다.
+   * 저장에 실패했는데 조용히 넘어가면, 기록이 남은 걸 보고 다시 '로그아웃이
+   * 안 된다'고 여기게 된다. 무엇이 일어났는지 말해준다.
+   */
+  const [logoutNote, setLogoutNote] = useState('')
+  const handleLogout = async () => {
+    const cleared = await logout()
+    if (!cleared) {
+      setLogoutNote(
+        '로그아웃했지만 진행 기록을 서버에 저장하지 못해 이 기기에 남겨뒀어요. 연결을 확인하고 다시 로그인해주세요.'
+      )
+      setTimeout(() => setLogoutNote(''), 7000)
+    }
+  }
 
-  const resumeLabel =
-    tour.phase === 'done'
-      ? '완주한 투어가 있습니다'
-      : '진행 중인 투어가 있습니다'
+  const finished = tour.phase === 'done'
+
+  const resumeLabel = finished
+    ? '골목 빙고에서 이어집니다'
+    : '진행 중인 투어가 있습니다'
 
   /** 모의 결제 — 실제 PG 연동 지점 */
   const handleMockPay = () => {
@@ -103,7 +119,7 @@ export default function LandingPage() {
                 {profile.nickname} 기록자
               </span>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="ml-2 font-mono-retro text-[9px] text-ink-60 underline"
               >
                 로그아웃
@@ -111,6 +127,14 @@ export default function LandingPage() {
             </div>
           ) : null)}
       </div>
+
+      {logoutNote && (
+        <div className="mx-auto max-w-[420px] px-4">
+          <p className="rounded-lg bg-rec/10 px-3 py-2 text-[11.5px] leading-snug text-rec">
+            {logoutNote}
+          </p>
+        </div>
+      )}
 
       {/* 키 비주얼 포스터 — 시안 2장 그대로 */}
       <div className="kv-stage mt-2 px-2" style={{ animation: 'fadeIn 0.8s ease-in-out' }}>
@@ -195,7 +219,7 @@ export default function LandingPage() {
           onClick={() => setShowInfo((v) => !v)}
           className="mt-4 w-full rounded-xl border border-line bg-paper px-4 py-2.5 text-center text-[12px] font-bold text-teal-dk"
         >
-          {showInfo ? '봉황 메모리즈 이용 안내 ▲' : '봉황 메모리즈 이용 안내 ▼'}
+          {showInfo ? '봉황 메모리즈 이용 안내 ▼' : '봉황 메모리즈 이용 안내 ▲'}
         </button>
 
       </div>
@@ -218,30 +242,15 @@ export default function LandingPage() {
           >
             <div className="mx-auto w-full max-w-[380px]">
               {resumeTarget ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => router.push(resumeTarget)}
-                    className="btn-teal flex-1 text-center text-[15px]"
-                  >
-                    이어서 걷기 ▶
-                    <small className="mt-0.5 block text-[10px] font-normal opacity-85">
-                      {resumeLabel}
-                    </small>
-                  </button>
-                  {/* 이미 걸어본 사람에게만 — 아직 아무것도 안 걸었으면
-                      둘러볼 것이 없다 */}
-                  {hasWalked && (
-                    <button
-                      onClick={() => router.push('/play')}
-                      className="flex-1 rounded-xl border border-teal bg-paper text-center text-[15px] font-bold text-teal-dk"
-                    >
-                      다시 둘러보기
-                      <small className="mt-0.5 block text-[10px] font-normal text-ink-60">
-                        걸어온 길 보기
-                      </small>
-                    </button>
-                  )}
-                </div>
+                <button
+                  onClick={() => router.push(resumeTarget)}
+                  className="btn-teal w-full text-center text-[15px]"
+                >
+                  {finished ? '다시 둘러보기 ▶' : '이어서 걷기 ▶'}
+                  <small className="mt-0.5 block text-[10px] font-normal opacity-85">
+                    {resumeLabel}
+                  </small>
+                </button>
               ) : (
                 <button
                   onClick={handleStart}

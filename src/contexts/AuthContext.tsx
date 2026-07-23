@@ -12,7 +12,8 @@ import {
 import { subscribeAuth, getProfile, signOutUser, Profile } from '@/lib/auth'
 import { auth, isFirebaseReady } from '@/lib/firebase'
 import { pullTour, pushTour, startTourSync, syncUserStats } from '@/lib/tourSync'
-import { flushPendingPoints } from '@/lib/points'
+import { clearLocalPoints, flushPendingPoints } from '@/lib/points'
+import { resetTour } from '@/lib/tourState'
 
 interface AuthContextValue {
   profile: Profile | null
@@ -23,7 +24,8 @@ interface AuthContextValue {
   /** 로그인/가입 직후 이미 받아둔 프로필을 즉시 반영한다 */
   applyProfile: (profile: Profile) => void
   refresh: () => Promise<void>
-  logout: () => Promise<void>
+  /** 서버 저장이 확인돼 이 기기의 기록까지 지웠으면 true */
+  logout: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -32,7 +34,7 @@ const AuthContext = createContext<AuthContextValue>({
   available: false,
   applyProfile: () => {},
   refresh: async () => {},
-  logout: async () => {},
+  logout: async () => false,
 })
 
 /**
@@ -113,14 +115,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [profile])
 
-  const logout = useCallback(async () => {
-    // 로그아웃 전에 마지막 진행도를 확정 저장한다
+  /**
+   * 로그아웃.
+   *
+   * 예전에는 서버 저장과 signOut만 하고 이 기기의 기록은 그대로 뒀다.
+   * 그래서 로그아웃해도 랜딩에는 '이어서 걷기'가 남고 포인트도 그대로라
+   * 로그아웃이 안 된 것처럼 보였다. 다음 사람이 같은 폰을 쓰면 남의 진행도를
+   * 이어받는다.
+   *
+   * 지우기 전에 서버 저장이 정말 됐는지 확인한다. 저장되지 않았는데 지우면
+   * 걸어온 90분이 사라진다 — 그럴 땐 로컬을 남기고 false를 돌려준다.
+   */
+  const logout = useCallback(async (): Promise<boolean> => {
     const uid = auth?.currentUser?.uid
-    if (uid) await pushTour(uid)
+    const saved = uid ? await pushTour(uid) : false
+
     stopSyncRef.current?.()
     stopSyncRef.current = null
     await signOutUser()
     setProfile(null)
+
+    if (saved) {
+      resetTour()
+      clearLocalPoints()
+    }
+    return saved
   }, [])
 
   return (

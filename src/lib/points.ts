@@ -266,6 +266,17 @@ export async function fetchPointHistory(uid: string): Promise<PointEntry[]> {
     .sort((a, b) => b.createdAt - a.createdAt)
 }
 
+/**
+ * 이 기기의 적립 기록을 비운다 — 로그아웃 전용.
+ * 서버에 이미 올라간 뒤에만 부른다. 안 그러면 적립이 사라진다.
+ */
+export function clearLocalPoints(): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(LEDGER_KEY)
+  window.localStorage.removeItem(PENDING_KEY)
+  window.dispatchEvent(new CustomEvent(POINTS_EVENT))
+}
+
 /** 아직 서버에 올라가지 않은 적립 합계 — 로그인 유도 문구에 쓴다 */
 export function pendingPointTotal(): number {
   return readPending().reduce((a, p) => a + p.points, 0)
