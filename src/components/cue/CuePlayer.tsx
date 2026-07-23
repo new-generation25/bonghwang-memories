@@ -18,11 +18,14 @@ import TapeFrame from './TapeFrame'
 
 interface CuePlayerProps {
   /**
-   * 화면 높이를 채우는 배치.
+   * 거점 화면 배치 — 화자·거점 그림·자막을 흰 상자 하나에 담는다.
    *
-   * 거점 화면에서는 카드 하나로 뭉쳐두면 아래가 텅 빈다. 데크 키를 화면
-   * 맨 아래에 고정하고(걸으면서 엄지로 닿는 자리), 자막을 그 위에,
-   * 남는 가운데를 거점 사진에 내준다.
+   * 전에는 이 값이 '화면 높이를 채운다'는 뜻이었고, 미션이 뜨면 꺼서
+   * 다른 배치로 넘어갔다. 그래서 더빙이 끝나는 순간 그림이 갑자기
+   * 작아지고 프레임 모양이 바뀌었다 — 거점마다 다른 화면처럼 보였다.
+   *
+   * 지금은 늘 같은 상자를 쓰고, 높이는 내용에 맞춘다. 크기가 변하지
+   * 않으므로 미션이 떠도 그 아래로 자연스럽게 이어진다.
    *
    * 인트로는 쪽지·플레이어와 함께 흐르는 화면이라 기존 카드 배치를 쓴다.
    */
@@ -76,40 +79,37 @@ export default function CuePlayer({
   )
 
   return (
-    <div
-      className={
-        fill
-          ? 'flex min-h-0 flex-1 flex-col'
-          : 'rounded-2xl border border-line bg-paper p-4 shadow-sm'
-      }
-    >
+    <div className={fill ? '' : 'rounded-2xl border border-line bg-paper p-4 shadow-sm'}>
       {fill ? (
         /*
           화자 · 거점 그림 · 자막을 흰 상자 하나에 담는다.
           셋을 따로 띄우면 카드가 세 장 겹친 것처럼 보이고, 사이의 크림
           여백이 화면을 토막 낸다. 하나로 묶으면 '지금 재생 중인 한 덩어리'로
           읽히고, 그 안에서 가는 선으로만 구역을 나눈다.
+
+          순서는 다섯 거점이 모두 같다 — 화자 · 거점 그림 · 자막 · 데크.
         */
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-line bg-paper shadow-sm">
           {/* 화자 — 누가 말하는지는 늘 위에 */}
-          <div className="shrink-0 p-3">
+          <div className="p-3">
             {frame}
             {progressBar}
           </div>
 
           {/*
-            남는 자리는 거점 그림에.
-            줄어드는 쪽은 여기다(shrink) — 자막이나 데크가 눌리면 글이
-            잘리거나 키가 작아지지만, 그림은 조금 작아져도 제 구실을 한다.
+            거점 그림.
+
+            크기를 못박는다. 예전에는 남는 높이를 그림에 내줬는데, 그러면
+            대사 길이와 미션 유무에 따라 거점마다 그림이 커졌다 작아졌다
+            했다. 특히 더빙이 끝나는 순간 눈에 띄게 줄어들어, 화면이
+            바뀐 것처럼 보였다.
           */}
-          <div className="flex min-h-0 flex-1 shrink items-center justify-center overflow-hidden px-3 pb-3">
-            {center}
+          <div className="flex justify-center px-3 pb-3">
+            <div className="w-[76%] min-w-[200px] max-w-[280px]">{center}</div>
           </div>
 
           {/* 자막은 데크 바로 위 — 듣는 동안 눈이 가장 오래 머무는 자리 */}
-          <div className="shrink-0 border-t border-line px-4 py-3">
-            {subtitles}
-          </div>
+          <div className="border-t border-line px-4 py-3">{subtitles}</div>
         </div>
       ) : (
         <>
@@ -119,10 +119,9 @@ export default function CuePlayer({
             미션이 뜬 뒤에도 거점 그림은 남긴다.
             음성이 끝났다고 그림이 사라지면 '여기가 어디였지'가 다시 흐려진다 —
             정작 미션(사진 찍기·세기)을 하려고 주변을 둘러보는 건 그때다.
-            대신 미션이 화면 밖으로 밀리지 않게 크기를 줄인다.
           */}
           {center && (
-            <div className="mx-auto mt-3 w-[62%] min-w-[180px] max-w-[240px]">
+            <div className="mx-auto mt-3 w-[76%] min-w-[200px] max-w-[280px]">
               {center}
             </div>
           )}

@@ -81,7 +81,11 @@ export default function PhotoStep({
            얹히고, 오른쪽 원형 버튼으로 보낸다. 익숙한 동작이라 설명이 필요 없다. */
         <div className="mt-3">
           <div className="rounded-2xl border border-line bg-cream p-2.5">
-            <div className="relative w-[92px]">
+            {/*
+              오른쪽에 붙인다. 문자로 사진을 보낼 때 내가 붙인 첨부가
+              오른쪽에 서는 것과 같다 — '내가 넣은 것'이라는 표시다.
+            */}
+            <div className="relative ml-auto w-[92px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={preview}

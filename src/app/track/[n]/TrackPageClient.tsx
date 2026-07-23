@@ -275,21 +275,22 @@ export default function TrackPageClient({ n }: { n: number }) {
       </header>
 
       {/*
-        이야기만 흐르는 동안에는 화면 높이를 다 쓴다.
-        카드 하나로 뭉쳐두면 아래가 텅 비었다 — 데크 키를 맨 아래(엄지가
-        닿는 자리)에 두고, 자막을 그 위에, 남는 가운데를 거점 사진에 준다.
+        프레임은 다섯 거점이 모두 같다 — 화자 · 거점 그림 · 자막 · 데크.
+        크기도 미션 유무와 무관하게 고정이다.
 
-        미션이 뜨면 채우지 않는다. 화면을 다 쓰면 정작 할 일(미션)이
-        스크롤 밖으로 밀려난다. 그때는 이야기가 자리를 양보한다.
+        예전에는 이야기만 흐르는 동안 화면 높이를 다 쓰고, 미션이 뜨면
+        다른 배치로 갈아탔다. 화면은 꽉 찼지만 더빙이 끝나는 순간 그림이
+        작아지고 프레임이 바뀌어서 거점마다 다른 화면처럼 보였다.
       */}
-      <div
-        className={`mx-auto mt-4 w-full max-w-[380px] ${
-          cueState.cueId && !interaction ? 'flex min-h-0 flex-1 flex-col' : ''
-        }`}
-      >
+      <div className="mx-auto mt-4 w-full max-w-[380px]">
         {cueState.cueId ? (
           <CuePlayer
-            fill={!interaction}
+            /*
+              늘 켠다. 예전에는 미션이 뜨면 껐는데, 그 순간 프레임이 통째로
+              다른 배치로 갈아타면서 거점 그림이 갑자기 작아졌다. 이제 상자
+              높이가 내용에 맞춰지므로 미션이 그 아래로 이어진다.
+            */
+            fill
             center={
               <PlacePhoto name={station.name} photo={station.photo} track={n} />
             }

@@ -1251,10 +1251,17 @@ video::-webkit-media-controls-start-playback-button {
   box-shadow: 0 0 0 #5d5952, inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* 비활성 키 — 살짝 눌린 채 흐리게. 크기는 활성 키와 같다 */
+/*
+ * 비활성 키 — 각인만 흐려진다.
+ *
+ * 전에는 살짝 눌린 것처럼 아래로 내리고 그림자를 바꿨다. 그러면 큐가
+ * 진행될 때마다 어떤 키는 올라오고 어떤 키는 내려가서 패널 전체가
+ * 들썩였다. 거점마다 데크 모양이 달라 보이기도 했다.
+ *
+ * 자리와 그림자는 네 키가 항상 같고, 조작 가능 여부는 각인 색으로만
+ * 말한다. 실물 데크도 키가 오르내리지 않는다.
+ */
 .deck-key.ghost {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #5d5952, inset 0 2px 4px rgba(0, 0, 0, 0.28);
   color: rgba(43, 36, 32, 0.28);
   pointer-events: none;
 }

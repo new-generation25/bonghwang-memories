@@ -3,13 +3,15 @@
 /**
  * 큐 자막 — 흐르는 2줄 형식.
  *
- * 기본 모드에서는 직전 문장(흐리게) + 현재 문장(강조)만 보인다.
- * 지난 문장을 전부 쌓지 않는다 — 음성과 함께 자막이 '흘러가는' 인터페이스.
- * 전체를 읽고 싶으면 '전체 스크립트 보기'로 펼친다(§5 공통 컨트롤).
+ * 직전 문장(흐리게) + 현재 문장(강조)만 보인다. 지난 문장을 전부 쌓지
+ * 않는다 — 음성과 함께 자막이 '흘러가는' 인터페이스.
  * 오디오가 없어도(합성 클록) 동일하게 동작한다.
+ *
+ * '전체 스크립트 보기'는 뺐다. 펼치면 상자 높이가 달라져서 아래 데크가
+ * 밀리고, 거점마다 프레임이 다른 모양이 됐다. 걸으면서 듣는 화면이라
+ * 지난 대사를 되짚어 읽는 일도 드물다 — 그건 ⏪ 다시듣기가 맡는다.
  */
 
-import { useEffect, useRef, useState } from 'react'
 import { Cue } from '@/lib/cues'
 
 interface SubtitleViewProps {
@@ -24,16 +26,6 @@ export default function SubtitleView({
   subtitleIndex,
   handwriting = false,
 }: SubtitleViewProps) {
-  const [expanded, setExpanded] = useState(false)
-  const currentRef = useRef<HTMLParagraphElement | null>(null)
-
-  // 펼침 모드에서 현재 줄이 항상 보이도록 스크롤 추적
-  useEffect(() => {
-    if (expanded) {
-      currentRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    }
-  }, [subtitleIndex, expanded])
-
   const lines = cue.subtitleLines
   const fontClass = handwriting
     ? 'font-pen text-[19px] leading-relaxed'
@@ -42,11 +34,10 @@ export default function SubtitleView({
   const renderLine = (
     line: (typeof lines)[number],
     key: number,
-    opts: { current: boolean; withRef?: boolean; spaced?: boolean }
+    opts: { current: boolean; spaced?: boolean }
   ) => (
     <p
       key={key}
-      ref={opts.withRef ? currentRef : undefined}
       className={`transition-opacity duration-500 ${
         opts.current ? 'opacity-100' : 'opacity-35'
       } text-ink ${opts.spaced ? 'mt-1.5' : ''}`}
@@ -60,29 +51,6 @@ export default function SubtitleView({
       {line.text}
     </p>
   )
-
-  if (expanded) {
-    return (
-      <div className="mt-3">
-        <div className={`max-h-48 overflow-y-auto rounded-lg bg-black/5 px-4 py-3 ${fontClass}`}>
-          {lines.map((line, i) =>
-            renderLine(line, i, {
-              current: i === subtitleIndex,
-              withRef: i === subtitleIndex,
-              spaced: i > 0,
-            })
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          className="mt-0.5 -ml-2 px-2 py-2.5 text-[12px] text-ink60 underline underline-offset-2"
-        >
-          자막 접기
-        </button>
-      </div>
-    )
-  }
 
   // 흐르는 2줄 — 직전 줄(흐림) + 현재 줄(강조). 첫 줄일 땐 현재 줄만.
   const prev = subtitleIndex > 0 ? lines[subtitleIndex - 1] : null
@@ -111,13 +79,6 @@ export default function SubtitleView({
             spaced: Boolean(prev),
           })}
       </div>
-      <button
-        type="button"
-        onClick={() => setExpanded(true)}
-        className="mt-1.5 text-[12px] text-ink60 underline underline-offset-2"
-      >
-        전체 스크립트 보기
-      </button>
     </div>
   )
 }
