@@ -21,6 +21,16 @@ export interface Station {
   manualCode: string
   /** 스캔 성공 시 재생되는 도착 큐 */
   arrivalCue: CueId | null
+  /**
+   * 거점 사진 — /images/place/{파일}. 정사각으로 잘라 쓴다.
+   *
+   * 목소리로만 진행되는 화면이라 '지금 여기가 어디인지'를 붙잡아 줄 것이
+   * 필요하다. 없으면 화면이 자리를 비워두고 거점 이름만 보여준다 —
+   * 사진이 준비되는 대로 이 한 줄만 채우면 된다.
+   *
+   * scripts/make-cast-avatars.mjs와 같은 방식으로 정사각 변환할 수 있다.
+   */
+  photo?: string
 }
 
 export type TrackMissionType =

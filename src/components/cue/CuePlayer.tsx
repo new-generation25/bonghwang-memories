@@ -16,7 +16,22 @@ import DeckControls from './DeckControls'
 import SubtitleView from './SubtitleView'
 import TapeFrame from './TapeFrame'
 
-export default function CuePlayer() {
+interface CuePlayerProps {
+  /**
+   * 화면 높이를 채우는 배치.
+   *
+   * 거점 화면에서는 카드 하나로 뭉쳐두면 아래가 텅 빈다. 데크 키를 화면
+   * 맨 아래에 고정하고(걸으면서 엄지로 닿는 자리), 자막을 그 위에,
+   * 남는 가운데를 거점 사진에 내준다.
+   *
+   * 인트로는 쪽지·플레이어와 함께 흐르는 화면이라 기존 카드 배치를 쓴다.
+   */
+  fill?: boolean
+  /** fill일 때 가운데에 넣을 것 — 거점 사진 */
+  center?: React.ReactNode
+}
+
+export default function CuePlayer({ fill = false, center }: CuePlayerProps = {}) {
   const cueState = useCue()
   const { cueId, playing, elapsed, duration, subtitleIndex, ended, audioAvailable, pendingAutoChain } = cueState
 
@@ -26,24 +41,64 @@ export default function CuePlayer() {
   // 자동재생 거부 상태: 오디오는 준비됐는데 시작을 못 한 경우
   const needsTap = audioAvailable && !playing && !ended && elapsed === 0
 
+  const frame =
+    cue.channel === 'tape' ? (
+      <TapeFrame cue={cue} playing={playing} progress={progress} />
+    ) : (
+      <CallFrame cue={cue} playing={playing} elapsed={elapsed} />
+    )
+
+  const progressBar = (
+    <div className="tape-prog mt-3" aria-hidden>
+      <i style={{ width: `${progress}%` }} />
+    </div>
+  )
+
+  const subtitles = (
+    <SubtitleView
+      cue={cue}
+      subtitleIndex={subtitleIndex}
+      handwriting={cue.id === 'B5_LETTER'}
+    />
+  )
+
   return (
-    <div className="rounded-2xl border border-line bg-paper p-4 shadow-sm">
-      {cue.channel === 'tape' ? (
-        <TapeFrame cue={cue} playing={playing} progress={progress} />
+    <div
+      className={
+        fill
+          ? 'flex min-h-0 flex-1 flex-col'
+          : 'rounded-2xl border border-line bg-paper p-4 shadow-sm'
+      }
+    >
+      {fill ? (
+        <>
+          {/* 화자 — 누가 말하는지는 늘 위에 */}
+          <div className="shrink-0 rounded-2xl border border-line bg-paper p-3 shadow-sm">
+            {frame}
+            {progressBar}
+          </div>
+
+          {/*
+            남는 자리는 거점 사진에.
+            줄어드는 쪽은 여기다(shrink) — 자막이나 데크가 눌리면 글이
+            잘리거나 키가 작아지지만, 사진은 조금 작아져도 제 구실을 한다.
+          */}
+          <div className="flex min-h-0 flex-1 shrink items-center justify-center overflow-hidden py-4">
+            {center}
+          </div>
+
+          {/* 자막은 데크 바로 위 — 듣는 동안 눈이 가장 오래 머무는 자리 */}
+          <div className="shrink-0 rounded-2xl border border-line bg-paper px-4 py-3 shadow-sm">
+            {subtitles}
+          </div>
+        </>
       ) : (
-        <CallFrame cue={cue} playing={playing} elapsed={elapsed} />
+        <>
+          {frame}
+          {progressBar}
+          {subtitles}
+        </>
       )}
-
-      {/* 진행 바 */}
-      <div className="tape-prog mt-3" aria-hidden>
-        <i style={{ width: `${progress}%` }} />
-      </div>
-
-      <SubtitleView
-        cue={cue}
-        subtitleIndex={subtitleIndex}
-        handwriting={cue.id === 'B5_LETTER'}
-      />
 
       {needsTap ? (
         <DeckControls

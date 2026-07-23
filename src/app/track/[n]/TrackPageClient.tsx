@@ -15,6 +15,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import CuePlayer from '@/components/cue/CuePlayer'
+import PlacePhoto from '@/components/cue/PlacePhoto'
 import CountInput from '@/components/mission/CountInput'
 import PhotoStep from '@/components/mission/PhotoStep'
 import RecorderBside from '@/components/mission/RecorderBside'
@@ -262,9 +263,26 @@ export default function TrackPageClient({ n }: { n: number }) {
         </button>
       </header>
 
-      <div className="mx-auto mt-4 w-full max-w-[380px]">
+      {/*
+        이야기만 흐르는 동안에는 화면 높이를 다 쓴다.
+        카드 하나로 뭉쳐두면 아래가 텅 비었다 — 데크 키를 맨 아래(엄지가
+        닿는 자리)에 두고, 자막을 그 위에, 남는 가운데를 거점 사진에 준다.
+
+        미션이 뜨면 채우지 않는다. 화면을 다 쓰면 정작 할 일(미션)이
+        스크롤 밖으로 밀려난다. 그때는 이야기가 자리를 양보한다.
+      */}
+      <div
+        className={`mx-auto mt-4 w-full max-w-[380px] ${
+          cueState.cueId && !interaction ? 'flex min-h-0 flex-1 flex-col' : ''
+        }`}
+      >
         {cueState.cueId ? (
-          <CuePlayer />
+          <CuePlayer
+            fill={!interaction}
+            center={
+              <PlacePhoto name={station.name} photo={station.photo} track={n} />
+            }
+          />
         ) : resumable ? (
           <div className="rounded-2xl border border-line bg-paper p-5 text-center">
             <p className="text-[13px] text-ink-60">
