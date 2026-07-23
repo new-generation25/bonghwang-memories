@@ -366,7 +366,7 @@ export default function IntroPage() {
           onResume={resumeCue}
           onSkip={callEnded ? undefined : skipLine}
           onAdvance={handleAccept}
-          advanceLabel="동행 수락"
+          advanceLabel="동행 시작"
           // 통화 끊기 — 15초가 지나야 열린다(D9). skipCue가 그 조건을 지킨다
           skippable={cueState.skippable}
           onEndCall={skipCue}

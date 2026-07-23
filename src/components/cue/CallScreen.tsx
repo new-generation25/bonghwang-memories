@@ -10,7 +10,6 @@
  */
 
 import { Cue, SPEAKER_NAMES } from '@/lib/cues'
-import DeckControls from './DeckControls'
 
 interface CallScreenProps {
   cue: Cue
@@ -43,6 +42,26 @@ function EndCallIcon() {
   return (
     <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24c1.1.37 2.3.57 3.5.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.2.2 2.4.57 3.5a1 1 0 0 1-.25 1l-2.22 2.3z" />
+    </svg>
+  )
+}
+
+/** 동행 시작 — 함께 걷는다는 뜻이라 앞으로 향하는 화살표를 쓴다 */
+function StartIcon() {
+  return (
+    <svg
+      width="30"
+      height="30"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 12h14" />
+      <path d="m12.5 6 6 6-6 6" />
     </svg>
   )
 }
@@ -141,23 +160,31 @@ export default function CallScreen({
         )}
 
         {ended ? (
-          /* 음성이 끝나면 카세트 컨트롤 바가 올라온다 — PLAY를 눌러야 다음으로.
-             키에 '동행 수락'이라 새겨져 있으니 위에 또 설명하지 않는다. */
-          <div style={{ animation: 'slideUp 0.4s ease-out' }}>
-            <DeckControls
-              keys={[
-                { kind: 'rew', label: '다시듣기', onClick: onReplay, ariaLabel: '다시듣기' },
-                {
-                  kind: 'play',
-                  label: advanceLabel,
-                  onClick: onAdvance,
-                  accent: 'go',
-                  ariaLabel: advanceLabel,
-                },
-                { kind: 'ff' },
-                { kind: 'stop' },
-              ]}
-            />
+          /*
+            통화가 끝나면 같은 자리의 같은 버튼이 빨강에서 초록으로 넘어간다.
+            '끊기'가 '시작'으로 이어지는 흐름이라 자리를 옮기지 않는다.
+            (.call-fab에 색 전환을 걸어 뒀다)
+          */
+          <div className="flex flex-col items-center">
+            <button
+              type="button"
+              onClick={onAdvance}
+              className="call-fab go"
+              aria-label={advanceLabel}
+            >
+              <StartIcon />
+            </button>
+            <span className="mt-2.5 font-mono-retro text-[12px] tracking-[0.14em] text-cream/80">
+              {advanceLabel}
+            </span>
+            {/* 다시듣기 — 놓친 말이 있을 수 있다. 글자만 작게 둔다 */}
+            <button
+              type="button"
+              onClick={onReplay}
+              className="mt-3 font-mono-retro text-[10.5px] text-cream/35"
+            >
+              ↺ 다시듣기
+            </button>
           </div>
         ) : (
           /*

@@ -1355,7 +1355,12 @@ video::-webkit-media-controls-start-playback-button {
   background: #34c759;
   color: #fff;
   box-shadow: 0 6px 16px rgba(52, 199, 89, 0.45);
-  transition: transform 0.1s ease;
+  /* 통화가 끝나면 같은 버튼이 빨강에서 초록으로 넘어간다 — 자리를 옮기지
+     않고 색만 바뀌어야 '끊기'가 '시작'으로 이어지는 것으로 읽힌다 */
+  transition:
+    transform 0.1s ease,
+    background 0.45s ease,
+    box-shadow 0.45s ease;
 }
 
 .call-fab:active { transform: scale(0.93); }
@@ -1364,6 +1369,13 @@ video::-webkit-media-controls-start-playback-button {
   box-shadow: 0 6px 16px rgba(255, 59, 48, 0.45);
 }
 .call-fab.end svg { transform: rotate(135deg); }
+
+/* 동행 시작 — 통화가 끝난 뒤의 초록. 화면이 어두워서 라이트모드 그린
+   (#34C759)은 가라앉는다. iOS가 다크모드에서 쓰는 밝은 초록을 쓴다. */
+.call-fab.go {
+  background: #30d158;
+  box-shadow: 0 6px 18px rgba(48, 209, 88, 0.5);
+}
 
 /* 발신 중 — 초록 버튼 주위로 퍼지는 링 */
 .call-fab-pulse {

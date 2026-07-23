@@ -36,6 +36,14 @@ if (isFirebaseConfigComplete()) {
     db = getFirestore(app)
     auth = getAuth(app)
     storage = getStorage(app)
+    /*
+      업로드 재시도 상한 — 기본값은 2분이다.
+      버킷이 없거나 네트워크가 막히면 SDK가 조용히 2분을 재시도하는 동안
+      화면은 '기록 중…'에 멈춰 있고 사용자는 무엇이 잘못됐는지 알 수 없다.
+      15초면 일시적인 끊김은 넘기면서 진짜 실패는 바로 드러난다.
+    */
+    storage.maxUploadRetryTime = 15000
+    storage.maxOperationRetryTime = 15000
 
     console.log('✅ Firebase 초기화 완료 (Auth · Firestore · Storage)')
   } catch (error) {

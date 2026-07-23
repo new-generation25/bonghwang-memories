@@ -87,7 +87,24 @@ async function uploadImage(uid: string, file: File): Promise<{ url: string; path
   const path = `posts/${uid}/${Date.now()}-${safeName}`
   const storageRef = ref(storage, path)
 
-  await uploadBytes(storageRef, file)
+  try {
+    await uploadBytes(storageRef, file)
+  } catch (err) {
+    /*
+      SDK 오류 코드를 그대로 보여주면 사용자는 무엇을 해야 할지 모른다.
+      특히 'storage/unknown'은 버킷이 아직 만들어지지 않았을 때 나온다 —
+      요청이 응답조차 받지 못해(status 0) SDK가 분류하지 못하는 경우다.
+      운영자가 고칠 일이므로 사용자에게는 사진 없이 올릴 길을 알려준다.
+    */
+    const code = (err as { code?: string })?.code ?? ''
+    if (code === 'storage/unauthorized') {
+      throw new Error('사진을 올릴 권한이 없어요. 다시 로그인해 주세요.')
+    }
+    throw new Error(
+      '사진 저장소에 연결하지 못했어요. 사진을 빼고 글만 먼저 남겨주세요.'
+    )
+  }
+
   const url = await getDownloadURL(storageRef)
 
   return { url, path }
