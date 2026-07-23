@@ -250,8 +250,18 @@ export default function TrackPageClient({ n }: { n: number }) {
   return (
     /* pb-28 — 화면 아래에 못박은 데크(.deck-dock)에 내용이 가리지 않을 만큼 */
     <div className="flex min-h-screen flex-col bg-cream-base px-4 pb-28 pt-5">
-      {/* 헤더 — 미션 진행 중에도 이 화면을 벗어날 수 있어야 한다.
-          탭바는 몰입을 깨서 두지 않되, 플레이어로 가는 길은 항상 열어둔다. */}
+      {/*
+        헤더 — 이 화면의 유일한 출구다.
+
+        거점 화면에만 하단 탭바가 없다(몰입을 위해 뺐다). 홈 화면에서 띄운
+        PWA에는 브라우저 뒤로가기조차 없어서, 이 버튼을 지우면 참여자가
+        여기 갇힌다. 다음 거점을 못 찾아 지도를 보거나, 방금 받은 쿠폰을
+        가게에 보여줘야 할 때 나가야 한다.
+
+        미션을 건너뛰는 길은 아니다 — 나가도 진행은 그대로고, 다음 거점에
+        들어가려면 여전히 QR이 필요하다. 그래서 이름을 '목록'에서
+        '플레이어'로 바꿨다. '목록'은 미션을 골라 들어가는 곳처럼 읽혔다.
+      */}
       <header className="mx-auto flex w-full max-w-[380px] items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-mono-retro text-[10.5px] tracking-[0.25em] text-teal">
@@ -266,7 +276,7 @@ export default function TrackPageClient({ n }: { n: number }) {
           className="-mr-1 shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold text-ink-60"
           aria-label="플레이어로 돌아가기"
         >
-          📼 목록
+          📼 플레이어
         </button>
       </header>
 
