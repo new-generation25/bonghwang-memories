@@ -33,6 +33,11 @@ interface Body {
   intensity?: number
   tempo?: number
   pitch?: number
+  /** 같은 값을 주면 같은 결과가 나온다 — 다시 굽기의 재현성 */
+  seed?: number
+  /** 앞뒤 문맥 — 줄을 따로 구워도 억양이 이어지게 한다 */
+  previousText?: string
+  nextText?: string
 }
 
 /** 괄호 안 연기 지시는 읽지 않는다 — 지문까지 낭독하면 못 쓴다 */
@@ -105,6 +110,22 @@ export async function POST(req: Request) {
               emotion_preset: body.emotion || 'normal',
               emotion_intensity: clamp(Number(body.intensity), 0, 2, 1),
             },
+      /*
+        앞뒤 문맥 — 본문 최상위 필드다. prompt 안에 넣으면
+        'body.prompt.preset.previous_text: Extra inputs are not permitted'로 막힌다.
+        줄을 따로 구우면 각 줄이 '처음이자 끝'인 것처럼 읽혀 억양이 뚝뚝
+        끊기는데, 앞뒤 문장을 알려주면 그 흐름에 맞춰 읽는다(읽지는 않는다).
+      */
+      ...(body.previousText ? { previous_text: body.previousText } : {}),
+      ...(body.nextText ? { next_text: body.nextText } : {}),
+      /*
+        seed — 같은 값이면 같은 결과가 나온다.
+        이게 없으면 같은 설정으로 구워도 길이가 매번 달라(실측 4.375 /
+        4.432 / 4.830초) 자막 타임라인을 신뢰할 수 없다.
+      */
+      ...(Number.isFinite(Number(body.seed))
+        ? { seed: Math.floor(Number(body.seed)) }
+        : {}),
       output: {
         audio_format: 'mp3',
         target_lufs: -16,
