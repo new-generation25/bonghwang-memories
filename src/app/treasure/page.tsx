@@ -82,7 +82,14 @@ export default function BingoPage() {
         <header className="appbar px-4 pb-3 pt-3">
           <div className="mx-auto max-w-md">
             <span className="appbar-badge">SIDE B · 골목 빙고</span>
-            <h1 className="appbar-title mt-1 text-[19px]">🔒 잠겨 있어요</h1>
+            <div className="mt-1 flex items-end justify-between gap-3">
+              <h1 className="appbar-title text-[19px]">🔒 잠겨 있어요</h1>
+              {/* 잠긴 화면에서도 머리 높이를 맞춘다. 칩에는 무엇을 채우면
+                  열리는지를 넣어 잠금 안내와 진행도를 한 줄로 잇는다. */}
+              <span className="shrink-0 rounded-full bg-cream/20 px-3 py-1 font-mono-retro text-[11px] font-bold">
+                {tour.tracksCompleted.length} / 5
+              </span>
+            </div>
           </div>
         </header>
 
@@ -150,7 +157,14 @@ export default function BingoPage() {
       <header className="appbar px-4 pb-3 pt-3">
         <div className="mx-auto max-w-md">
           <span className="appbar-badge">2막 · 소영이 자란 동네</span>
-          <h1 className="appbar-title mt-1 text-[19px]">골목 빙고</h1>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <h1 className="appbar-title text-[19px]">골목 빙고</h1>
+            {/* 발견 수는 앱바로 올렸다 — 다른 탭의 'N / 5'와 같은 자리다.
+                아래 트랙바에 있던 중복 표기는 뺐다. */}
+            <span className="shrink-0 rounded-full bg-cream/20 px-3 py-1 font-mono-retro text-[11px] font-bold">
+              {act2Done} / 20
+            </span>
+          </div>
         </div>
       </header>
 
@@ -158,9 +172,7 @@ export default function BingoPage() {
       <div className="trackbar px-4 py-3">
         <div className="mx-auto max-w-md">
           <div className="flex items-center justify-between font-mono-retro text-[10px] text-sunset">
-            <span>
-              발견 {act2Done} / 20 · 빙고 {lines}줄
-            </span>
+            <span>빙고 {lines}줄</span>
             {/* 누적 포인트 — 여기서 다른 보너스 미션으로 이어지게 하는 고리다 */}
             <span className="font-display text-[13px] text-cream">
               {myPoints.toLocaleString()}P

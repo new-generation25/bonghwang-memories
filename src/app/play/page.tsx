@@ -43,10 +43,17 @@ export default function PlayerHomePage() {
   // pb-32 — 하단 탭바(84px)와 안전영역을 덮는 여백. 탭바를 쓰는 화면 공통값
   return (
     <div className="flex min-h-screen flex-col bg-cream-base pb-32">
-      <header className="px-4 pt-6 text-center">
-        <p className="font-mono-retro text-[11px] tracking-[0.25em] text-teal">
-          SIDE A · 다섯 가지 소원
-        </p>
+      {/* 앱바 — 티얼 구조색. 탭바를 쓰는 화면은 모두 같은 머리를 쓴다 */}
+      <header className="appbar px-4 pb-3 pt-3">
+        <div className="mx-auto max-w-md">
+          <span className="appbar-badge">SIDE A · 아버지의 믹스테이프</span>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <h1 className="appbar-title text-[19px]">다섯 가지 소원</h1>
+            <span className="shrink-0 rounded-full bg-cream/20 px-3 py-1 font-mono-retro text-[11px] font-bold">
+              {completedCount} / 5
+            </span>
+          </div>
+        </div>
       </header>
 
       {/* 카세트 히어로 — 릴 게이지 = 트랙 진행률 */}

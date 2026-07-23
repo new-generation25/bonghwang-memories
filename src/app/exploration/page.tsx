@@ -54,12 +54,20 @@ export default function GuideMapPage() {
       {/* 앱바 — 티얼 구조색 */}
       <header className="appbar px-4 pb-3 pt-3">
         <div className="mx-auto max-w-md">
-          <span className="appbar-badge">보조 화면 · 길 안내</span>
-          <h1 className="appbar-title mt-1 text-[17px] leading-tight">
-            {nextStation
-              ? `다음 거점 — ${nextStation.name}`
-              : '다섯 소원을 모두 이뤘습니다!'}
-          </h1>
+          {/*
+            다음 거점 이름은 배지로 내렸다. 제목 자리에 두면 이름 길이에 따라
+            글자 크기를 17px로 낮추고 줄바꿈까지 감수해야 해서, 다른 화면의
+            앱바와 머리 높이가 달라졌다. 제목은 고정, 변하는 값은 배지로.
+          */}
+          <span className="appbar-badge">
+            {nextStation ? `다음 거점 · ${nextStation.name}` : '다섯 소원 완주'}
+          </span>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <h1 className="appbar-title text-[19px]">길 안내</h1>
+            <span className="shrink-0 rounded-full bg-cream/20 px-3 py-1 font-mono-retro text-[11px] font-bold">
+              {tour.tracksCompleted.length} / 5
+            </span>
+          </div>
         </div>
       </header>
 
