@@ -134,6 +134,22 @@ export function resetTour(): TourState {
   return state
 }
 
+/**
+ * 이야기만 처음으로 되돌린다 — 산 것은 그대로 둔다.
+ *
+ * resetTour는 paid까지 false로 되돌린다. 로그아웃이나 기기 인계처럼 기록을
+ * 통째로 비울 때는 그게 맞지만, 사용자가 '처음부터 시작하기'를 누른 것은
+ * 환불이 아니라 다시 걷겠다는 뜻이다. 여기서 결제까지 지우면 15,000원 내고
+ * 산 사람이 자기 상품에 못 들어간다.
+ */
+export function restartTour(): TourState {
+  const wasPaid = (state as TourState).paid
+  state = { ...INITIAL_TOUR_STATE, paid: wasPaid, phase: wasPaid ? 'intro' : 'landing' }
+  persist()
+  listeners.forEach((l) => l(state as TourState))
+  return state
+}
+
 // ---------------------------------------------------------------------------
 // 자주 쓰는 파생·조작 헬퍼
 // ---------------------------------------------------------------------------

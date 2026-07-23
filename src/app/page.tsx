@@ -14,10 +14,8 @@ import NicknameEditor from '@/components/NicknameEditor'
 import Cassette from '@/components/Cassette'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
-import { mutateTour, resetTour } from '@/lib/tourState'
+import { mutateTour, restartTour } from '@/lib/tourState'
 import { clearLocalPoints } from '@/lib/points'
-import { pushTour } from '@/lib/tourSync'
-import { auth } from '@/lib/firebase'
 import { logEvent } from '@/lib/analytics'
 
 export default function LandingPage() {
@@ -83,21 +81,21 @@ export default function LandingPage() {
   }
 
   /**
-   * 이 기기의 기록을 지우고 처음으로 되돌린다.
+   * 이야기를 처음부터 다시 걷는다.
    *
-   * 되돌릴 수 없는 조작이라 한 번 묻는다. 로그인 상태면 서버에 올려두고
-   * 지우므로 다시 로그인하면 그대로 돌아온다.
+   * 진행도는 계정에도 이어져 있어 되돌릴 수 없다 — 로그인 상태에서 지우면
+   * 동기화가 서버 기록까지 같은 상태로 덮는다. 그러니 그렇게 말해준다.
+   *
+   * 산 것은 건드리지 않는다. 이건 환불이 아니라 다시 걷겠다는 뜻이라,
+   * 결제까지 지우면 15,000원 내고 산 사람이 자기 상품에 못 들어간다.
    */
-  const handleRestart = async () => {
-    const signedIn = Boolean(profile)
-    const message = signedIn
-      ? '이 기기의 진행 기록을 지우고 처음부터 시작할까요?\n계정에 저장되어 있어 다시 로그인하면 돌아옵니다.'
-      : '이 기기의 진행 기록을 지우고 처음부터 시작할까요?\n로그인하지 않은 기록이라 되돌릴 수 없습니다.'
+  const handleRestart = () => {
+    const message = profile
+      ? '이야기를 처음부터 다시 시작할까요?\n지금까지의 진행 기록은 계정에서도 지워지며 되돌릴 수 없습니다.\n구매한 이용권은 그대로 유지됩니다.'
+      : '이야기를 처음부터 다시 시작할까요?\n지금까지의 진행 기록은 되돌릴 수 없습니다.'
     if (!window.confirm(message)) return
 
-    const uid = auth?.currentUser?.uid
-    if (uid) await pushTour(uid)
-    resetTour()
+    restartTour()
     clearLocalPoints()
   }
 
