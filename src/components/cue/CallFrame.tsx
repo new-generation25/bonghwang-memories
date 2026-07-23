@@ -5,6 +5,7 @@
  * 소영(현재)·사장님 전달 녹음이 이 프레임을 쓴다.
  */
 
+import { initialFor, portraitFor } from '@/lib/cast'
 import { Cue, SPEAKER_NAMES } from '@/lib/cues'
 
 interface CallFrameProps {
@@ -20,12 +21,19 @@ function formatClock(sec: number): string {
 }
 
 export default function CallFrame({ cue, playing, elapsed }: CallFrameProps) {
+  const portrait = portraitFor(cue)
+
   return (
     <div className="call-frame">
       <div className="flex items-center gap-3">
-        {/* 프로필 */}
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-teal text-[22px] text-cream shadow-inner">
-          {cue.speaker === 'shopkeeper1' || cue.speaker === 'shopkeeper2' ? '👵' : '📞'}
+        {/* 프로필 — 그림이 있으면 얼굴, 없으면 한 글자 배지 */}
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-teal text-[22px] text-cream shadow-inner">
+          {portrait ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={portrait} alt="" className="call-avatar-photo" />
+          ) : (
+            initialFor(cue)
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[17px] text-ink">

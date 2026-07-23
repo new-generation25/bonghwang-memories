@@ -97,6 +97,15 @@ async function uploadImage(uid: string, file: File): Promise<{ url: string; path
       운영자가 고칠 일이므로 사용자에게는 사진 없이 올릴 길을 알려준다.
     */
     const code = (err as { code?: string })?.code ?? ''
+    // 원인 파악용 — 사용자에게는 다듬은 말을 보여주되 콘솔엔 원문을 남긴다.
+    // 버킷 미생성·권한·CORS가 모두 비슷한 실패로 보여서 코드가 있어야 가른다.
+    console.error('[사진 업로드 실패]', {
+      code,
+      message: (err as { message?: string })?.message,
+      serverResponse: (err as { serverResponse_?: string }).serverResponse_,
+      bucket: storageRef.bucket,
+      fullPath: storageRef.fullPath,
+    })
     if (code === 'storage/unauthorized') {
       throw new Error('사진을 올릴 권한이 없어요. 다시 로그인해 주세요.')
     }

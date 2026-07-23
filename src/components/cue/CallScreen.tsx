@@ -9,6 +9,7 @@
  * PLAY를 눌러야 다음 단계로 넘어간다 (D9 — 시간 기반 자동진행 금지).
  */
 
+import { initialFor, portraitFor } from '@/lib/cast'
 import { Cue, SPEAKER_NAMES } from '@/lib/cues'
 
 interface CallScreenProps {
@@ -90,6 +91,7 @@ export default function CallScreen({
   onEndCall,
 }: CallScreenProps) {
   const lines = cue.subtitleLines
+  const portrait = portraitFor(cue)
   // 문자 말풍선 — 직전 줄(흐림) + 현재 줄(강조) 2줄만
   const prev = subtitleIndex > 0 ? lines[subtitleIndex - 1] : null
   const current = lines[subtitleIndex] ?? null
@@ -105,8 +107,14 @@ export default function CallScreen({
           {formatClock(elapsed)}
         </p>
 
+        {/* 지금 말하는 사람의 얼굴 — 없으면 한 글자 배지로 되돌아간다 */}
         <div className="call-avatar mt-6">
-          <span>{cue.speaker === 'soyoung' ? '소' : '📞'}</span>
+          {portrait ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={portrait} alt="" className="call-avatar-photo" />
+          ) : (
+            <span>{initialFor(cue)}</span>
+          )}
           {playing && <span className="call-avatar-ring" aria-hidden />}
         </div>
       </div>

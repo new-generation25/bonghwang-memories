@@ -38,7 +38,13 @@ const audioToCache = CUE_AUDIO_NAMES.flatMap((name) => [
   // 데크 키음 — 오프라인에서도 버튼 피드백이 있어야 한다
   '/audio/sfx/deck-key.wav',
   // M3 능소화 정적 프레임 (D11 폴백)
-  '/images/neungsohwa-overlay.png'
+  '/images/neungsohwa-overlay.png',
+  // 등장인물 얼굴 — 통화·테이프 화면에 뜬다. 골목에서 신호가 약할 때
+  // 얼굴만 빈 칸으로 남으면 인물이 사라진 것처럼 보인다.
+  '/images/cast/father.png',
+  '/images/cast/soyoung.png',
+  '/images/cast/shopkeeper1.png',
+  '/images/cast/shopkeeper2.png'
 ]);
 
 // Install - 정적 자원만 프리캐시하고 즉시 활성화

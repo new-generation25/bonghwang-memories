@@ -1468,6 +1468,16 @@ video::-webkit-media-controls-start-playback-button {
   font-size: 34px;
   color: rgb(var(--cream));
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+/* 인물 사진 — 원본 비율이 조금씩 달라도 원 안을 꽉 채우도록 잘라 넣는다 */
+.call-avatar-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
 }
 
 .call-avatar-ring {
