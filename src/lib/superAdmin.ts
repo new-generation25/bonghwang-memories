@@ -67,6 +67,21 @@ export function setSuperAdmin(on: boolean) {
   listeners.forEach((l) => l(on))
 }
 
+/**
+ * 조작 패널 열기.
+ *
+ * 전에는 화면 맨 위에 "슈퍼관리자 · 순서 무시 중" 띠를 상시로 띄우고 그것을
+ * 눌러 열었다. 앱바가 통째로 레드로 바뀌는 지금은 그 글씨가 같은 말을 두 번
+ * 하는 것이라 걷어냈다 — 색이 이미 상태를 말한다.
+ *
+ * 대신 켠 자리(내 설정)에서 연다. 여는 곳과 켜는 곳이 같으면 찾지 못할 일이 없다.
+ */
+export const SUPER_PANEL_EVENT = 'bh:super-panel'
+
+export function openSuperAdminPanel() {
+  window.dispatchEvent(new Event(SUPER_PANEL_EVENT))
+}
+
 export function subscribeSuperAdmin(listener: Listener): () => void {
   listeners.add(listener)
   listener(superAdminSwitch())

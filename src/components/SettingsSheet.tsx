@@ -15,7 +15,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { isAdminUser } from '@/lib/admin'
-import { setSuperAdmin, superAdminSwitch } from '@/lib/superAdmin'
+import {
+  openSuperAdminPanel,
+  setSuperAdmin,
+  superAdminSwitch,
+} from '@/lib/superAdmin'
 import NicknameEditor from '@/components/NicknameEditor'
 
 interface SettingsSheetProps {
@@ -165,6 +169,26 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
                       {superOn ? 'ON' : 'OFF'}
                     </span>
                   </button>
+
+                  {/*
+                    조작은 켠 자리에서 연다. 예전에는 화면 맨 위 띠를 눌러
+                    열었는데, 앱바가 통째로 레드가 되는 지금은 그 띠가 같은
+                    말을 두 번 하는 것이라 걷어냈다.
+                  */}
+                  {superOn && (
+                    <button
+                      onClick={() => {
+                        onClose()
+                        openSuperAdminPanel()
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-rec/40 bg-rec/5 px-4 py-3 text-left"
+                    >
+                      <span className="text-[13px] font-bold text-rec">
+                        순서 무시 조작 열기
+                      </span>
+                      <span className="text-[12px] text-rec">›</span>
+                    </button>
+                  )}
                 </>
               )}
 

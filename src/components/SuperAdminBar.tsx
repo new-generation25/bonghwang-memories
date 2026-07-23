@@ -1,22 +1,28 @@
 'use client'
 
 /**
- * 슈퍼관리자 띠 — 모드가 켜져 있는 동안 모든 화면 위에 남는다.
+ * 슈퍼관리자 조작 패널.
  *
- * 띠를 상시로 두는 이유는 하나다. 건너뛰며 만든 판을 실제 참여자의 판으로
- * 착각하는 것이 이 종류의 기능에서 제일 잦은 사고다. "왜 여기서 소리가
- * 안 나지"를 30분 붙들었는데 알고 보니 앞 단계를 건너뛰어 상태가 없던
- * 것이면, 그 30분은 띠 하나로 막을 수 있었던 시간이다.
+ * 모드가 켜져 있음을 알리는 일은 앱바가 맡는다 — 켜지면 티얼이 레드로
+ * 바뀐다(globals.css의 .super-admin). 건너뛰며 만든 판을 실제 참여자의
+ * 판으로 착각하는 것이 이 종류의 기능에서 제일 잦은 사고인데, 모든 화면에
+ * 있고 면적이 넓은 앱바가 그 일에 맞다. 예전엔 맨 위에 글씨 띠를 하나 더
+ * 얹었지만 같은 말을 두 번 하는 것이라 걷어냈다.
  *
- * 눌러서 펼치면 진행을 건너뛰는 조작이 나온다. 상태는 직접 쓰지 않고
- * tourState의 헬퍼를 거친다 — 조각·빙고·현재 트랙이 서로 물려 있어서
- * raw로 써 넣으면 조각 없이 B면이 열리는 조합이 나온다.
+ * 이 컴포넌트는 이제 조작만 맡는다. 내 설정에서 연다.
+ *
+ * 상태는 직접 쓰지 않고 tourState의 헬퍼를 거친다 — 조각·빙고·현재 트랙이
+ * 서로 물려 있어서 raw로 써 넣으면 조각 없이 B면이 열리는 조합이 나온다.
  */
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { dispatchQr } from '@/lib/cueEngine'
-import { setSuperAdmin, useSuperAdmin } from '@/lib/superAdmin'
+import {
+  SUPER_PANEL_EVENT,
+  setSuperAdmin,
+  useSuperAdmin,
+} from '@/lib/superAdmin'
 import { STATIONS } from '@/lib/tracks'
 import {
   awardFragment,
@@ -50,6 +56,13 @@ export default function SuperAdminBar() {
     root.classList.toggle('super-admin', on)
     return () => root.classList.remove('super-admin')
   }, [on])
+
+  // 내 설정에서 여는 신호를 받는다
+  useEffect(() => {
+    const show = () => setOpen(true)
+    window.addEventListener(SUPER_PANEL_EVENT, show)
+    return () => window.removeEventListener(SUPER_PANEL_EVENT, show)
+  }, [])
 
   if (!on) return null
 
@@ -88,28 +101,29 @@ export default function SuperAdminBar() {
     router.push('/treasure')
   }
 
-  return (
-    <>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="fixed inset-x-0 top-0 z-[70] flex items-center justify-center gap-2 bg-rec px-3 py-1 text-cream"
-        style={{ paddingTop: 'max(0.25rem, env(safe-area-inset-top))' }}
-      >
-        <span className="font-mono-retro text-[10px] font-bold tracking-[0.2em]">
-          슈퍼관리자 · 순서 무시 중
-        </span>
-        <span className="text-[10px] opacity-80">{open ? '닫기' : '조작 ▾'}</span>
-      </button>
+  if (!open) return null
 
-      {open && (
-        <div
-          className="fixed inset-0 z-[69] bg-shell/60"
-          onClick={() => setOpen(false)}
-        >
+  return (
+    <div
+      className="fixed inset-0 z-[69] flex items-start justify-center bg-shell/60 px-4 pt-10"
+      onClick={() => setOpen(false)}
+    >
           <div
-            className="mx-auto mt-9 w-full max-w-[420px] rounded-b-2xl bg-paper px-4 pb-4 pt-3 shadow-2xl"
+            className="w-full max-w-[420px] rounded-2xl bg-paper px-4 pb-4 pt-3 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="mb-3 flex items-baseline justify-between">
+              <p className="font-display text-[15px] text-rec">
+                🔓 순서 무시 조작
+              </p>
+              <button
+                onClick={() => setOpen(false)}
+                className="text-[12px] text-ink-60"
+              >
+                닫기
+              </button>
+            </div>
+
             <Row label="거점으로 이동" hint="QR 없이 그 거점의 도착 큐를 시작합니다">
               {TRACKS.map((t) => (
                 <Key key={t} onClick={() => jump(t)}>
@@ -163,10 +177,8 @@ export default function SuperAdminBar() {
               <br />
               관리자 계정의 기록은 콘트롤 패널 집계에서 빠집니다.
             </p>
-          </div>
-        </div>
-      )}
-    </>
+      </div>
+    </div>
   )
 }
 

@@ -156,29 +156,36 @@ export default function BingoPage() {
 
   return (
     <div className="min-h-screen bg-cream-base pb-32">
+      {/*
+        머리를 하나로 합쳤다.
+
+        전에는 앱바(제목) 아래에 트랙바(릴·진행바)가 따로 얹혀 색 띠가 둘로
+        갈렸다. 보기에 어수선한 것보다 문제는 높이였다 — 둘이 140px을 먹어서
+        빙고판과 그 아래 설명이 한 화면에 들어오지 않았다. 릴과 바를 앱바
+        안으로 들여 40px 남짓을 돌려준다.
+
+        수치 셋의 자리: 발견 수(N/20)는 제목 옆 — 다른 탭의 'N / 5'와 같은
+        자리다. 줄 수는 뱃지 줄 오른쪽, 누적 포인트는 그 아래. 포인트는
+        다른 보너스 미션으로 이어지는 고리라 작게라도 남긴다.
+      */}
       <header className="appbar px-4 pb-3 pt-3">
         <div className="mx-auto max-w-md">
-          <span className="appbar-badge">2막 · 소영이 자란 동네</span>
-          <div className="mt-1 flex items-end justify-between gap-3">
-            <h1 className="appbar-title text-[19px]">골목 빙고</h1>
-            {/* 발견 수는 앱바로 올렸다 — 다른 탭의 'N / 5'와 같은 자리다.
-                아래 트랙바에 있던 중복 표기는 뺐다. */}
-            <span className="shrink-0 rounded-full bg-cream/20 px-3 py-1 font-mono-retro text-[11px] font-bold">
-              {act2Done} / 20
+          <div className="flex items-center justify-between gap-3">
+            <span className="appbar-badge">2막 · 소영이 자란 동네</span>
+            <span className="shrink-0 font-mono-retro text-[10px] text-sunset">
+              빙고 {lines}줄
             </span>
           </div>
-        </div>
-      </header>
-
-      {/* 트랙바 — 수집 진행률 */}
-      <div className="trackbar px-4 py-3">
-        <div className="mx-auto max-w-md">
-          <div className="flex items-center justify-between font-mono-retro text-[10px] text-sunset">
-            <span>빙고 {lines}줄</span>
-            {/* 누적 포인트 — 여기서 다른 보너스 미션으로 이어지게 하는 고리다 */}
-            <span className="font-display text-[13px] text-cream">
-              {myPoints.toLocaleString()}P
-            </span>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <h1 className="appbar-title text-[19px]">골목 빙고</h1>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="font-display text-[13px] text-cream">
+                {myPoints.toLocaleString()}P
+              </span>
+              <span className="rounded-full bg-cream/20 px-3 py-1 font-mono-retro text-[11px] font-bold">
+                {act2Done} / 20
+              </span>
+            </div>
           </div>
           <div className="tape-prog mt-2">
             <div className="reel spin">
@@ -192,7 +199,7 @@ export default function BingoPage() {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="mx-auto max-w-md px-4 py-5">
         {/* 소영의 한마디 (C6_x) 재생 중이면 표시 */}
