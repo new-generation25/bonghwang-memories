@@ -586,6 +586,13 @@ export default function VoiceLabPage() {
             번호와 설정값을 알려주시면 그대로 전체 대사를 굽겠습니다.
           </p>
         </div>
+
+        <a
+          href="/debug/script"
+          className="mt-5 block w-full rounded-xl border border-line bg-paper px-4 py-3 text-center text-[13px] font-bold text-teal-dk"
+        >
+          📝 대본 줄별 굽기 — 한 줄씩 따로 굽고 다시 굽기
+        </a>
       </div>
     </div>
   )

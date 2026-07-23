@@ -90,11 +90,21 @@ export async function POST(req: Request) {
       text,
       model: body.model || DEFAULT_MODEL,
       language: 'kor',
-      prompt: {
-        emotion_type: 'preset',
-        emotion_preset: body.emotion || 'normal',
-        emotion_intensity: clamp(Number(body.intensity), 0, 2, 1),
-      },
+      /*
+        emotion_type이 받는 값은 preset · smart · embedding 뿐이다.
+        자유 텍스트 연기 지시는 422로 거절한다 — 확인해 봤다.
+        smart는 글의 내용에서 감정을 스스로 잡는 방식이라 프리셋·강도를
+        함께 보내면 'Extra inputs are not permitted'로 막힌다.
+        embedding은 1024차원 벡터를 요구해 손으로 쓸 수 있는 값이 아니다.
+      */
+      prompt:
+        body.emotion === 'smart'
+          ? { emotion_type: 'smart' }
+          : {
+              emotion_type: 'preset',
+              emotion_preset: body.emotion || 'normal',
+              emotion_intensity: clamp(Number(body.intensity), 0, 2, 1),
+            },
       output: {
         audio_format: 'mp3',
         target_lufs: -16,
