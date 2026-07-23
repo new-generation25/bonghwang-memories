@@ -64,16 +64,32 @@ export function setSfxMuted(next: boolean): void {
 function audioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
   try {
-    if (!ctx) {
-      const Ctor =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext?: typeof AudioContext })
-          .webkitAudioContext
-      if (!Ctor) return null
-      ctx = new Ctor()
+    const Ctor =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext
+    if (!Ctor) return null
+
+    /*
+      닫힌 컨텍스트는 되살릴 수 없다 — 새로 만든다.
+      디코딩해 둔 조각도 그 컨텍스트에 묶여 있으므로 함께 버린다.
+    */
+    if (ctx && ctx.state === 'closed') {
+      ctx = null
+      sample = null
+      sampleLoad = null
     }
-    // 화면을 오래 두면 정지 상태로 내려간다 — 클릭 안이라 바로 깨울 수 있다
-    if (ctx.state === 'suspended') void ctx.resume()
+    if (!ctx) ctx = new Ctor()
+
+    /*
+      멈춘 컨텍스트를 깨운다.
+
+      'suspended'는 화면을 오래 뒀을 때고, 'interrupted'는 iOS가 카메라·통화
+      같은 다른 오디오 세션에 자리를 내줬을 때다(표준에 없는 상태라 문자열로
+      비교한다). 능소화 포토존처럼 카메라를 쓰고 돌아오면 여기에 걸려서,
+      suspended만 되살리던 코드는 그 뒤로 소리를 내지 못했다.
+    */
+    if (ctx.state !== 'running') void ctx.resume().catch(() => {})
     return ctx
   } catch {
     return null
