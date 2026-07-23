@@ -48,6 +48,14 @@ export default function LandingPage() {
     }
   })()
 
+  /** 한 곳이라도 걸었으면 되돌아볼 것이 있다 */
+  const hasWalked = tour.tracksCompleted.length > 0 || tour.phase === 'done'
+
+  const resumeLabel =
+    tour.phase === 'done'
+      ? '완주한 투어가 있습니다'
+      : '진행 중인 투어가 있습니다'
+
   /** 모의 결제 — 실제 PG 연동 지점 */
   const handleMockPay = () => {
     logEvent('purchase', { mock: true })
@@ -143,44 +151,52 @@ export default function LandingPage() {
             <em>열지 않은 이야기가 있다</em>
           </div>
 
-          <div className="foot">
-            <span>봉황 메모리즈</span>
-            <span>AUDIO DRAMA TOUR</span>
-          </div>
         </div>
       </div>
 
       {/* 상품 소개 — 포스터 바깥. 결제 버튼은 아래 고정 바로 뺐다 */}
       <div className="mx-auto w-full max-w-[380px] px-4 pb-32 pt-5">
-        <p className="text-center text-[13px] font-bold leading-relaxed text-ink">
-          골목에 남겨진 카세트테이프 하나,
-          <br />
-          그리고 손글씨 쪽지 한 장.
-        </p>
-        <p className="mt-1 text-center text-[11px] leading-relaxed text-ink-60">
-          1988년, 아버지가 태어날 딸에게 남긴 다섯 가지 소원.
-          <br />
-          쪽지 속 번호로 전화를 걸면 이야기가 시작됩니다.
-        </p>
+        {/* 안내는 이 자리를 덮으며 올라온다 — 아래로 펼치면 첫 화면에서
+            내용이 접힌 부분 밖으로 밀려 스크롤해야 보인다. */}
+        <div className="relative">
+          <div
+            className="transition-opacity duration-200"
+            style={{ opacity: showInfo ? 0 : 1 }}
+            aria-hidden={showInfo}
+          >
+            <p className="text-center text-[13px] font-bold leading-relaxed text-ink">
+              골목에서 발견한 카세트 하나,
+              <br />
+              그리고 손글씨 쪽지 한 장.
+            </p>
+            <p className="mt-1 text-center text-[11px] leading-relaxed text-ink-60">
+              1988년, 아버지가 태어날 딸에게 남긴 다섯 가지 소원.
+              <br />
+              쪽지 속 번호로 전화를 걸면 이야기가 시작됩니다.
+            </p>
+          </div>
 
-        {/* 구성 안내 — 기본은 접혀 있고 버튼으로 펼친다 */}
+          {showInfo && (
+            <div className="absolute inset-x-0 bottom-0">
+              <ul
+                className="space-y-1.5 rounded-xl border border-line bg-paper px-4 py-3 text-[12px] leading-relaxed text-ink shadow-lg"
+                style={{ animation: 'guide-pull-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) both' }}
+              >
+                <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 필수</li>
+                <li>📼 다섯 거점 · 다섯 소원 · 숨겨진 B면 트랙</li>
+                <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 테이프&rsquo;</li>
+                <li>🎟 골목 빙고 — 포인트와 아이템</li>
+              </ul>
+            </div>
+          )}
+        </div>
+
         <button
           onClick={() => setShowInfo((v) => !v)}
           className="mt-4 w-full rounded-xl border border-line bg-paper px-4 py-2.5 text-center text-[12px] font-bold text-teal-dk"
         >
-          {showInfo ? '구성·이용 안내 접기 ▲' : '구성·이용 안내 보기 ▼'}
+          {showInfo ? '봉황 메모리즈 이용 안내 ▲' : '봉황 메모리즈 이용 안내 ▼'}
         </button>
-        {showInfo && (
-          <ul
-            className="mt-2 space-y-1.5 rounded-xl border border-line bg-paper px-4 py-3 text-[12px] leading-relaxed text-ink"
-            style={{ animation: 'fadeIn 0.25s ease-in-out' }}
-          >
-            <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 필수</li>
-            <li>📼 다섯 거점 · 다섯 소원 · 숨겨진 B면 트랙</li>
-            <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 테이프&rsquo;</li>
-            <li>🎟 골목 빙고 — 포인트와 아이템</li>
-          </ul>
-        )}
 
       </div>
 
@@ -202,15 +218,30 @@ export default function LandingPage() {
           >
             <div className="mx-auto w-full max-w-[380px]">
               {resumeTarget ? (
-                <button
-                  onClick={() => router.push(resumeTarget)}
-                  className="btn-teal w-full text-center text-[15px]"
-                >
-                  이어서 걷기 ▶
-                  <small className="mt-0.5 block text-[10px] font-normal opacity-85">
-                    진행 중인 투어가 있습니다
-                  </small>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => router.push(resumeTarget)}
+                    className="btn-teal flex-1 text-center text-[15px]"
+                  >
+                    이어서 걷기 ▶
+                    <small className="mt-0.5 block text-[10px] font-normal opacity-85">
+                      {resumeLabel}
+                    </small>
+                  </button>
+                  {/* 이미 걸어본 사람에게만 — 아직 아무것도 안 걸었으면
+                      둘러볼 것이 없다 */}
+                  {hasWalked && (
+                    <button
+                      onClick={() => router.push('/play')}
+                      className="flex-1 rounded-xl border border-teal bg-paper text-center text-[15px] font-bold text-teal-dk"
+                    >
+                      다시 둘러보기
+                      <small className="mt-0.5 block text-[10px] font-normal text-ink-60">
+                        걸어온 길 보기
+                      </small>
+                    </button>
+                  )}
+                </div>
               ) : (
                 <button
                   onClick={handleStart}

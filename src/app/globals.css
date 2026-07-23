@@ -1514,3 +1514,23 @@ video::-webkit-media-controls-start-playback-button {
     animation: none;
   }
 }
+
+/* ── 이용 안내 풀업 ────────────────────────────────────────────
+   위쪽 설명 텍스트를 덮으며 올라온다. 아래로 펼치면 첫 화면에서
+   접힌 부분 밖으로 밀려 스크롤해야 보인다. */
+@keyframes guide-pull-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*='guide-pull-up'] {
+    animation: none !important;
+  }
+}
