@@ -395,7 +395,9 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
         <button
           onClick={capturePhoto}
           disabled={isLoading}
-          className="w-16 h-16 bg-white rounded-full border-4 border-line 
+          // 셔터도 데크 키와 같은 딸깍 — 실제 카메라의 그 소리 자리다
+          data-sfx="key"
+          className="w-16 h-16 bg-white rounded-full border-4 border-line
                    hover:bg-cream active:scale-95 transition-all duration-200
                    disabled:opacity-50 disabled:cursor-not-allowed"
         >

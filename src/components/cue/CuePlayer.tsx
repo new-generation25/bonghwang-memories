@@ -71,27 +71,33 @@ export default function CuePlayer({ fill = false, center }: CuePlayerProps = {})
       }
     >
       {fill ? (
-        <>
+        /*
+          화자 · 거점 그림 · 자막을 흰 상자 하나에 담는다.
+          셋을 따로 띄우면 카드가 세 장 겹친 것처럼 보이고, 사이의 크림
+          여백이 화면을 토막 낸다. 하나로 묶으면 '지금 재생 중인 한 덩어리'로
+          읽히고, 그 안에서 가는 선으로만 구역을 나눈다.
+        */
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper shadow-sm">
           {/* 화자 — 누가 말하는지는 늘 위에 */}
-          <div className="shrink-0 rounded-2xl border border-line bg-paper p-3 shadow-sm">
+          <div className="shrink-0 p-3">
             {frame}
             {progressBar}
           </div>
 
           {/*
-            남는 자리는 거점 사진에.
+            남는 자리는 거점 그림에.
             줄어드는 쪽은 여기다(shrink) — 자막이나 데크가 눌리면 글이
-            잘리거나 키가 작아지지만, 사진은 조금 작아져도 제 구실을 한다.
+            잘리거나 키가 작아지지만, 그림은 조금 작아져도 제 구실을 한다.
           */}
-          <div className="flex min-h-0 flex-1 shrink items-center justify-center overflow-hidden py-4">
+          <div className="flex min-h-0 flex-1 shrink items-center justify-center overflow-hidden px-3 pb-3">
             {center}
           </div>
 
           {/* 자막은 데크 바로 위 — 듣는 동안 눈이 가장 오래 머무는 자리 */}
-          <div className="shrink-0 rounded-2xl border border-line bg-paper px-4 py-3 shadow-sm">
+          <div className="shrink-0 border-t border-line px-4 py-3">
             {subtitles}
           </div>
-        </>
+        </div>
       ) : (
         <>
           {frame}

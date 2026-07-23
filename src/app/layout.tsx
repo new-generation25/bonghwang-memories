@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import DeckSfx from '@/components/DeckSfx'
 import PointToast from '@/components/PointToast'
 
 export const metadata: Metadata = {
@@ -227,6 +228,8 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <PointToast />
+          {/* 데크 키음 — 화면마다 심지 않고 여기서 한 번에 건다 */}
+          <DeckSfx />
         </AuthProvider>
       </body>
     </html>

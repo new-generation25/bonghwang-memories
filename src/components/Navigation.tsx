@@ -128,6 +128,8 @@ export default function Navigation() {
               // disabled를 걸지 않는다 — 눌러야 왜 안 되는지 알려줄 수 있다.
               // 대신 aria로 잠긴 상태임을 알린다.
               aria-disabled={isDisabled}
+              // 탭도 눌리는 물건이다 — 잠긴 탭은 소리를 내지 않는다
+              data-sfx={isDisabled ? 'off' : 'key'}
               className={`relative flex w-full transform flex-col items-center justify-center rounded-lg px-1 py-2 transition-all duration-150 active:scale-95 ${
                 isDisabled
                   ? 'cursor-not-allowed text-ink-60 opacity-40'

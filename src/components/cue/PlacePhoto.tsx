@@ -24,8 +24,14 @@ interface PlacePhotoProps {
 
 export default function PlacePhoto({ name, photo, track }: PlacePhotoProps) {
   return (
-    <figure className="mx-auto w-full max-w-[300px]">
-      <div className="rounded-sm bg-paper p-2.5 pb-8 shadow-[0_6px_18px_rgba(43,36,32,0.18)]">
+    // 폭은 상자 안을 꽉 채운다. 가운데에 좁게 두면 위의 화자 상자·아래
+    // 구분선과 좌우 끝이 어긋나 한 장 안에 두 개의 격자가 생긴다.
+    <figure className="w-full">
+      {/*
+        인화지 — 바탕이 같은 흰색(paper)이라 그림자만으로는 종이가 떠 보이지
+        않는다. 가는 테두리를 둘러 '한 장이 놓여 있다'는 것을 만든다.
+      */}
+      <div className="rounded-sm border border-line bg-paper p-2.5 pb-8 shadow-[0_4px_12px_rgba(43,36,32,0.12)]">
         {/* 4:3 — 간판과 처마가 가로로 넓게 앉는 비율이다.
             정사각으로 두면 하늘이나 바닥이 그만큼 더 들어와 건물이 작아진다. */}
         <div className="relative aspect-[4/3] overflow-hidden rounded-sm bg-cream-dp">
