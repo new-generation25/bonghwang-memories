@@ -12,6 +12,7 @@
  * 지시자 실행은 모두 멱등이라 재실행이 안전하다.
  */
 
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import CuePlayer from '@/components/cue/CuePlayer'
 import CountInput from '@/components/mission/CountInput'
@@ -122,6 +123,16 @@ export default function TrackPageClient({ n }: { n: number }) {
 
   const activeCue = endedCue ?? resumable
   const interaction = activeCue ? INTERACTIONS[activeCue] : undefined
+
+  // 2막 전환 — 소영의 대사가 끝나면 빙고 단독 화면으로 넘긴다.
+  // 예전에는 트랙 5 화면 아래에 빙고 버튼만 덧붙어서, 끝난 트랙 내용과
+  // 새 막의 진입이 한 화면에 겹쳐 보였다. replace로 넘겨 뒤로가기가
+  // 그 어중간한 상태로 돌아오지 않게 한다.
+  useEffect(() => {
+    if (interaction?.kind !== 'bingo') return
+    const t = window.setTimeout(() => router.replace('/treasure'), 900)
+    return () => window.clearTimeout(t)
+  }, [interaction?.kind, router])
   const interactionRef = useRevealOnChange<HTMLDivElement>(
     interaction?.kind,
     Boolean(interaction)
@@ -219,7 +230,7 @@ export default function TrackPageClient({ n }: { n: number }) {
         return (
           <div className="cta-band mt-4" style={{ animation: 'slideUp 0.4s ease-out' }}>
             <button
-              onClick={() => router.push('/treasure')}
+              onClick={() => router.replace('/treasure')}
               className="btn-teal w-full text-[15px]"
             >
               🎴 골목 빙고 펼치기 ▶

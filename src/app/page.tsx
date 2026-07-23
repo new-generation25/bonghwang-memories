@@ -178,7 +178,7 @@ export default function LandingPage() {
             <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 필수</li>
             <li>📼 다섯 거점 · 다섯 소원 · 숨겨진 B면 트랙</li>
             <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 테이프&rsquo;</li>
-            <li>🎟 거점 상점 쿠폰 + 2막 골목 빙고</li>
+            <li>🎟 골목 빙고 — 포인트와 아이템</li>
           </ul>
         )}
 

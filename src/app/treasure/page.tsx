@@ -5,7 +5,7 @@
  *
  * 다섯 소원 완료(phase=act2) 전에는 잠긴다 — 강제 해제 없음.
  * 대각선 5칸은 1막 소원(자동 완료), 나머지 20칸은 자유 탐험 셀.
- * 줄 판정은 실제 12줄(행·열·대각) 기준이며, 새 줄마다 쿠폰을 준다.
+ * 줄 판정은 실제 12줄(행·열·대각) 기준이며, 새 줄마다 포인트와 아이템을 준다.
  * 소영의 큐가 연결된 셀(분식점·벽화골목·봉황대)은 완료 시 한마디가 재생된다.
  */
 
@@ -20,7 +20,12 @@ import { BINGO_ALWAYS_OPEN } from '@/lib/tracks'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { markBingoCell, mutateTour, addCoupon } from '@/lib/tourState'
-import { award } from '@/lib/points'
+import {
+  POINT_TABLE,
+  POINTS_EVENT,
+  award,
+  localPointTotal,
+} from '@/lib/points'
 import { logEvent } from '@/lib/analytics'
 
 export default function BingoPage() {
@@ -48,7 +53,17 @@ export default function BingoPage() {
 
   const lines = useMemo(() => countLines(donePositions), [donePositions])
 
-  // 줄 수가 늘면 저장 + 새 줄마다 쿠폰·점수 (스펙: 줄 완성=쿠폰)
+  // 빙고판 상단에 누적 포인트를 띄운다. 칸을 채울 때마다 그 자리에서 올라가야
+  // 다음 칸으로 이어진다 — 점수를 보려고 다른 화면에 다녀오게 하면 끊긴다.
+  const [myPoints, setMyPoints] = useState(0)
+  useEffect(() => {
+    const sync = () => setMyPoints(localPointTotal())
+    sync()
+    window.addEventListener(POINTS_EVENT, sync)
+    return () => window.removeEventListener(POINTS_EVENT, sync)
+  }, [])
+
+  // 줄 수가 늘면 저장 + 새 줄마다 포인트·아이템
   useEffect(() => {
     if (lines > tour.bingo.lines) {
       for (let i = tour.bingo.lines + 1; i <= lines; i++) {
@@ -146,7 +161,10 @@ export default function BingoPage() {
             <span>
               발견 {act2Done} / 20 · 빙고 {lines}줄
             </span>
-            <span className="rec-dot">REC</span>
+            {/* 누적 포인트 — 여기서 다른 보너스 미션으로 이어지게 하는 고리다 */}
+            <span className="font-display text-[13px] text-cream">
+              {myPoints.toLocaleString()}P
+            </span>
           </div>
           <div className="tape-prog mt-2">
             <div className="reel spin">
@@ -216,13 +234,13 @@ export default function BingoPage() {
         <div className="card-paper mb-5 p-4 shadow-lg">
           <p className="text-[12px] leading-relaxed text-ink-60">
             골목을 걷다가 마음에 드는 곳을 발견하면 칸을 눌러 기록하세요.
-            가로·세로·대각선 5칸을 이으면 빙고 — 줄마다 상점 쿠폰을 드려요.
+            가로·세로·대각선 5칸을 이으면 빙고 — 빙고를 완성할 때마다
+            포인트 또는 아이템을 얻을 수 있어요.
           </p>
-          {tour.coupons.length > 0 && (
-            <p className="mt-2 font-mono-retro text-[11px] text-teal">
-              🎟 보유 쿠폰 {tour.coupons.length}장
-            </p>
-          )}
+          <p className="mt-2 font-mono-retro text-[11px] text-teal">
+            칸 하나 +{POINT_TABLE.bonusMission}P · 빙고 한 줄 +
+            {POINT_TABLE.treasureLine}P
+          </p>
         </div>
 
         {/* 투어 마치기 */}
