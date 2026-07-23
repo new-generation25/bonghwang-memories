@@ -28,6 +28,23 @@ interface CallScreenProps {
   /** 통화 종료 후 PLAY — 다음 단계로 */
   onAdvance: () => void
   advanceLabel: string
+  /** D9 — 15초가 지나 통화를 끊을 수 있는 상태 */
+  skippable?: boolean
+  /** 빨간 버튼 — 통화 끊기 */
+  onEndCall?: () => void
+}
+
+/**
+ * 통화 종료 아이콘 — 수화기.
+ * 뒤집는 회전은 .call-fab.end 쪽 CSS가 한다(발신 취소 버튼과 같은 규칙).
+ * 여기서 또 돌리면 두 번 돌아 엉뚱한 방향이 된다.
+ */
+function EndCallIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24c1.1.37 2.3.57 3.5.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.2.2 2.4.57 3.5a1 1 0 0 1-.25 1l-2.22 2.3z" />
+    </svg>
+  )
 }
 
 function formatClock(sec: number): string {
@@ -50,6 +67,8 @@ export default function CallScreen({
   onSkip,
   onAdvance,
   advanceLabel,
+  skippable = false,
+  onEndCall,
 }: CallScreenProps) {
   const lines = cue.subtitleLines
   // 문자 말풍선 — 직전 줄(흐림) + 현재 줄(강조) 2줄만
@@ -76,7 +95,7 @@ export default function CallScreen({
       {/*
         중앙 — 문자 말풍선으로 흐르는 자막 2줄.
         누르면 다음 줄로 건너뛴다(FF). 화면에서 가장 넓고 자연스럽게 눈이 가는
-        자리라, 아래의 작은 '다음 줄' 버튼보다 여기를 먼저 누른다.
+        자리라 설명 없이도 손이 간다 — 안내 문구는 두지 않는다.
       */}
       <div
         className="call-screen-body"
@@ -111,12 +130,6 @@ export default function CallScreen({
             {current.text}
           </div>
         )}
-
-        {!ended && onSkip && (
-          <p className="mt-3 text-center font-mono-retro text-[10px] text-cream/35">
-            화면을 누르면 다음 줄 ⏩
-          </p>
-        )}
       </div>
 
       {/* 하단 — 통화 중엔 파형만, 끝나면 카세트 컨트롤 바 */}
@@ -128,11 +141,9 @@ export default function CallScreen({
         )}
 
         {ended ? (
-          /* 음성이 끝나면 카세트 컨트롤 바가 올라온다 — PLAY를 눌러야 다음으로 */
+          /* 음성이 끝나면 카세트 컨트롤 바가 올라온다 — PLAY를 눌러야 다음으로.
+             키에 '동행 수락'이라 새겨져 있으니 위에 또 설명하지 않는다. */
           <div style={{ animation: 'slideUp 0.4s ease-out' }}>
-            <p className="mb-2 text-center font-mono-retro text-[10.5px] text-cream/60">
-              ▶ PLAY를 눌러 계속
-            </p>
             <DeckControls
               keys={[
                 { kind: 'rew', label: '다시듣기', onClick: onReplay, ariaLabel: '다시듣기' },
@@ -149,37 +160,45 @@ export default function CallScreen({
             />
           </div>
         ) : (
-          /* 통화 중에는 컨트롤 없이 파형만 — 탭 한 번으로 일시정지·재개 */
-          <button
-            type="button"
-            onClick={playing ? onPause : onResume}
-            className="w-full"
-            aria-label={playing ? '일시정지' : '재생'}
-          >
-            <span className={`call-live-wave${playing ? ' on' : ''}`} aria-hidden>
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-            </span>
-            <span className="mt-1 block text-center font-mono-retro text-[10.5px] text-cream/45">
-              {playing ? '통화 중 — 탭하면 잠시 멈춤' : '탭하면 이어서 듣기'}
-            </span>
-          </button>
-        )}
+          /*
+            통화 중 — 파형과 빨간 종료 버튼만. 실제 통화 화면이 그렇듯
+            글자는 두지 않는다. 파형이 움직이면 통화 중, 멈춰 있으면 정지다.
+          */
+          <div className="flex flex-col items-center">
+            <button
+              type="button"
+              onClick={playing ? onPause : onResume}
+              className="w-full"
+              aria-label={playing ? '일시정지' : '재생'}
+            >
+              <span className={`call-live-wave${playing ? ' on' : ''}`} aria-hidden>
+                <i />
+                <i />
+                <i />
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+            </button>
 
-        {/* 한 줄씩 빨리감기 — 마지막 문장에서는 통화가 끝난다 */}
-        {!ended && onSkip && (
-          <button
-            type="button"
-            onClick={onSkip}
-            className="mt-2 block w-full text-center font-mono-retro text-[11px] text-cream/40 underline underline-offset-4"
-          >
-            다음 줄 ⏩
-          </button>
+            {/*
+              통화 끊기 — 15초가 지나야 나타난다(D9).
+              그전에는 자리를 비워 둔다. 눌러도 안 되는 버튼을 보여주고
+              왜 안 되는지 설명하는 것보다, 될 때 나타나는 편이 깔끔하다.
+            */}
+            {skippable && onEndCall && (
+              <button
+                type="button"
+                onClick={onEndCall}
+                className="call-fab end mt-5"
+                aria-label="통화 종료"
+                style={{ animation: 'fadeIn 0.35s ease-out' }}
+              >
+                <EndCallIcon />
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
