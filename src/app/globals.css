@@ -435,6 +435,11 @@ a {
 }
 
 .reel {
+  /*
+    감긴 테이프의 양. 0이면 빈 릴, 1이면 가득.
+    공급 릴(왼쪽)은 1에서 0으로 풀리고, 감기 릴(오른쪽)은 0에서 1로 찬다.
+  */
+  --fill: 0.5;
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -451,6 +456,38 @@ a {
   background: repeating-conic-gradient(rgb(var(--bg-base)) 0 18deg, #b9b2a6 18deg 36deg);
 }
 
+/*
+ * 감긴 테이프.
+ *
+ * 릴이 도는 것만으로는 '돌아가는 원'이지 카세트가 아니다. 실제 카세트는
+ * 한쪽 뭉치가 얇아지는 만큼 다른 쪽이 두꺼워지고, 그 두께가 창 너머로
+ * 그대로 보인다 — 얼마나 남았는지를 숫자 없이 알려주는 것이 그 두께다.
+ *
+ * 안쪽 끝은 허브에 닿고(27%), 가득 차면 플랜지 바로 안까지 온다(8%).
+ * %로 두어 30px 릴과 22px 릴이 같은 비율로 감긴다.
+ *
+ * 결은 repeating-radial-gradient로 낸다 — 얇은 테이프가 겹겹이 감긴
+ * 동심원이다. 위에 얹은 conic 한 조각은 도는 것이 보이게 하는 빛이다.
+ * 뭉치가 두꺼워지면 살(::before)을 덮어 가리는데, 그러면 회전이 읽히지
+ * 않기 때문이다.
+ */
+.reel::after {
+  content: '';
+  position: absolute;
+  inset: calc(27% - 19% * var(--fill));
+  border-radius: 50%;
+  background:
+    conic-gradient(
+      from 0deg,
+      rgba(255, 255, 255, 0.14) 0 10deg,
+      transparent 10deg 360deg
+    ),
+    repeating-radial-gradient(circle, #241a12 0 1.5px, #3b2c1e 1.5px 3px);
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.55);
+  z-index: 1;
+  transition: inset 0.5s ease;
+}
+
 .reel .hub {
   position: absolute;
   inset: 8px;
@@ -460,6 +497,17 @@ a {
 }
 
 .spin { animation: spin 3.4s linear infinite; }
+
+/*
+ * 가득 감긴 릴은 천천히 돈다.
+ *
+ * 테이프가 지나가는 속도는 일정하므로, 뭉치가 두꺼울수록 한 바퀴에 더 긴
+ * 길이가 풀린다 — 그만큼 덜 돈다. 재생이 끝나갈 때 왼쪽이 빨라지고
+ * 오른쪽이 느려지는 그 장면이 카세트를 카세트로 보이게 한다.
+ */
+.reel.spin {
+  animation-duration: calc(2s + 2.9s * var(--fill));
+}
 
 @keyframes spin {
   to { transform: rotate(360deg); }

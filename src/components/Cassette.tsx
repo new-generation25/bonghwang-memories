@@ -85,14 +85,24 @@ export default function Cassette({
           <div className="num88">{year}</div>
         </div>
 
+        {/*
+          왼쪽은 공급 릴, 오른쪽은 감기 릴이다. 진행률만큼 한쪽이 풀리고
+          그만큼 다른 쪽에 감긴다 — 두 뭉치의 두께 합은 늘 같다.
+        */}
         <div className="win">
-          <div className={`reel${spin === 'left' || spin === 'both' ? ' spin' : ''}`}>
+          <div
+            className={`reel${spin === 'left' || spin === 'both' ? ' spin' : ''}`}
+            style={{ '--fill': 1 - clamped / 100 } as React.CSSProperties}
+          >
             <span className="hub" />
           </div>
           <div className="tamount">
             <i style={{ width: `${clamped}%` }} />
           </div>
-          <div className={`reel${spin === 'right' || spin === 'both' ? ' spin' : ''}`}>
+          <div
+            className={`reel${spin === 'right' || spin === 'both' ? ' spin' : ''}`}
+            style={{ '--fill': clamped / 100 } as React.CSSProperties}
+          >
             <span className="hub" />
           </div>
         </div>

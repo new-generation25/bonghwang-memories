@@ -185,14 +185,24 @@ export default function BingoPage() {
               {myPoints.toLocaleString()}P
             </span>
           </div>
+          {/*
+            채운 칸만큼 왼쪽에서 풀려 오른쪽에 감긴다. 둘 다 돈다 —
+            한쪽만 돌면 테이프가 어디로 가는지가 보이지 않는다.
+          */}
           <div className="tape-prog mt-2">
-            <div className="reel spin">
+            <div
+              className="reel spin"
+              style={{ '--fill': 1 - act2Done / 20 } as React.CSSProperties}
+            >
               <span className="hub" />
             </div>
             <div className="bar">
               <i style={{ width: `${(act2Done / 20) * 100}%` }} />
             </div>
-            <div className="reel">
+            <div
+              className="reel spin"
+              style={{ '--fill': act2Done / 20 } as React.CSSProperties}
+            >
               <span className="hub" />
             </div>
           </div>
