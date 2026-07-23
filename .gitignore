@@ -53,3 +53,7 @@ scripts/voices.json
 scripts/tts-once.mjs
 tts-out/
 *.sample.mp3
+
+# 효과음 원본 녹음 — 여기서 잘라 쓸 작업 파일이라 저장소에 두지 않는다.
+# 채택된 조각만 public/audio/sfx/에 커밋한다.
+public/audio/_raw/

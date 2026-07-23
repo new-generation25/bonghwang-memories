@@ -35,6 +35,8 @@ const audioToCache = CUE_AUDIO_NAMES.flatMap((name) => [
   '/audio/sfx/tape_hiss.mp3',
   '/audio/sfx/tape_stop.mp3',
   '/audio/sfx/call_ring.mp3',
+  // 데크 키음 — 오프라인에서도 버튼 피드백이 있어야 한다
+  '/audio/sfx/deck-key.wav',
   // M3 능소화 정적 프레임 (D11 폴백)
   '/images/neungsohwa-overlay.png'
 ]);

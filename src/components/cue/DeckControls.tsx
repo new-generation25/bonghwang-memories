@@ -10,7 +10,9 @@
 
 export type DeckKeyKind = 'rew' | 'play' | 'pause' | 'ff' | 'stop' | 'rec'
 
-import { playDeckKey } from '@/lib/sfx'
+import { useEffect } from 'react'
+
+import { playDeckKey, preloadDeckKey } from '@/lib/sfx'
 
 export interface DeckKeySpec {
   kind: DeckKeyKind
@@ -91,6 +93,12 @@ interface DeckControlsProps {
 }
 
 export default function DeckControls({ keys, className = '' }: DeckControlsProps) {
+  // 데크가 화면에 뜨는 순간 키음을 받아둔다. 첫 클릭에 소리가 늦으면
+  // 눌리지 않은 줄 알고 한 번 더 누르게 된다.
+  useEffect(() => {
+    preloadDeckKey()
+  }, [])
+
   return (
     <div className={`player-keys ${className}`}>
       {keys.map((spec, i) => {
