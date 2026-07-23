@@ -19,6 +19,7 @@ import CallScreen from '@/components/cue/CallScreen'
 import CuePlayer from '@/components/cue/CuePlayer'
 import DeckControls from '@/components/cue/DeckControls'
 import { useCue, useCueEvents } from '@/hooks/useCue'
+import { portraitFor } from '@/lib/cast'
 import { useTourHydrated, useTourState } from '@/hooks/useTourState'
 import {
   CUES,
@@ -50,6 +51,9 @@ const DIAL_MS = 6200
  * 잠깐 정적이 흐른 뒤에 쪽지를 꺼내드는 호흡을 준다.
  */
 const CALL_PROMPT_DELAY_MS = 1600
+
+/** 발신 화면에 띄울 소영의 얼굴 — 통화 화면(cast.ts)과 같은 그림이다 */
+const SOYOUNG_PORTRAIT = portraitFor({ speaker: 'soyoung' }) ?? ''
 
 /** 아이폰 통화 아이콘 — 수화기 실루엣 */
 function HandsetIcon() {
@@ -327,17 +331,19 @@ export default function IntroPage() {
             <p className="call-screen-number">{phoneNumber}</p>
             <h2 className="call-screen-name">소영</h2>
             <p className="call-screen-status">발신 중{dots}</p>
+            {/* 통화 화면과 같은 얼굴 — 걸 때와 받았을 때가 달라 보이면 안 된다 */}
             <div className="call-avatar mt-6">
-              <span>소</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={SOYOUNG_PORTRAIT} alt="" className="call-avatar-photo" />
               <span className="call-avatar-ring" aria-hidden />
             </div>
           </div>
 
-          <div className="call-screen-body items-center justify-center">
-            <p className="text-center font-mono-retro text-[12px] tracking-[0.18em] text-cream/45">
-              신호가 가고 있습니다
-            </p>
-          </div>
+          {/*
+            가운데는 비워 둔다. 위의 '발신 중…'이 이미 같은 말을 하고 있고,
+            실제 전화기도 발신 중에는 이름과 상태만 띄운다.
+          */}
+          <div className="call-screen-body" />
 
           <div className="call-screen-foot flex justify-center">
             <button
