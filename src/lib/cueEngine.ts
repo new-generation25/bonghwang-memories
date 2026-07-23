@@ -542,6 +542,24 @@ function runDirective(directive: UiDirective, cueId: CueId) {
 // -----------------------------------------------------------------------------
 
 /**
+ * 반 박자 두고 큐를 시작한다.
+ *
+ * 버튼을 누른 순간 소리가 나면, 화면이 아직 바뀌기 전이라 첫 문장이 이전
+ * 화면 위에서 들린다. 전화가 연결되기도 전에 소영이 말하고, 미션 카드가
+ * 아직 덮여 있는데 다음 대사가 시작된다. 카세트도 PLAY를 누르고 테이프가
+ * 헤드에 닿기까지 잠깐이 있다 — 그 사이가 '이제 시작한다'를 만든다.
+ *
+ * 세 진입점이 모두 이 함수를 지난다. 한 곳에만 넣었더니 거점 진입만
+ * 자연스럽고 전화·미션 완료·빙고는 그대로 튀어나왔다.
+ *
+ * unlockAudio()는 호출부에서 제스처 안에 이미 실행된다 — 재생만 미룬다.
+ * iOS는 한 번 풀린 요소의 뒤늦은 play()를 막지 않는다.
+ */
+function startCueSoon(cueId: CueId) {
+  window.setTimeout(() => void playCue(cueId), ENTRY_LEAD_MS)
+}
+
+/**
  * T1 — QR 스캔(또는 수동 코드) 성공. 사용자 제스처 문맥에서 호출됨.
  * 도착이 곧 현재 트랙의 기준 — user_tap:NEXT 매칭이 여기에 의존한다.
  */
@@ -554,14 +572,7 @@ export function dispatchQr(station: StationId): boolean {
     setCurrentTrack(st.track as 1 | 2 | 3 | 4 | 5)
     logEvent('track_arrived', { n: st.track })
   }
-  /*
-    반 박자 두고 시작한다.
-
-    QR을 찍자마자 소리가 나면 화면이 아직 거점 화면으로 바뀌기 전이라,
-    첫 문장이 이전 화면 위에서 들린다. 카세트도 PLAY를 누르고 테이프가
-    헤드에 닿기까지 잠깐이 있다 — 그 사이가 '이제 시작한다'를 만든다.
-  */
-  window.setTimeout(() => void playCue(cue.id), ENTRY_LEAD_MS)
+  startCueSoon(cue.id)
   return true
 }
 
@@ -573,7 +584,7 @@ export function dispatchAction(action: ActionId): boolean {
   }
   const cue = findCueByAction(action)
   if (!cue) return false
-  void playCue(cue.id)
+  startCueSoon(cue.id)
   return true
 }
 
@@ -587,7 +598,7 @@ export function dispatchTap(tap: TapId): boolean {
   }
   const cue = findCueByTap(tap, getTourState().currentTrack)
   if (!cue) return false
-  void playCue(cue.id)
+  startCueSoon(cue.id)
   return true
 }
 
