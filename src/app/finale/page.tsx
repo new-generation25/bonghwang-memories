@@ -18,6 +18,7 @@ import { ep2Discount, localPointTotal, POINTS_EVENT } from '@/lib/points'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlobUrl } from '@/lib/blobStore'
+import { saveCertificate } from '@/lib/certificate'
 import { S40_TEXT } from '@/lib/cues'
 import { TRACK_STATIONS } from '@/lib/tracks'
 import { formatElapsed, mutateTour } from '@/lib/tourState'
@@ -30,6 +31,7 @@ export default function FinalePage() {
   const [photoUrls, setPhotoUrls] = useState<{ track: number; url: string }[]>([])
   const [bsideVoiceUrl, setBsideVoiceUrl] = useState<string | null>(null)
   const [points, setPoints] = useState(0)
+  const [saving, setSaving] = useState(false)
   const ep2 = ep2Discount(points)
 
   // 설문에 응답하면 그 자리에서 200P가 붙는다 — 할인 문구도 같이 올라가야 한다
@@ -97,59 +99,27 @@ export default function FinalePage() {
   const elapsed = formatElapsed(tour.startTime)
   const bingoCount = tour.bingo.cellsDone.length
 
-  /** 우리의 테이프 저장 — 간단한 인증서 PNG 합성 */
+  /**
+   * 우리의 테이프 저장 — 합성은 certificate.ts가 전부 맡는다.
+   * 글꼴 로딩·이미지 로딩이 끝날 때까지 기다리므로 버튼을 잠가둔다.
+   */
   const handleSave = async () => {
-    logEvent('finale_saved')
     const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    canvas.width = 720
-    canvas.height = 960
-    // 배경
-    ctx.fillStyle = '#F3EAD3'
-    ctx.fillRect(0, 0, 720, 960)
-    // 스트라이프
-    const stripe = ['#F2B33D', '#E8722C', '#2E8A80']
-    stripe.forEach((c, i) => {
-      ctx.fillStyle = c
-      ctx.fillRect(0, 8 * i, 720, 8)
-    })
-    ctx.fillStyle = '#262422'
-    ctx.font = 'bold 40px "Black Han Sans", sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText('봉황 메모리즈 · 아버지의 믹스테이프', 360, 110)
-    ctx.font = '24px "Noto Sans KR", sans-serif'
-    ctx.fillText(S40_TEXT.title(serial), 360, 170)
-    ctx.fillText(S40_TEXT.journey(dateStr, 1), 360, 210)
-    ctx.fillText(S40_TEXT.stats(elapsed, bingoCount), 360, 250)
-    // 사진 몽타주 (최대 4장)
-    const imgs = photoUrls.slice(0, 4)
-    await Promise.all(
-      imgs.map(
-        (p, i) =>
-          new Promise<void>((resolve) => {
-            const img = new Image()
-            img.onload = () => {
-              const x = 60 + (i % 2) * 310
-              const y = 300 + Math.floor(i / 2) * 250
-              ctx.drawImage(img, x, y, 290, 230)
-              resolve()
-            }
-            img.onerror = () => resolve()
-            img.src = p.url
-          })
-      )
-    )
-    ctx.fillStyle = '#262422'
-    ctx.font = '26px "Nanum Pen Script", cursive'
-    ctx.fillText(S40_TEXT.closing, 360, 880)
-
-    const a = document.createElement('a')
-    a.href = canvas.toDataURL('image/png')
-    a.download = `bonghwang1988-tape-${serial}.png`
-    a.click()
+    if (!canvas || saving) return
+    logEvent('finale_saved')
+    setSaving(true)
+    try {
+      await saveCertificate(canvas, {
+        serial,
+        date: dateStr,
+        partySize: 1,
+        elapsed,
+        bingoCount,
+        photos: photoUrls,
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -260,8 +230,12 @@ export default function FinalePage() {
         )}
 
         {/* 액션 */}
-        <button onClick={handleSave} className="btn-teal mt-5 w-full text-[15px]">
-          {S40_TEXT.saveButton}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn-teal mt-5 w-full text-[15px] disabled:opacity-70"
+        >
+          {saving ? '테이프를 굽는 중…' : S40_TEXT.saveButton}
         </button>
         <button
           onClick={() => {
