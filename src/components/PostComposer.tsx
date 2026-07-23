@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPost, validateImage } from '@/lib/community'
+import { formatBytes, prepareImage } from '@/lib/imagePrep'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlob } from '@/lib/blobStore'
@@ -34,6 +35,10 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [error, setError] = useState('')
+  /** 사진을 줄이는 중 — 큰 사진은 한두 박자 걸린다 */
+  const [preparing, setPreparing] = useState(false)
+  /** 얼마나 줄었는지 알리는 한 줄 */
+  const [prepNote, setPrepNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [journeyOpen, setJourneyOpen] = useState(false)
   // 진행 중인 한정 미션 — 글을 그 미션으로 태그하면 캠페인 포인트가 붙는다
@@ -103,27 +108,46 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
     setJourneyOpen(false)
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = e.target.files?.[0]
     if (!picked) return
 
-    const imageError = validateImage(picked)
+    /*
+      먼저 줄인다. 폰 사진은 한 장에 3~8MB라 원본 그대로는 5MB 상한에
+      예사로 걸렸다 — 골목에서 찍은 사진을 올리려다 용량 이야기만 듣고
+      포기하게 된다. 줄이고 나서 검증하므로 대부분 그 문턱을 넘지 않는다.
+    */
+    setError('')
+    setPreparing(true)
+    let prepared
+    try {
+      prepared = await prepareImage(picked)
+    } finally {
+      setPreparing(false)
+    }
+
+    const imageError = validateImage(prepared.file)
     if (imageError) {
       setError(imageError)
       return
     }
 
-    setError('')
-    setFile(picked)
+    setFile(prepared.file)
+    setPrepNote(
+      prepared.resized
+        ? `사진을 ${formatBytes(prepared.originalBytes)} → ${formatBytes(prepared.file.size)}로 줄여 올립니다.`
+        : ''
+    )
     // 이전 미리보기 URL을 해제하지 않으면 메모리에 계속 남는다
     if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(URL.createObjectURL(picked))
+    setPreviewUrl(URL.createObjectURL(prepared.file))
   }
 
   const clearImage = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl('')
     setFile(null)
+    setPrepNote('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -250,10 +274,16 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
           </div>
         )}
 
+        {/*
+          HEIC을 함께 받는다. 아이폰 기본 촬영 형식이라 이것이 빠져 있으면
+          파일 앱에서 고를 때 사진이 회색으로 눌리지 않는다. 검증
+          (community.ts)과 저장 규칙(storage.rules)은 진작 허용하고 있었고
+          여기만 빠져 있었다. 어차피 prepareImage가 JPEG으로 다시 굽는다.
+        */}
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -262,6 +292,11 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
           <p className="mt-2 rounded-lg bg-rec/10 px-3 py-2 text-[11px] font-bold text-rec">
             {error}
           </p>
+        )}
+
+        {/* 왜 파일이 바뀌었는지 알린다 — 말없이 줄이면 원본이 사라진 줄 안다 */}
+        {prepNote && !error && (
+          <p className="mt-2 text-[11px] text-ink-60">{prepNote}</p>
         )}
 
         {/* 여정에서 가져오기 — 투어 산출물 공유 */}
@@ -333,9 +368,10 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="btn-outline flex-1 py-2.5 text-[12px]"
+              disabled={preparing}
+              className="btn-outline flex-1 py-2.5 text-[12px] disabled:opacity-60"
             >
-              📸 사진 첨부
+              {preparing ? '사진 준비 중…' : '📸 사진 첨부'}
             </button>
           ) : (
             <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-line px-2 py-2.5 text-center text-[11px] text-ink-60">
