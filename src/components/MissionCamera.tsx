@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { MediaFailure, openStream, closeStream } from '@/lib/media'
+import { playShutter } from '@/lib/sfx'
 import { useArOverlay } from '@/hooks/useArOverlay'
 
 interface MissionCameraProps {
@@ -122,6 +123,13 @@ export default function MissionCamera({ onCapture, onClose, overlaySrc }: Missio
   }, [initCamera, isMobile])
 
   const capturePhoto = () => {
+    /*
+      찰칵은 셔터를 누른 그 순간에 나야 한다. 아래 인코딩(toDataURL)이
+      끝난 뒤에 내면 큰 사진일수록 한 박자 늦어서, 눌린 것과 찍힌 것이
+      따로 논다. 실기기·모의 촬영 어느 쪽으로 가든 여기를 지난다.
+    */
+    playShutter()
+
     if (isMobile) {
       // Mobile: Use actual camera
       if (!videoRef.current || !canvasRef.current) return
