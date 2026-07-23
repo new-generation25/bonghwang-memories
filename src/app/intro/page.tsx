@@ -239,7 +239,7 @@ export default function IntroPage() {
 
           {/* 쪽지 앞면 (D3) — 마스킹테이프로 붙어 있는 실물 느낌 */}
           <div
-            className="note-paper mt-6 rounded-sm border border-line bg-cream px-5 py-4 shadow-sm"
+            className="note-paper mt-6 rounded-sm border px-5 py-4 shadow-sm"
             style={{ transform: 'rotate(-1.2deg)' }}
           >
             <p className="font-pen text-[19px] leading-relaxed text-ink">
@@ -274,7 +274,7 @@ export default function IntroPage() {
 
             {/* 쪽지 뒷면 (D3) — 전화번호. 뒤 2자리는 가린다 */}
             <div
-              className="note-paper mt-4 rounded-sm border border-line bg-cream px-5 py-4 text-center shadow-sm"
+              className="note-paper mt-4 rounded-sm border px-5 py-4 text-center shadow-sm"
               style={{ transform: 'rotate(0.8deg)' }}
             >
               <p className="font-pen text-[16px] text-ink-60">

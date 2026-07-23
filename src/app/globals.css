@@ -21,6 +21,15 @@
   --shell: 38 36 34;         /* #262422 셸 블랙 — 오브제·텍스트 */
   --rec-red: 217 58 43;      /* #D93A2B 넘버 레드 — REC 전용 */
 
+  /*
+    소영의 쪽지 전용 — 바랜 분홍 편지지.
+    P3 원색은 아니지만 쪽지는 이 세계에서 유일하게 '소영이 남긴 물건'이라
+    크림 일색인 화면에서 한눈에 구별돼야 한다. 채도를 낮춰 레트로 팔레트
+    안에 앉히고, 테두리는 조금 더 진한 같은 계열로 잡는다.
+  */
+  --note-pink: 248 226 226;      /* #F8E2E2 */
+  --note-pink-line: 226 186 186; /* #E2BABA */
+
   /* 중립 */
   --paper: 255 253 247;      /* #FFFDF7 */
   --line: 224 216 198;       /* #E0D8C6 */
@@ -1063,7 +1072,12 @@ video::-webkit-media-controls-start-playback-button {
 .deck-window {
   position: relative;
   width: 168px;
-  height: 69px;
+  /*
+    높이 69 → 78. 릴은 원래도 창 안에 다 들어와 있었지만, 창 아래쪽의
+    안쪽 그림자가 릴 바로 밑을 덮어 동그라미가 잘린 것처럼 보였다.
+    라벨 아랫단(창 기준 71.7px)까지 열어 릴과 창 사이에 여백을 준다.
+  */
+  height: 78px;
   border-radius: 5px;
   background: linear-gradient(#0d0b0a, #171413);
   /*
@@ -1526,6 +1540,10 @@ video::-webkit-media-controls-start-playback-button {
 /* 쪽지 실물 연출 — 상단 마스킹테이프 */
 .note-paper {
   position: relative;
+  /* 배경·테두리를 여기서 잡는다 — 호출부의 bg-cream/border-line보다
+     나중에 오는 규칙이라 유틸리티 클래스를 그대로 두고도 덮인다 */
+  background: rgb(var(--note-pink));
+  border-color: rgb(var(--note-pink-line));
 }
 
 .note-paper::before {
