@@ -508,24 +508,28 @@ a {
   transform-origin: top center;
 }
 
-/* 좁은 화면 축소 — 포스터 내부는 380×532 절대좌표라 폭을 줄이면 배치가 깨진다.
+/* 좁은 화면 축소 — 포스터 내부는 380×500 절대좌표라 폭을 줄이면 배치가 깨진다.
    그래서 통째로 scale하되, transform은 레이아웃 높이를 줄이지 않으므로
-   줄어든 만큼(532 × (1-배율))을 음수 margin으로 걷어낸다.
+   줄어든 만큼(500 × (1-배율))을 음수 margin으로 걷어낸다.
    이 보정이 없으면 좁은 기기일수록 포스터 아래 빈 공간이 생겨
    결제 버튼이 더 아래로 밀린다. */
 @media (max-width: 404px) {
-  .kv-stage { transform: scale(0.95); margin-bottom: -26.6px; }
+  .kv-stage { transform: scale(0.95); margin-bottom: -25px; }
 }
 @media (max-width: 384px) {
-  .kv-stage { transform: scale(0.9); margin-bottom: -53.2px; }
+  .kv-stage { transform: scale(0.9); margin-bottom: -50px; }
 }
 @media (max-width: 366px) {
-  .kv-stage { transform: scale(0.85); margin-bottom: -79.8px; }
+  .kv-stage { transform: scale(0.85); margin-bottom: -75px; }
 }
 
 .kv-poster {
   width: 380px;
-  aspect-ratio: 3 / 4.2;
+  /* 380 × 500. 슬로건이 끝나는 자리에서 곧바로 닫는다 —
+     이전 532px에서는 슬로건 아래에 쓰임새 없는 여백이 32px 남아
+     포스터가 헐거워 보이고 시작 버튼도 그만큼 아래로 밀렸다.
+     내부는 절대좌표라 높이를 바꾸면 아래 미디어쿼리 보정값도 함께 바뀐다. */
+  aspect-ratio: 380 / 500;
   border-radius: 8px;
   position: relative;
   overflow: hidden;
@@ -557,19 +561,18 @@ a {
   background: repeating-linear-gradient(180deg, transparent 0 22px, rgba(46, 138, 128, 0.06) 22px 24px);
 }
 
-/* 마스킹테이프 지역 태그 — 지역판 교체 지점 */
-.kv-poster .tape1 {
+/* 지역 표기 — 지역판 교체 지점.
+   마스킹테이프 형태였으나, 포스터 안에 이미 카세트라는 주인공 오브제가 있어
+   왼쪽 위의 기울어진 띠가 그와 시선을 다퉜다. 지금은 우상단에 얌전히 놓아
+   '어디 이야기인가'만 알리고 물러난다. */
+.kv-poster .region-tag {
   position: absolute;
-  top: 18px;
-  left: -14px;
-  background: rgb(var(--teal));
-  color: rgb(var(--cream));
+  top: 20px;
+  right: 24px;
+  color: rgb(var(--teal));
   font-weight: 900;
-  font-size: 12px;
-  padding: 6px 30px;
-  transform: rotate(-7deg);
-  letter-spacing: 0.22em;
-  box-shadow: 2px 3px 0 rgba(31, 98, 92, 0.35);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
 }
 
 /* 타이틀 — 티얼 글자 + 옐로 오프셋 그림자, 기울기 -6° 고정 */
@@ -604,10 +607,10 @@ a {
 
 .kv-poster .price-stick {
   position: absolute;
-  top: 210px;
-  right: 14px;
-  width: 82px;
-  height: 82px;
+  top: 214px;
+  right: 16px;
+  width: 66px;
+  height: 66px;
   background: rgb(var(--rec-red));
   border-radius: 50%;
   border: 3px dashed rgba(243, 234, 211, 0.75);
@@ -617,13 +620,13 @@ a {
   justify-content: center;
   color: rgb(var(--cream));
   font-weight: 900;
-  font-size: 11px;
+  font-size: 9px;
   transform: rotate(9deg);
   z-index: 6;
-  box-shadow: 0 6px 14px rgba(43, 36, 32, 0.28);
+  box-shadow: 0 5px 11px rgba(43, 36, 32, 0.28);
 }
 
-.kv-poster .price-stick b { font-size: 17px; }
+.kv-poster .price-stick b { font-size: 14px; }
 
 .kv-poster .cass-hold {
   position: absolute;
@@ -639,7 +642,7 @@ a {
 
 .kv-poster .slogan {
   position: absolute;
-  bottom: 64px;
+  bottom: 26px;
   left: 26px;
   right: 26px;
   font-weight: 900;

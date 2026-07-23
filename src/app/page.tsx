@@ -180,7 +180,8 @@ export default function LandingPage() {
           <div className="sun" />
           <div className="rays" />
 
-          <div className="tape1">BONGHWANG-DONG · GIMHAE</div>
+          {/* 지역 표기 — 우상단 (지역판 교체 지점) */}
+          <div className="region-tag">BONGHWANG-DONG · GIMHAE</div>
 
           <h1>
             BONGHWANG
@@ -201,7 +202,7 @@ export default function LandingPage() {
             <Cassette
               title="아버지의 믹스테이프"
               headLeft="LOCAL MEMORIES"
-              headRight="REC"
+              headRight="SIDE A"
               side="A"
               progress={70}
               spin="both"
@@ -246,20 +247,22 @@ export default function LandingPage() {
                 style={{ animation: 'guide-pull-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) both' }}
               >
                 <ul className="space-y-1.5 text-[12px] leading-relaxed text-ink">
-                  <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 필수</li>
-                  <li>📼 다섯 거점 · 다섯 소원 · 숨겨진 B면 트랙</li>
-                  <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 테이프&rsquo;</li>
-                  <li>🎟 골목 빙고 — 포인트와 아이템</li>
+                  <li>🎧 오디오 드라마 투어 약 90분 — 이어폰 사용 권장</li>
+                  <li>📼 다섯 개의 장소, 다섯 소원. 그리고 숨겨진 이야기</li>
+                  <li>📸 사진·녹음으로 완성하는 &lsquo;우리의 믹스테이프&rsquo;</li>
+                  <li>🎟 골목 곳곳을 다니며 빙고를 완성</li>
                 </ul>
 
-                {/* 무료·완주 리워드 비교 (브랜드 v2.1 §5) */}
+                {/* 무료·유료 비교 (브랜드 v2.1 §5).
+                    '완주 리워드'는 무엇을 사는지가 안 읽혀서 '유료'로 되돌리고,
+                    받는 시점은 항목 이름에 붙인다 — 결제 전에 알아야 할 조건이다. */}
                 <table className="mt-3 w-full border-t border-line pt-2 text-[11.5px] text-ink">
                   <thead>
                     <tr className="text-ink-60">
                       <th className="py-1 text-left font-normal">　</th>
                       <th className="py-1 text-center font-bold text-teal-dk">무료</th>
                       <th className="py-1 text-center font-bold text-teal-dk">
-                        완주 리워드
+                        유료
                       </th>
                     </tr>
                   </thead>
@@ -275,7 +278,7 @@ export default function LandingPage() {
                       <td className="py-1 text-center">○</td>
                     </tr>
                     <tr className="border-t border-line/60">
-                      <td className="py-1">골목 가게 쿠폰</td>
+                      <td className="py-1">골목 가게 쿠폰(완주시)</td>
                       <td className="py-1 text-center text-ink-60">—</td>
                       <td className="py-1 text-center font-bold">4,000원</td>
                     </tr>
@@ -328,7 +331,7 @@ export default function LandingPage() {
 
       {/*
         결제 CTA — 화면 하단 고정.
-        포스터가 532px 고정 높이라 흐름 배치로는 작은 기기에서 첫 화면 밖으로
+        포스터가 500px 고정 높이라 흐름 배치로는 작은 기기에서 첫 화면 밖으로
         밀린다(iPhone SE 기준 753px 지점). 이 화면은 유일한 전환 지점이고
         하단 탭바도 없어 겹칠 대상이 없다. 3색 밴드도 여기 함께 붙여
         다른 화면들과 같은 fixed 정책으로 맞춘다.
@@ -343,11 +346,9 @@ export default function LandingPage() {
             }}
           >
             <div className="mx-auto w-full max-w-[380px]">
-              {/* 전환 띠 — 무료로 걷되, 완주하면 무엇을 받는지 (브랜드 v2.1 §5) */}
-              <p className="mb-2 rounded-lg bg-sunset-yellow/25 px-3 py-1.5 text-center text-[11.5px] font-bold leading-snug text-shell">
-                완주하면 4,000원 쿠폰 + 완주 기념품
-              </p>
-
+              {/* 리워드 안내 띠는 뺐다 — 같은 내용을 '이용 안내' 팝업의 비교표가
+                  더 정확하게(무엇을·언제·얼마) 설명한다. 시작 버튼 바로 위에서
+                  금액을 먼저 보여주면 무료로 걷는다는 사실이 흐려진다. */}
               {resumeTarget ? (
                 <>
                   <button
