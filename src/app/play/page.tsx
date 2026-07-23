@@ -15,9 +15,24 @@ import Navigation from '@/components/Navigation'
 import QRGate from '@/components/QRGate'
 import { useProximityNotice } from '@/hooks/useProximityNotice'
 import { useTourState } from '@/hooks/useTourState'
-import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchQr } from '@/lib/cueEngine'
-import { BINGO_ALWAYS_OPEN, Station, TRACK_STATIONS, stationByTrack } from '@/lib/tracks'
+import { Station, TRACK_STATIONS, stationByTrack } from '@/lib/tracks'
+
+/**
+ * QR 표식 — 실물 QR을 축약한 모양.
+ * 이모지(📷)는 카메라를 뜻해서 '사진 찍기'로 읽힐 수 있다. 거점에 붙은
+ * 종이 QR과 같은 그림이어야 무엇을 찾아야 하는지 바로 안다.
+ */
+function QrIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      {/* 세 모서리의 찾기 표식 */}
+      <path d="M3 3h7v7H3V3zm2 2v3h3V5H5zM14 3h7v7h-7V3zm2 2v3h3V5h-3zM3 14h7v7H3v-7zm2 2v3h3v-3H5z" />
+      {/* 데이터 칸 몇 개 — 실물처럼 보이게 하는 최소한 */}
+      <path d="M14 14h2v2h-2v-2zm4 0h3v2h-3v-2zm-4 4h2v3h-2v-3zm4 1h3v2h-3v-2z" />
+    </svg>
+  )
+}
 
 export default function PlayerHomePage() {
   const tour = useTourState()
@@ -100,42 +115,44 @@ export default function PlayerHomePage() {
                       : '잠김'}
                 </p>
               </div>
+
+              {/*
+                지금 차례인 소원에만 QR 버튼이 붙는다.
+                화면 아래 큰 버튼 하나로 두면 '어느 거점의 QR인지'를 버튼
+                글자로 다시 설명해야 했다. 그 소원 옆에 있으면 설명이 필요 없다.
+              */}
+              {isNext && (
+                <button
+                  onClick={() => setShowScanner(true)}
+                  aria-label={`${station.name} 거점 QR 스캔`}
+                  /*
+                    실물 QR처럼 검정. 티얼은 이 앱의 구조색이라 앱바·탭·버튼이
+                    이미 쓰고 있어서, 여기까지 초록이면 '누르는 곳'이 아니라
+                    '또 하나의 장식'으로 묻힌다. 검정 QR은 거점에 붙은 실물과
+                    같은 그림이라 무엇을 찾아야 하는지도 같이 알려준다.
+                  */
+                  className="flex shrink-0 flex-col items-center gap-0.5 rounded-lg bg-shell px-2.5 py-1.5 text-cream active:scale-95"
+                >
+                  <QrIcon />
+                  <span className="font-mono-retro text-[9px] tracking-wider">
+                    SCAN
+                  </span>
+                </button>
+              )}
             </div>
           )
         })}
 
-        {/* 빙고 배지 — 5개 소원 완료 전 잠김 (BINGO_ALWAYS_OPEN이면 검수용 개방) */}
-        <div
-          className={`mt-4 rounded-xl border px-4 py-3 text-center ${
-            tour.bingo.unlocked || BINGO_ALWAYS_OPEN
-              ? 'border-sunset-yellow bg-sunset-yellow/15'
-              : 'border-line bg-paper/60'
-          }`}
-        >
-          {tour.bingo.unlocked || BINGO_ALWAYS_OPEN ? (
-            <button
-              onClick={() => router.push('/treasure')}
-              className="w-full font-display text-[14px] text-ink"
-            >
-              🎴 2막 — 골목 빙고 열기 ▶
-            </button>
-          ) : (
-            <p className="text-[12px] text-ink-60">🔒 {BINGO_LOCKED_MESSAGE}</p>
-          )}
-        </div>
+        {/*
+          빙고 진입 카드는 뺐다. 하단 탭에 '빙고'가 생기면서 같은 일을
+          두 곳에서 하게 됐고, 잠겼을 때의 안내도 탭 쪽이 더 정확하다
+          (눌러보면 무엇을 끝내야 열리는지 말해준다).
 
-        {/* 액션 */}
-        {nextStation && (
-          <button
-            onClick={() => setShowScanner(true)}
-            className="btn-teal mt-5 w-full text-[15px]"
-          >
-            📷 거점 QR 스캔 — {nextStation.name}
-          </button>
-        )}
+          QR 버튼도 여기 있던 것을 지웠다 — 지금 차례인 소원 옆으로 옮겼다.
+        */}
         <button
           onClick={() => router.push('/exploration')}
-          className="mt-2 w-full rounded-xl border border-line bg-paper py-3 text-[13px] text-ink"
+          className="mt-5 w-full rounded-xl border border-line bg-paper py-3 text-[13px] text-ink"
         >
           🗺 길 안내 지도 보기
         </button>
