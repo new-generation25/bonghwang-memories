@@ -187,8 +187,9 @@ export default function IntroPage() {
               <div className="deck-grille" aria-hidden />
               <div className="deck-door">
                 {/* 테이프를 아래로 내려 윗부분만 창에 걸치게 한다 —
-                    창(deck-door)의 overflow:hidden이 나머지를 잘라낸다 */}
-                <div style={{ marginTop: 16 }}>
+                    창(deck-door)의 overflow:hidden이 나머지를 잘라낸다.
+                    좌우 가운데 정렬은 .deck-door의 flex가 맡는다. */}
+                <div className="shrink-0" style={{ marginTop: 16 }}>
                   <Cassette
                     title="소영에게 — 1988. 9. 17."
                     headLeft=""
@@ -196,7 +197,7 @@ export default function IntroPage() {
                     side="A"
                     progress={12}
                     spin="none"
-                    scale={0.72}
+                    scale={0.68}
                   />
                 </div>
               </div>

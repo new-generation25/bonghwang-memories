@@ -1019,7 +1019,8 @@ video::-webkit-media-controls-start-playback-button {
 
 /* 스피커 그릴 — 촘촘한 타공 */
 .deck-grille {
-  flex: 0 0 34%;
+  /* 창을 넓히려고 그릴을 줄였다 — 실물도 스피커보다 테이프 창이 크다 */
+  flex: 0 0 27%;
   border-radius: 8px;
   background-color: #c3bfb8;
   background-image: radial-gradient(#6f6a63 1.1px, transparent 1.2px);
@@ -1034,6 +1035,10 @@ video::-webkit-media-controls-start-playback-button {
   height: 128px;
   border-radius: 9px;
   padding: 9px 8px 0;
+  /* 테이프를 창 한가운데 둔다. 예전에는 흐름 배치라 오른쪽으로 밀려
+     릴 바깥쪽이 잘렸다(창 207~417 / 테이프 242~458). */
+  display: flex;
+  justify-content: center;
   background: linear-gradient(#0d0b0a, #171413);
   box-shadow:
     inset 0 3px 10px rgba(0, 0, 0, 0.9),
