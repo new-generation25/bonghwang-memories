@@ -24,6 +24,7 @@ import {
   TourState,
   getTourState,
   mutateTour,
+  resetTour,
   subscribeTour,
 } from './tourState'
 
@@ -111,6 +112,31 @@ export function mergeTour(local: TourState, remote: Partial<SyncedTour>): Partia
 }
 
 /** 서버 기록을 받아 로컬에 병합한다. 로그인 직후 한 번 부른다. */
+const OWNER_KEY = 'bh_tour_owner_v1'
+
+/**
+ * 이 기기에 남은 기록이 누구 것인지 확정한다. pullTour 전에 부른다.
+ *
+ * 없으면 서버 기록에 로컬을 합치는데, 남이 쓰던 기기라면 그 사람의 진행도가
+ * 내 투어에 섞여 들어오고 그대로 내 서버 문서로 올라간다. 축제 현장에서
+ * 기기를 돌려 쓰면 실제로 일어난다.
+ *
+ * 주인이 없던 기록(로그인 전에 걸은 것)은 지금 로그인한 사람 것으로 본다 —
+ * 등록 없이 걷다가 나중에 로그인하는 흐름이 정상 경로다.
+ */
+export function claimTour(uid: string): void {
+  if (typeof window === 'undefined') return
+  const owner = window.localStorage.getItem(OWNER_KEY)
+  if (owner && owner !== uid) resetTour()
+  window.localStorage.setItem(OWNER_KEY, uid)
+}
+
+/** 로그아웃 등으로 기기를 비울 때 함께 지운다 */
+export function releaseTour(): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(OWNER_KEY)
+}
+
 export async function pullTour(uid: string): Promise<boolean> {
   if (!isFirebaseReady() || !db) return false
   try {

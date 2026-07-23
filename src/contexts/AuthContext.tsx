@@ -11,7 +11,14 @@ import {
 } from 'react'
 import { subscribeAuth, getProfile, signOutUser, Profile } from '@/lib/auth'
 import { auth, isFirebaseReady } from '@/lib/firebase'
-import { pullTour, pushTour, startTourSync, syncUserStats } from '@/lib/tourSync'
+import {
+  claimTour,
+  pullTour,
+  pushTour,
+  releaseTour,
+  startTourSync,
+  syncUserStats,
+} from '@/lib/tourSync'
 import { clearLocalPoints, flushPendingPoints } from '@/lib/points'
 import { resetTour } from '@/lib/tourState'
 
@@ -76,6 +83,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         // 서버 기록을 로컬과 병합한 뒤(기기 교체 대비) 이후 변경을 계속 올린다
         try {
+          // 남이 쓰던 기기면 그 기록을 먼저 비운다 — 안 그러면 남의 진행도가
+          // 내 투어에 섞여 서버로 올라간다
+          claimTour(user.uid)
           await pullTour(user.uid)
           await pushTour(user.uid)
           stopSyncRef.current = startTourSync(user.uid)
@@ -138,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (saved) {
       resetTour()
       clearLocalPoints()
+      releaseTour()
     }
     return saved
   }, [])

@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthModal from '@/components/AuthModal'
+import NicknameEditor from '@/components/NicknameEditor'
 import Cassette from '@/components/Cassette'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
@@ -23,6 +24,7 @@ export default function LandingPage() {
   const [showButton, setShowButton] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
+  const [showNickname, setShowNickname] = useState(false)
   const { profile, loading, available, logout } = useAuth()
   const tour = useTourState()
   const router = useRouter()
@@ -34,8 +36,19 @@ export default function LandingPage() {
     return () => clearTimeout(timer)
   }, [])
 
-  // 진행 중인 투어가 있으면 해당 지점으로 이어간다
+  /**
+   * 진행 중인 투어가 있으면 이어갈 지점.
+   *
+   * 계정에 로그인해야 내민다. 진행도의 원본은 서버이고 이 기기의 기록은
+   * 걷는 동안 신호가 끊겼을 때를 위한 임시 보관일 뿐이다. 로그인하지 않은
+   * 상태에서 남의 기록이나 지난 검수 기록으로 '이어서 걷기'가 뜨면
+   * 그게 누구 것인지 알 방법이 없다.
+   *
+   * 서버를 쓸 수 없는 환경(환경변수 미설정 등)에서는 기기 기록이 유일한
+   * 원본이라 그대로 쓴다 — 그때까지 막으면 투어 자체가 진행되지 않는다.
+   */
   const resumeTarget = (() => {
+    if (available && !profile) return null
     if (!tour.paid) return null
     switch (tour.phase) {
       case 'intro':
@@ -137,9 +150,14 @@ export default function LandingPage() {
         {!loading &&
           (profile ? (
             <div className="text-right">
-              <span className="text-[11px] font-bold text-teal-dk">
+              {/* 닉네임을 눌러 바꾼다 — 커뮤니티에 그대로 나가는 이름이라
+                  고칠 길이 있어야 한다 */}
+              <button
+                onClick={() => setShowNickname(true)}
+                className="text-[11px] font-bold text-teal-dk underline decoration-dotted underline-offset-2"
+              >
                 {profile.nickname} 기록자
-              </span>
+              </button>
               <button
                 onClick={handleLogout}
                 className="ml-2 font-mono-retro text-[9px] text-ink-60 underline"
@@ -292,9 +310,9 @@ export default function LandingPage() {
                   onClick={handleStart}
                   className="btn-teal w-full text-center text-[15px]"
                 >
-                  결제 완료(테스트) ▶
+                  시작하기 ▶
                   <small className="mt-0.5 block text-[10px] font-normal opacity-85">
-                    실제 결제 없이 바로 시작합니다
+                    실제 결제 없이 바로 시작합니다 (테스트)
                   </small>
                 </button>
               )}
@@ -303,6 +321,11 @@ export default function LandingPage() {
         )}
         <div className="stripe-band" />
       </div>
+
+      <NicknameEditor
+        isOpen={showNickname}
+        onClose={() => setShowNickname(false)}
+      />
 
       <AuthModal
         isOpen={showAuth}
