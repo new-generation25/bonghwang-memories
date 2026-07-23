@@ -10,6 +10,8 @@
 
 export type DeckKeyKind = 'rew' | 'play' | 'pause' | 'ff' | 'stop' | 'rec'
 
+import { playDeckKey } from '@/lib/sfx'
+
 export interface DeckKeySpec {
   kind: DeckKeyKind
   /** 키 각인 — 생략하면 kind의 기본 라벨 */
@@ -98,7 +100,12 @@ export default function DeckControls({ keys, className = '' }: DeckControlsProps
           <button
             key={`${spec.kind}-${i}`}
             type="button"
-            onClick={spec.onClick}
+            onClick={() => {
+              // 소리는 여기 한 곳에서만 낸다 — 각 호출부가 따로 챙기면
+              // 새 버튼이 생길 때마다 빠뜨린다
+              playDeckKey(spec.kind)
+              spec.onClick?.()
+            }}
             tabIndex={enabled ? undefined : -1}
             aria-hidden={enabled ? undefined : true}
             aria-label={spec.ariaLabel ?? spec.label ?? DEFAULT_LABEL[spec.kind]}
