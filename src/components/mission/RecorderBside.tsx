@@ -20,7 +20,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { submitOnCtrlEnter } from '@/lib/submitOnEnter'
 import { putBlob } from '@/lib/blobStore'
-import { dispatchAction } from '@/lib/cueEngine'
+import { dispatchAction, getCueState } from '@/lib/cueEngine'
+import { playRecStart, playRecStop } from '@/lib/sfx'
 import { logEvent } from '@/lib/analytics'
 import { auth, storage } from '@/lib/firebase'
 import { openStream } from '@/lib/media'
@@ -132,7 +133,19 @@ export default function RecorderBside() {
         stream.getTracks().forEach((t) => t.stop())
         void audioCtx.close().catch(() => {})
         setRecording(false)
+        /*
+          정지음은 마이크를 닫은 뒤에 낸다 — 먼저 내면 녹음 끝머리에 신호음이
+          그대로 담긴다. 60초 상한으로 저절로 끝날 때도 여기를 지나므로,
+          손을 대지 않아도 끝났다는 걸 알 수 있다.
+        */
+        playRecStop()
       }
+
+      /*
+        신호음은 소영의 말이 끝난 뒤에만 낸다 — 미션 카드는 큐가 재생되는
+        중에도 떠 있어서, 확인 없이 내면 대사 위에 겹친다.
+      */
+      if (!getCueState().playing) playRecStart()
 
       setRecordedBlob(null)
       setElapsed(0)

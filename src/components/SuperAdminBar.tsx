@@ -25,12 +25,16 @@ import {
 } from '@/lib/superAdmin'
 import { STATIONS } from '@/lib/tracks'
 import {
+  addCoupon,
   awardFragment,
   completeTrack,
+  getTourState,
   mutateTour,
   restartTour,
   setCurrentTrack,
 } from '@/lib/tourState'
+import { couponForTrack } from '@/lib/coupons'
+import { award } from '@/lib/points'
 import type { FragmentId } from '@/lib/cues'
 
 /** 거점 다섯 — 넘버링은 카세트 라벨과 같은 A면 표기를 쓴다 */
@@ -79,14 +83,29 @@ export default function SuperAdminBar() {
   /**
    * 그 거점까지 걸어온 것으로 친다.
    *
+   * 실제 완주가 주는 것을 빠짐없이 넣는다 — 완료 표시 · 조각 · 쿠폰 ·
+   * 포인트. 처음에는 완료 표시와 조각만 넣었는데, 그러면 쿠폰함이 비고
+   * 포인트가 0이라 인증서와 랭킹이 실제와 다른 숫자를 보여줬다. 절반만
+   * 찬 상태로 시험하면 "인증서에 쿠폰이 왜 없지" 같은 헛다리를 짚는다.
+   *
+   * 주는 것들은 cueEngine의 runDirective가 큐 종료 때 하는 일과 같다
+   * (fragment_award · coupon · track_check). 값을 여기 다시 적지 않고
+   * 같은 출처(couponForTrack)를 쓴다 — 쿠폰이 바뀌면 함께 바뀐다.
+   *
    * 조각은 트랙 1~4에서만 나온다(FragmentId가 넷). 트랙 5는 B면 편지로
    * 이어지는 자리라 조각을 주지 않는다 — 없는 조각을 만들어 넣으면
    * 피날레에서 개수가 맞지 않는다.
    */
   const completeUpTo = (track: number) => {
     for (let t = 1; t <= track; t++) {
+      // 점수는 최초 완료에만 — 두 번 눌러도 중복 적립되지 않는다
+      if (!getTourState().tracksCompleted.includes(t)) {
+        void award(`main-${t}`, 'mainMission')
+      }
       completeTrack(t)
       if (t <= 4) awardFragment(`frag_${t}` as FragmentId)
+      const coupon = couponForTrack(t)
+      if (coupon) addCoupon(coupon)
     }
     setCurrentTrack(track as 1 | 2 | 3 | 4 | 5)
     setOpen(false)
@@ -132,7 +151,10 @@ export default function SuperAdminBar() {
               ))}
             </Row>
 
-            <Row label="여기까지 완료 처리" hint="조각과 완료 표시를 함께 넣습니다">
+            <Row
+              label="여기까지 완료 처리"
+              hint="조각 · 쿠폰 · 포인트까지 실제 완주와 같게 채웁니다"
+            >
               {TRACKS.map((t) => (
                 <Key key={t} onClick={() => completeUpTo(t)}>
                   ~A{t}
@@ -140,7 +162,27 @@ export default function SuperAdminBar() {
               ))}
             </Row>
 
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            {/*
+              인트로로 돌아가는 길.
+
+              인트로는 테이프를 듣고 전화를 거는 첫 10분인데, 한 번 지나면
+              다시 볼 방법이 '처음부터 다시'뿐이었다. 그건 진행을 통째로
+              지우므로 인트로 한 곳만 고칠 때는 쓸 수 없다.
+
+              진행은 건드리지 않고 화면만 연다 — 인트로를 끝까지 보면
+              phase가 다시 act1로 정리된다.
+            */}
+            <button
+              onClick={() => {
+                setOpen(false)
+                router.push('/intro')
+              }}
+              className="mt-3 w-full rounded-lg border border-line bg-cream py-2 text-[12px] font-bold text-ink"
+            >
+              ▶ 인트로 다시 보기 — 테이프 · 전화
+            </button>
+
+            <div className="mt-2 grid grid-cols-2 gap-2">
               <button
                 onClick={openBingo}
                 className="rounded-lg border border-line bg-cream py-2 text-[12px] font-bold text-ink"

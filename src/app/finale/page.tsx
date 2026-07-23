@@ -19,6 +19,7 @@ import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlobUrl } from '@/lib/blobStore'
 import { saveCertificate } from '@/lib/certificate'
+import { playStamp } from '@/lib/sfx'
 import { S40_TEXT } from '@/lib/cues'
 import { TRACK_STATIONS } from '@/lib/tracks'
 import { formatElapsed, mutateTour } from '@/lib/tourState'
@@ -107,6 +108,11 @@ export default function FinalePage() {
     const canvas = canvasRef.current
     if (!canvas || saving) return
     logEvent('finale_saved')
+    /*
+      도장 소리는 누른 그 자리에서 낸다. 합성이 끝난 뒤로 미루면 기기에 따라
+      1초 넘게 걸려서, 소리가 버튼과 상관없는 것처럼 들린다.
+    */
+    playStamp()
     setSaving(true)
     try {
       await saveCertificate(canvas, {

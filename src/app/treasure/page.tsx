@@ -19,6 +19,7 @@ import { BoardCell, buildBoard, countLines } from '@/lib/bingoCells'
 import { bingoOpen, useSuperAdmin } from '@/lib/superAdmin'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
+import { playBingoLine } from '@/lib/sfx'
 import { markBingoCell, mutateTour, addCoupon } from '@/lib/tourState'
 import {
   POINT_TABLE,
@@ -74,6 +75,11 @@ export default function BingoPage() {
         logEvent('bingo_line', { n: i })
       }
       mutateTour((prev) => ({ bingo: { ...prev.bingo, lines } }))
+      /*
+        여러 줄이 한꺼번에 완성돼도 한 번만 낸다 — 같은 소리를 겹쳐 내면
+        줄 수가 아니라 잡음으로 들린다. 몇 줄인지는 화면 숫자가 말한다.
+      */
+      playBingoLine()
     }
   }, [lines, tour.bingo.lines])
 

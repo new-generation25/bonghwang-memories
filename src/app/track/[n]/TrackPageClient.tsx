@@ -247,6 +247,9 @@ export default function TrackPageClient({ n }: { n: number }) {
     }
   }
 
+  /** 한 번만 만들어 둔다 — 그릴 것이 있는지 판단하는 데도 같은 값을 쓴다 */
+  const interactionNode = renderInteraction()
+
   return (
     /* pb-28 — 화면 아래에 못박은 데크(.deck-dock)에 내용이 가리지 않을 만큼 */
     <div className="flex min-h-screen flex-col bg-cream-base px-4 pb-28 pt-5">
@@ -357,13 +360,21 @@ export default function TrackPageClient({ n }: { n: number }) {
         바탕을 눌러도 닫히지 않는다. 미션은 건너뛰는 것이 아니라 해야
         다음으로 넘어가는 것이라, 실수로 닫히면 되돌릴 길이 없다.
       */}
-      {interaction && (
+      {/*
+        그릴 것이 있을 때만 덮는다.
+
+        resume·bingo 단계는 화면에 아무것도 그리지 않는다 — 그 일은 데크의
+        PLAY 키가 맡거나(deckAction) 잠시 뒤 빙고 화면으로 넘어간다. 그런데
+        interaction이 있다는 것만 보고 막을 깔았더니, 보이지 않는 전체화면
+        막이 데크를 포함한 모든 탭을 삼켜 화면이 멈춘 것처럼 됐다.
+      */}
+      {interactionNode && (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-shell/55 px-4 pb-4">
           <div
             className="max-h-[82vh] w-full max-w-[380px] overflow-y-auto"
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
-            {renderInteraction()}
+            {interactionNode}
           </div>
         </div>
       )}

@@ -190,6 +190,75 @@ function fallbackClick(ac: AudioContext, kind: SfxKind) {
 }
 
 /**
+ * 길게 끄는 저역 노이즈 — 통이 울리는 성분.
+ *
+ * clack은 0.035초로 고정이라 '탁' 이상은 만들지 못한다. 도장처럼 무게가
+ * 남아야 하는 소리는 여운이 있어야 해서 길이를 받는 쪽을 따로 둔다.
+ * 밴드패스 대신 로우패스를 쓴다 — 좁은 대역만 남기면 통울림이 아니라
+ * 삐 하는 음정으로 들린다.
+ */
+function lowNoise(
+  ac: AudioContext,
+  at: number,
+  cutoff: number,
+  gain: number,
+  dur: number
+) {
+  const len = Math.floor(ac.sampleRate * dur)
+  const buf = ac.createBuffer(1, len, ac.sampleRate)
+  const data = buf.getChannelData(0)
+  for (let i = 0; i < len; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2)
+  }
+  const src = ac.createBufferSource()
+  src.buffer = buf
+
+  const lp = ac.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.frequency.value = cutoff
+
+  const g = ac.createGain()
+  g.gain.value = gain
+
+  src.connect(lp).connect(g).connect(ac.destination)
+  src.start(at)
+  src.stop(at + dur + 0.02)
+}
+
+/**
+ * 음정이 있는 짧은 신호음.
+ *
+ * 노이즈로는 '확인됐다'·'한 줄 됐다' 같은 뜻을 못 만든다 — 사람은 올라가는
+ * 음에서 성공을 읽는다. 그래서 여기만 오실레이터를 쓴다.
+ *
+ * 삼각파를 기본으로 둔다. 사인파는 스피커가 작은 휴대폰에서 거의 안 들리고,
+ * 사각파는 같은 크기에서도 귀를 찌른다.
+ *
+ * 시작과 끝을 램프로 감싼다. 값을 그냥 0으로 떨구면 파형이 잘려 '틱' 하는
+ * 잡음이 붙는다.
+ */
+function tone(
+  ac: AudioContext,
+  at: number,
+  freq: number,
+  gain: number,
+  dur: number
+) {
+  const osc = ac.createOscillator()
+  osc.type = 'triangle'
+  osc.frequency.value = freq
+
+  const g = ac.createGain()
+  g.gain.setValueAtTime(0.0001, at)
+  g.gain.exponentialRampToValueAtTime(gain, at + 0.008)
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur)
+
+  osc.connect(g).connect(ac.destination)
+  osc.start(at)
+  osc.stop(at + dur + 0.02)
+}
+
+/**
  * 셔터 — 사진을 찍는 순간의 '찰칵'.
  *
  * 녹음 조각을 쓰지 않고 합성한다. 데크 키는 화면의 주인공이라 진짜 기구
@@ -212,6 +281,172 @@ export function playShutter(): void {
     clack(ac, now, 5200, 0.34) // 막이 열린다 — 짧고 밝게
     clack(ac, now + 0.055, 3400, 0.2) // 닫힌다 — 조금 낮게
     clack(ac, now + 0.078, 1500, 0.09) // 기구가 돌아가는 여운
+  } catch {
+    /* 소리는 부가 기능이다 */
+  }
+}
+
+/**
+ * 카세트 뒤집기 — 뚜껑을 열고, 테이프를 돌려 끼우고, 닫는다.
+ *
+ * 이 소리는 한 번의 '탁'이 아니라 사람이 손으로 하는 세 동작이다. 붙여서
+ * 내면 그냥 두꺼운 클릭이 되고, B면으로 넘어갔다는 느낌이 남지 않는다.
+ * 그래서 가운데에 정적을 둔다 — 손이 움직이는 시간이 있어야 기구가 아니라
+ * 사람이 뒤집은 것처럼 들린다.
+ *
+ *  1) 뚜껑이 젖혀지는 '탁' — 가장 밝고 크다
+ *  2) 0.18초 정적 — 테이프를 돌려 쥐는 사이
+ *  3) 케이스 홈을 긁으며 들어가는 '드르륵' — 짧은 노이즈 다섯 조각.
+ *     간격을 일정하게 두면 기계 소리가 되므로 조금씩 흔든다.
+ *  4) 걸쇠가 물리는 '탁' + 통이 울리는 여운
+ */
+export function playCassetteFlip(): void {
+  if (isSfxMuted()) return
+  const ac = audioContext()
+  if (!ac) return
+  try {
+    const now = ac.currentTime
+    clack(ac, now, 2900, 0.32) // 뚜껑
+    clack(ac, now + 0.03, 1400, 0.12) // 뚜껑이 끝까지 젖혀지며 부딪는 소리
+
+    // 드르륵 — 간격이 조금씩 다른 다섯 조각
+    const drag = now + 0.21
+    for (let i = 0; i < 5; i++) {
+      clack(ac, drag + i * 0.026 + Math.random() * 0.008, 1700 + i * 120, 0.075)
+    }
+
+    const seat = drag + 0.16
+    clack(ac, seat, 2200, 0.26) // 걸쇠
+    lowNoise(ac, seat, 420, 0.2, 0.14) // 케이스가 울리는 여운
+  } catch {
+    /* 소리는 부가 기능이다 */
+  }
+}
+
+/**
+ * QR 인식 성공 — 스캐너의 '삑'.
+ *
+ * 마트 계산대에서 배운 소리다. 하나뿐이고, 짧고, 높다. 두 번 내면 확인이
+ * 아니라 안내처럼 들려서 그다음을 기다리게 된다.
+ *
+ * 앞에 아주 작은 노이즈를 붙인다 — 순수한 음만 내면 어디서 시작했는지
+ * 모르게 스르륵 들어와서, 찍힌 순간과 소리가 어긋난 것처럼 느껴진다.
+ */
+export function playQrOk(): void {
+  if (isSfxMuted()) return
+  const ac = audioContext()
+  if (!ac) return
+  try {
+    const now = ac.currentTime
+    clack(ac, now, 4200, 0.08) // 시작점을 만드는 아주 짧은 잡음
+    tone(ac, now, 2100, 0.16, 0.075)
+  } catch {
+    /* 소리는 부가 기능이다 */
+  }
+}
+
+/**
+ * 빙고 한 줄 완성.
+ *
+ * 칸 하나를 채울 때보다 확실히 커야 한다. 같은 크기로 내면 줄이 됐는지
+ * 화면을 다시 봐야 알 수 있다.
+ *
+ * 세 음을 올린다(솔–도–미). 마지막 음만 조금 길게 끌어 끝맺음을 준다 —
+ * 셋 다 같은 길이면 아직 더 올라갈 것처럼 들려 끊긴 느낌이 된다.
+ */
+export function playBingoLine(): void {
+  if (isSfxMuted()) return
+  const ac = audioContext()
+  if (!ac) return
+  try {
+    const now = ac.currentTime
+    clack(ac, now, 3000, 0.1) // 첫 음의 머리를 세운다
+    tone(ac, now, 784, 0.2, 0.1) // 솔
+    tone(ac, now + 0.09, 1046, 0.2, 0.1) // 도
+    tone(ac, now + 0.18, 1318, 0.22, 0.26) // 미 — 여기서 끝난다
+  } catch {
+    /* 소리는 부가 기능이다 */
+  }
+}
+
+/**
+ * 포인트 적립 — 작은 '띵'.
+ *
+ * 걷는 중에 자주 뜨는 알림이라 존재만 알리면 된다. 빙고 줄 소리와 같은
+ * 음계를 쓰되 한 음이고 훨씬 작다 — 크게 만들면 몇 번 만에 성가셔진다.
+ */
+export function playPoint(): void {
+  if (isSfxMuted()) return
+  const ac = audioContext()
+  if (!ac) return
+  try {
+    const now = ac.currentTime
+    tone(ac, now, 1568, 0.12, 0.16)
+  } catch {
+    /* 소리는 부가 기능이다 */
+  }
+}
+
+/**
+ * 녹음 시작 신호 — 자동응답기의 '삐-삐'.
+ *
+ * 두 번 내는 데는 이유가 있다. 한 번이면 눌렸다는 뜻밖에 안 되지만, 두 번은
+ * '이제부터 말하세요'가 된다. 육십 초를 혼자 말해야 하는 화면이라 그 신호가
+ * 필요하다.
+ *
+ * 짧고 작게 둔다 — 이 소리는 스피커로 나가는 동안 마이크에 함께 담긴다.
+ * 길게 끌면 녹음 앞머리에 신호음이 그대로 남는다.
+ */
+export function playRecStart(): void {
+  if (isSfxMuted()) return
+  const ac = audioContext()
+  if (!ac) return
+  try {
+    const now = ac.currentTime
+    tone(ac, now, 880, 0.14, 0.07)
+    tone(ac, now + 0.13, 880, 0.14, 0.07)
+  } catch {
+    /* 소리는 부가 기능이다 */
+  }
+}
+
+/**
+ * 녹음 정지 — 한 번, 낮게.
+ *
+ * 시작보다 낮은 음이어야 끝났다고 들린다. 같은 음을 한 번만 내면 시작
+ * 신호를 덜 낸 것처럼 느껴져 계속 말하게 된다.
+ */
+export function playRecStop(): void {
+  if (isSfxMuted()) return
+  const ac = audioContext()
+  if (!ac) return
+  try {
+    const now = ac.currentTime
+    tone(ac, now, 523, 0.14, 0.16)
+  } catch {
+    /* 소리는 부가 기능이다 */
+  }
+}
+
+/**
+ * 완주 도장 — 종이에 눌러 찍는 '쿵'.
+ *
+ * 세 겹이다. 고무가 종이에 닿는 짧고 마른 소리, 그 아래 책상이 울리는
+ * 저역, 그리고 도장을 떼는 작은 소리. 저역만 내면 북이 되고, 고역만 내면
+ * 그냥 딸깍이라 무게가 없다.
+ *
+ * 여운을 0.26초까지 끈다 — 이 앱에서 가장 긴 효과음이다. 마지막 한 번이라
+ * 여기서만 그럴 값이 있다.
+ */
+export function playStamp(): void {
+  if (isSfxMuted()) return
+  const ac = audioContext()
+  if (!ac) return
+  try {
+    const now = ac.currentTime
+    clack(ac, now, 1200, 0.22) // 고무가 종이를 때린다
+    lowNoise(ac, now, 180, 0.5, 0.26) // 책상이 울린다
+    clack(ac, now + 0.11, 2400, 0.07) // 도장을 뗀다
   } catch {
     /* 소리는 부가 기능이다 */
   }

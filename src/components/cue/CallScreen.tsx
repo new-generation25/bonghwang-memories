@@ -117,6 +117,34 @@ export default function CallScreen({
           )}
           {playing && <span className="call-avatar-ring" aria-hidden />}
         </div>
+
+        {/*
+          파형은 얼굴 바로 아래에 둔다.
+
+          전에는 화면 맨 아래 종료 버튼 위에 있었다. 소리가 나오는 곳은
+          상대의 얼굴인데 파형은 반대쪽 끝에서 흔들려서, 목소리와 그림이
+          한 사람으로 묶이지 않았다. 얼굴 밑에 붙으면 그 사람이 지금
+          말하고 있다는 표시가 된다.
+
+          누르면 멈춘다 — 실제 통화 화면처럼 글자는 두지 않는다.
+          파형이 움직이면 통화 중, 멈춰 있으면 정지다.
+        */}
+        <button
+          type="button"
+          onClick={playing ? onPause : onResume}
+          className="mt-4 w-full"
+          aria-label={playing ? '일시정지' : '재생'}
+        >
+          <span className={`call-live-wave${playing ? ' on' : ''}`} aria-hidden>
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+        </button>
       </div>
 
       {/*
@@ -196,27 +224,10 @@ export default function CallScreen({
           </div>
         ) : (
           /*
-            통화 중 — 파형과 빨간 종료 버튼만. 실제 통화 화면이 그렇듯
-            글자는 두지 않는다. 파형이 움직이면 통화 중, 멈춰 있으면 정지다.
+            통화 중 — 빨간 종료 버튼만. 파형은 얼굴 아래로 올렸다.
+            실제 통화 화면이 그렇듯 글자는 두지 않는다.
           */
           <div className="flex flex-col items-center">
-            <button
-              type="button"
-              onClick={playing ? onPause : onResume}
-              className="w-full"
-              aria-label={playing ? '일시정지' : '재생'}
-            >
-              <span className={`call-live-wave${playing ? ' on' : ''}`} aria-hidden>
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-              </span>
-            </button>
-
             {/*
               통화 끊기 — 15초가 지나야 나타난다(D9).
               그전에는 자리를 비워 둔다. 눌러도 안 되는 버튼을 보여주고

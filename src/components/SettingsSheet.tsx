@@ -20,6 +20,7 @@ import {
   setSuperAdmin,
   superAdminSwitch,
 } from '@/lib/superAdmin'
+import { isSfxMuted, playDeckKey, setSfxMuted } from '@/lib/sfx'
 import NicknameEditor from '@/components/NicknameEditor'
 
 interface SettingsSheetProps {
@@ -34,10 +35,14 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [superOn, setSuperOn] = useState(false)
+  const [sfxOn, setSfxOn] = useState(true)
 
   // 시트가 열릴 때 저장값을 읽는다 — 첫 그림에 읽으면 서버 렌더와 어긋난다
   useEffect(() => {
-    if (isOpen) setSuperOn(superAdminSwitch())
+    if (isOpen) {
+      setSuperOn(superAdminSwitch())
+      setSfxOn(!isSfxMuted())
+    }
   }, [isOpen])
 
   if (!isOpen) return null
@@ -116,6 +121,46 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
                   </span>
                 </button>
               )}
+
+              {/*
+                효과음 켬/끔 — 모두에게 보인다.
+
+                끄는 길이 코드에만 있고 화면에는 없었다. 조용해야 하는 자리에
+                있는 사람은 앱을 덮어두는 것 말고는 방법이 없었다.
+                끄는 것은 딸깍·삑 같은 조작음까지다. 소영의 목소리와 아버지의
+                테이프는 이 스위치와 무관하다 — 그건 이야기라서 끄면 진행이
+                끊긴다.
+
+                켜는 쪽으로 바꿀 때만 소리를 낸다. 어떤 소리가 돌아왔는지
+                그 자리에서 들려줘야 스위치를 믿을 수 있다.
+              */}
+              <button
+                onClick={() => {
+                  const next = !sfxOn
+                  setSfxOn(next)
+                  setSfxMuted(!next)
+                  if (next) playDeckKey('play')
+                }}
+                className="flex w-full items-center justify-between rounded-xl border border-line bg-cream px-4 py-3 text-left"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-bold text-ink">
+                    🔊 효과음
+                  </span>
+                  <span className="block text-[11px] text-ink-60">
+                    {sfxOn
+                      ? '버튼·확인음이 들립니다'
+                      : '조작음만 꺼집니다 (이야기 소리는 그대로)'}
+                  </span>
+                </span>
+                <span
+                  className={`ml-3 shrink-0 rounded-lg px-2.5 py-1 font-mono-retro text-[10.5px] tracking-wider ${
+                    sfxOn ? 'bg-teal text-cream' : 'bg-cream-dp text-ink-60'
+                  }`}
+                >
+                  {sfxOn ? 'ON' : 'OFF'}
+                </span>
+              </button>
 
               {/* 관리자 전용 — 참여자에게는 항목이 아예 보이지 않는다 */}
               {isAdminUser() && (

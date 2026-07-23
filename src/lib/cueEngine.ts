@@ -36,6 +36,7 @@ import { timingsFor } from './audioTimings'
 import { canSkipCueNow } from './superAdmin'
 import { STATIONS } from './tracks'
 import { award } from './points'
+import { playCassetteFlip } from './sfx'
 import { logEvent } from './analytics'
 
 /** D9 — 스킵 허용 시점(초) */
@@ -515,6 +516,15 @@ function runDirective(directive: UiDirective, cueId: CueId) {
     completeTrack(track)
   } else if (directive === 'speech_mode:casual') {
     mutateTour({ speechMode: 'casual' })
+  } else if (directive === 'cassette_flip') {
+    /*
+      뒤집는 소리는 여기서 낸다.
+
+      지시자는 큐가 끝난 뒤에 실행되므로(finishCue) 대사 위에 겹치지 않는다.
+      화면 쪽에서 내면 이 이벤트를 받는 컴포넌트가 붙어 있을 때만 들리는데,
+      B면 안내는 트랙 5 화면 구성에 따라 늦게 마운트될 수 있다.
+    */
+    playCassetteFlip()
   } else if (directive === 'phase:act2') {
     // 재실행(다시듣기) 시 중복 계측 방지
     if (getTourState().phase !== 'act2') logEvent('act2_entered')

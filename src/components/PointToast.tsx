@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from 'react'
 import { PointEntry, POINTS_EVENT, REASON_LABEL } from '@/lib/points'
+import { playPoint } from '@/lib/sfx'
 
 interface Toast extends PointEntry {
   key: string
@@ -26,6 +27,11 @@ export default function PointToast() {
       const entry = (e as CustomEvent<PointEntry>).detail
       if (!entry) return
       const key = `${entry.refId}-${entry.createdAt}`
+      /*
+        빙고 줄은 여기서 내지 않는다. 빙고 화면이 같은 순간에 더 큰 소리를
+        내므로 둘이 겹치면 어느 쪽도 제대로 안 들린다.
+      */
+      if (entry.reason !== 'treasureLine') playPoint()
       setToasts((prev) => [...prev, { ...entry, key }])
       window.setTimeout(
         () => setToasts((prev) => prev.filter((t) => t.key !== key)),

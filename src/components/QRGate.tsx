@@ -14,6 +14,7 @@ import { useState } from 'react'
 import QRScanner from '@/components/QRScanner'
 import type { StationId } from '@/lib/cues'
 import { submitOnEnter } from '@/lib/submitOnEnter'
+import { playQrOk } from '@/lib/sfx'
 import { canSkipOrder, useSuperAdmin } from '@/lib/superAdmin'
 import {
   CAMERA_SCAN_ENABLED,
@@ -54,6 +55,12 @@ export default function QRGate({
       setError(`아직 ${station.name} 차례가 아니에요. 소영의 안내를 따라가 주세요.`)
       return false
     }
+    /*
+      통과가 확정된 뒤에만 낸다 — 거절 경로에서도 나면 '찍혔다'와 '들어갔다'가
+      구분되지 않는다. 거점 대사는 반 박자 뒤에 시작하므로(ENTRY_LEAD_MS)
+      이 소리가 첫 문장 위에 얹히지 않는다.
+    */
+    playQrOk()
     onSuccess(station)
     return true
   }

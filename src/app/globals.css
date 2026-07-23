@@ -1364,60 +1364,66 @@ video::-webkit-media-controls-start-playback-button {
 
 .deck-key.on .key-label { opacity: 0.95; }
 
-/* 키 각인 — 글꼴에 기대지 않고 CSS 도형으로 그린다 */
+/*
+ * 키 각인 — 글꼴에 기대지 않고 CSS 도형으로 그린다.
+ *
+ * 키를 62px으로 키우고 나니 각인만 예전 크기로 남아 넓은 판 가운데
+ * 작은 표시가 떠 있는 꼴이 됐다. 걸으면서 흘깃 보고 누르는 키라
+ * 도형과 글자가 판 크기에 맞게 커져야 한다.
+ */
 .deck-key .glyph {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  height: 14px;
+  gap: 3px;
+  height: 19px;
 }
 
 .deck-key .tri {
   width: 0;
   height: 0;
-  border-top: 7px solid transparent;
-  border-bottom: 7px solid transparent;
-  border-left: 11px solid currentColor;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-left: 15px solid currentColor;
 }
 
 .deck-key .tri.sm {
-  border-top-width: 5px;
-  border-bottom-width: 5px;
-  border-left-width: 8px;
+  border-top-width: 7px;
+  border-bottom-width: 7px;
+  border-left-width: 11px;
 }
 
 .deck-key .tri.back {
   border-left: 0;
-  border-right: 8px solid currentColor;
+  border-right: 11px solid currentColor;
 }
 
 .deck-key .sq {
-  width: 11px;
-  height: 11px;
+  width: 15px;
+  height: 15px;
   background: currentColor;
   border-radius: 1px;
 }
 
-.deck-key .pause { display: flex; gap: 3px; }
+.deck-key .pause { display: flex; gap: 4px; }
 
 .deck-key .pause i {
-  width: 4px;
-  height: 13px;
+  width: 5px;
+  height: 18px;
   background: currentColor;
   border-radius: 1px;
 }
 
 .deck-key .dot {
-  width: 11px;
-  height: 11px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: currentColor;
 }
 
 .deck-key .key-label {
   font-family: 'Share Tech Mono', monospace;
-  font-size: 8px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.14em;
   opacity: 0.6;
