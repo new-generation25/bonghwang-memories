@@ -35,7 +35,7 @@ export const AUDIO_TIMINGS: Record<string, number[]> = {
   b5_t1: [0, 6.25, 8.95],
   b5_t2: [0, 6.42, 12.48],
   b5_t3: [0, 4.9, 8.35],
-  b6_0: [0, 6.2, 14.65, 20.4],
+  b6_0: [0, 5.8, 13.2, 18.5],
   b6_x_bonghwangdae: [0],
   b6_x_bunsik: [0],
   b6_x_byeokhwa: [0],

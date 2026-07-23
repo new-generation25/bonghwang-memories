@@ -1,6 +1,6 @@
 // 캐시하는 파일(오디오 포함)을 교체할 때는 반드시 이 버전을 올려야 한다.
 // 버전이 같으면 기존 기기가 옛 캐시를 계속 쓴다.
-const CACHE_NAME = 'bonghwang-memories-v1.0.1784740261345';
+const CACHE_NAME = 'bonghwang-memories-v1.0.1784768360245';
 const urlsToCache = [
   '/manifest.json',
   '/icon-192x192.png',

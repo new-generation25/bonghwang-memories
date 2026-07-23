@@ -143,7 +143,9 @@ const EMOTION = {
   b5_t3: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.0 },
   b5_letter: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.2 },
   b5_f: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.3 },
-  b6_0: { emotion_type: 'preset', emotion_preset: 'happy', emotion_intensity: 1.0 },
+  // happy 프리셋은 음색 자체를 바꿔서 다른 사람처럼 들렸다. 이 대사는 밝아지는
+  // 전환점이지 다른 인물이 아니다 — normal로 두고 강도만 살짝 올려 톤만 밝힌다.
+  b6_0: { emotion_type: 'preset', emotion_preset: 'normal', emotion_intensity: 1.1 },
   b7_0: { emotion_type: 'preset', emotion_preset: 'normal', emotion_intensity: 0.9 },
   b7_1: { emotion_type: 'preset', emotion_preset: 'whisper', emotion_intensity: 1.0 },
 }
