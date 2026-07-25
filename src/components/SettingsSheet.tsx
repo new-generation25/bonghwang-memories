@@ -254,6 +254,7 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
             >
               닫기
             </button>
+
           </div>
         </div>
       </div>

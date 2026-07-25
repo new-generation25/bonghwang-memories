@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import PointToast from '@/components/PointToast'
+import VersionGate from '@/components/VersionGate'
 import SuperAdminBar from '@/components/SuperAdminBar'
 
 export const metadata: Metadata = {
@@ -228,8 +229,16 @@ export default function RootLayout({
                 미션을 풀던 중에 새로고침되면 하던 것이 날아간다. 다음에
                 앱을 열 때 조용히 반영된다.
               */
-              // 이 스크립트가 도는 지금이 곧 '앱을 여는 순간'이다.
-              // 이후(visibilitychange 등)에 발견한 것은 받아만 두고 넘긴다.
+              /*
+                '앱을 여는 순간'의 범위.
+
+                3초로 뒀더니 대부분 놓쳤다 — 서버에 물어보고 새 워커를
+                받아 설치하는 데 그보다 오래 걸린다. 그 사이에 시간이
+                지나버려 새 버전을 눈앞에 두고도 다음으로 미뤘다.
+
+                넉넉히 준다. 이 시간 안이라도 이야기가 재생 중이면 어차피
+                미루므로, 길게 잡는다고 걷는 도중에 새로고침되지 않는다.
+              */
               let atStartup = true;
 
               const applyUpdate = (reg) => {
@@ -258,13 +267,13 @@ export default function RootLayout({
                   });
 
                   /*
-                    시작 순간이 지나면 받아두기만 한다.
+                    이 시간이 지나면 받아두기만 한다.
 
-                    화면이 그려지고 나면 사용자는 이미 무언가를 하고 있다.
-                    그때 새로고침하면 하던 것이 날아가므로, 새 버전은
-                    받아두고 다음에 앱을 열 때 갈아탄다.
+                    한참 쓰고 있는 중이라는 뜻이다. 그때 새로고침하면 하던
+                    것이 날아가므로, 새 버전은 받아두고 다음에 앱을 열 때
+                    갈아탄다.
                   */
-                  setTimeout(() => { atStartup = false; }, 3000);
+                  setTimeout(() => { atStartup = false; }, 60000);
 
                   /*
                     앱으로 돌아올 때마다 확인만 해둔다.
@@ -299,6 +308,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <PointToast />
+          <VersionGate />
           {/* 켜져 있을 때만 그려진다 — 참여자에게는 존재하지 않는 것과 같다 */}
           <SuperAdminBar />
         </AuthProvider>
