@@ -179,10 +179,15 @@ export default function RootLayout({
               } else {
               let refreshing = false;
 
-              // 새로고침 중복 방지
+              /*
+                갈아탄 뒤 새로고침한다. 그 새로고침이 곧 화면이 한 번
+                깜빡이는 일이라, 무슨 일이 있었는지 다음 화면에 한 줄
+                남긴다 — 까닭 없이 깜빡이면 앱이 흔들린 줄 안다.
+              */
               navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (!refreshing) {
                   refreshing = true;
+                  try { sessionStorage.setItem('bh_updated', '1'); } catch (e) {}
                   window.location.reload();
                 }
               });
@@ -196,12 +201,18 @@ export default function RootLayout({
                 것이 그래서였다. 이제 워커는 기다리고, 갈아탈 자리는
                 여기서 고른다.
 
-                이야기가 재생 중이면 미룬다. 새로고침은 재생을 끊고 화면을
-                처음부터 다시 그리는 일이라, 걷는 도중에 일어나면 무슨 일이
-                난 줄 안다. 다음에 앱을 열 때 조용히 반영된다.
+                갈아타는 자리는 '앱을 여는 순간' 하나뿐이다. 쓰는 도중에
+                새 버전을 발견해도 손대지 않는다 — 사진을 찍던 중이거나
+                미션을 풀던 중에 새로고침되면 하던 것이 날아간다. 다음에
+                앱을 열 때 조용히 반영된다.
               */
+              // 이 스크립트가 도는 지금이 곧 '앱을 여는 순간'이다.
+              // 이후(visibilitychange 등)에 발견한 것은 받아만 두고 넘긴다.
+              let atStartup = true;
+
               const applyUpdate = (reg) => {
                 if (!reg.waiting) return;
+                if (!atStartup) return;
                 if (window.__bhPlaying) return;
                 reg.waiting.postMessage({ type: 'SKIP_WAITING' });
               };
@@ -225,15 +236,24 @@ export default function RootLayout({
                   });
 
                   /*
-                    앱으로 돌아올 때마다 다시 확인한다.
+                    시작 순간이 지나면 받아두기만 한다.
+
+                    화면이 그려지고 나면 사용자는 이미 무언가를 하고 있다.
+                    그때 새로고침하면 하던 것이 날아가므로, 새 버전은
+                    받아두고 다음에 앱을 열 때 갈아탄다.
+                  */
+                  setTimeout(() => { atStartup = false; }, 3000);
+
+                  /*
+                    앱으로 돌아올 때마다 확인만 해둔다.
 
                     홈 화면에서 띄운 PWA는 좀처럼 죽지 않아서, 등록할 때 한 번
-                    본 것이 며칠 전 확인일 수 있다. 화면이 다시 보이는 순간이
-                    사실상의 '앱 시작'이다.
+                    본 것이 며칠 전 확인일 수 있다. 미리 받아두면 다음 실행이
+                    곧바로 최신이 된다.
                   */
                   document.addEventListener('visibilitychange', () => {
                     if (document.visibilityState !== 'visible') return;
-                    registration.update().then(() => applyUpdate(registration));
+                    registration.update();
                   });
                 })
                 .catch((error) => {

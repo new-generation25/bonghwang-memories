@@ -43,6 +43,26 @@ export default function PointToast() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [wishes, setWishes] = useState<WishToast[]>([])
 
+  /*
+    업데이트 직후 한 줄.
+
+    새 버전으로 갈아타면 페이지가 새로고침되는데, 그것이 화면이 한 번
+    깜빡이는 일로 보인다. 까닭 없이 깜빡이면 앱이 흔들린 줄 아니까
+    무슨 일이었는지 알려준다. 묻지 않고 적용하는 대신 알리기만 한다.
+  */
+  const [updated, setUpdated] = useState(false)
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('bh_updated') !== '1') return
+      sessionStorage.removeItem('bh_updated')
+    } catch {
+      return
+    }
+    setUpdated(true)
+    const t = window.setTimeout(() => setUpdated(false), WISH_LIFETIME_MS)
+    return () => window.clearTimeout(t)
+  }, [])
+
   useEffect(() => {
     const onWish = (e: Event) => {
       const d = (e as CustomEvent<{ track: number }>).detail
@@ -78,7 +98,7 @@ export default function PointToast() {
     return () => window.removeEventListener(POINTS_EVENT, onAward)
   }, [])
 
-  if (toasts.length === 0 && wishes.length === 0) return null
+  if (toasts.length === 0 && wishes.length === 0 && !updated) return null
 
   return (
     <div
@@ -87,6 +107,16 @@ export default function PointToast() {
       role="status"
       aria-live="polite"
     >
+      {updated && (
+        <div className="point-toast flex items-center gap-2.5 rounded-full bg-teal-dk px-4 py-2 shadow-lg">
+          <span className="text-[13px] leading-none" aria-hidden>
+            ✓
+          </span>
+          <span className="text-[12px] font-bold text-cream">
+            최신 버전으로 업데이트했어요
+          </span>
+        </div>
+      )}
       {wishes.map((w) => (
         <div
           key={w.key}
