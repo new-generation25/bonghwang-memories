@@ -33,6 +33,7 @@ import {
   resumeCue,
   unlockAudio,
 } from '@/lib/cueEngine'
+import { timingsFor } from '@/lib/audioTimings'
 import { stationByTrack } from '@/lib/tracks'
 import { mutateTour } from '@/lib/tourState'
 
@@ -40,9 +41,6 @@ const NEUNGSOHWA_OVERLAY = '/images/neungsohwa-overlay.png'
 
 /** B1_B에서 소영이 말을 놓아도 되냐고 묻는 줄(0부터) */
 const SPEECH_ASK_LINE = 3
-
-/** 물음이 끝나고 창이 올라오기까지 — 생각할 틈 */
-const SPEECH_ASK_DELAY_MS = 1000
 
 /** 큐 종료 → 이어지는 상호작용 */
 type Interaction =
@@ -138,24 +136,37 @@ export default function TrackPageClient({ n }: { n: number }) {
     소영이 혼자 묻고 혼자 말을 놓는 꼴이라, 두 사람이 가까워지는 대목이
     통째로 지나간다.
 
-    한 박자 두고 띄운다. 말이 끝나자마자 창이 덮으면 재촉하는 것처럼
-    보인다 — 실제로 그런 질문을 받으면 잠깐 생각한다.
-
-    한 번만 묻는다. 다시듣기로 그 줄을 또 지나도 이미 답한 사람에게
-    같은 것을 되묻지 않는다.
+    물음이 끝까지 들린 뒤에 뜬다. 한 번만 묻는다 — 다시듣기로 그 줄을
+    또 지나도 이미 답한 사람에게 같은 것을 되묻지 않는다.
   */
   const [speechAsked, setSpeechAsked] = useState(false)
   useEffect(() => {
     if (speechAsked || tour.speechConsent) return
-    if (cueState.cueId !== 'B1_B' || cueState.subtitleIndex !== SPEECH_ASK_LINE) {
-      return
-    }
-    const t = window.setTimeout(() => {
-      pauseCue()
-      setSpeechAsked(true)
-    }, SPEECH_ASK_DELAY_MS)
-    return () => window.clearTimeout(t)
-  }, [cueState.cueId, cueState.subtitleIndex, speechAsked, tour.speechConsent])
+    if (cueState.cueId !== 'B1_B') return
+
+    /*
+      물음이 다 들린 뒤에 멈춘다.
+
+      자막이 그 줄로 넘어가는 순간에 띄웠더니 "…왠지 오래 알던 사이
+      같아서요"가 채 나오기도 전에 창이 덮었다. 묻다 만 사람에게 답하는
+      꼴이라 대화가 끊긴다.
+
+      다음 줄이 시작하는 시각에서 조금 앞당겨 멈춘다 — 딱 그 시각에
+      멈추면 "…고마워"의 첫 소리가 새어 나온다. 승낙하기 전에 고맙다는
+      말이 들리면 물음이 시늉이 된다.
+    */
+    const t = timingsFor('b1_b', CUES.B1_B.subtitleLines.length)
+    const askAt = t ? t[SPEECH_ASK_LINE + 1] - 0.2 : 0
+    if (!askAt || cueState.elapsed < askAt) return
+
+    pauseCue()
+    setSpeechAsked(true)
+  }, [
+    cueState.cueId,
+    cueState.elapsed,
+    speechAsked,
+    tour.speechConsent,
+  ])
 
   const answerSpeech = (consent: 'yes' | 'no') => {
     mutateTour({ speechConsent: consent })
