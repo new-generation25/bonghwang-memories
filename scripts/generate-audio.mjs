@@ -137,17 +137,35 @@ function roleOf(bundle, line) {
  * 지정하지 않으면 smart(문맥 자동 판별)를 쓴다.
  */
 const EMOTION = {
-  b0_tape: { emotion_type: 'preset', emotion_preset: 'normal', emotion_intensity: 0.8 },
+  /*
+    아버지 — 이야기 전체에서 목소리가 한 번 늙는다.
+
+    B0_TAPE(1988·38세)는 아직 태어나지 않은 딸에게 혼자 말하는 자리다.
+    "말주변이 없다"고 스스로 말하는 사람이라 들뜨면 안 되지만, 이름을
+    정해놓고 소원을 다섯 개나 적어둔 사람이기도 하다. 밋밋하지 않게
+    강도를 조금 올리고, 속도는 늦춰 한마디씩 고르게 했다.
+
+    B4_RADIO(1988)는 남들이 듣는 방송에 사연을 보낸 자리라 더 또렷하다.
+    다만 끝에서 딸 이름을 부를 때 목이 멘다 — 그래서 normal에 강도를 준다.
+
+    B5_LETTER(현재·76세)가 정점이다. 기억을 잃어가는 중에 "미안하다"를
+    남기는 대목이라, 가장 낮고 느리게 간다.
+
+    B7_1은 옆방에서 딸을 부르는 한마디다. 속삭임이 아니라 평범한 노인의
+    말투여야 앞의 무게가 일상으로 풀린다.
+  */
+  b0_tape: { emotion_type: 'preset', emotion_preset: 'normal', emotion_intensity: 0.95 },
+  b4_radio: { emotion_type: 'preset', emotion_preset: 'normal', emotion_intensity: 1.15 },
   b2_b: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.1 },
   b4_b: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.4 },
   b5_t3: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.0 },
-  b5_letter: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.2 },
+  b5_letter: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.35 },
   b5_f: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.3 },
   // happy 프리셋은 음색 자체를 바꿔서 다른 사람처럼 들렸다. 이 대사는 밝아지는
   // 전환점이지 다른 인물이 아니다 — normal로 두고 강도만 살짝 올려 톤만 밝힌다.
   b6_0: { emotion_type: 'preset', emotion_preset: 'normal', emotion_intensity: 1.1 },
   b7_0: { emotion_type: 'preset', emotion_preset: 'normal', emotion_intensity: 0.9 },
-  b7_1: { emotion_type: 'preset', emotion_preset: 'whisper', emotion_intensity: 1.0 },
+  b7_1: { emotion_type: 'preset', emotion_preset: 'normal', emotion_intensity: 0.85 },
 }
 
 /** 줄 사이 기본 호흡(초). 번들 성격에 따라 다르게 준다 (D13) */
@@ -158,14 +176,22 @@ const GAP = { tape: 0.9, call: 0.55, shop: 0.6 }
  * lead: 첫 줄 앞 무음(초) / gapsAfter: N번째 줄 뒤에 추가로 넣을 무음(초)
  */
 const SPECIAL = {
-  // 라디오: 도입 잡음만 10초 (여기서는 무음으로 두고 후처리에서 잡음을 얹는다)
-  b4_radio: { lead: 10 },
-  // B면 편지: 릴 감기 15초 → 소영 1줄 → 잡음 5초 → 편지 (총 공백 20초)
-  b5_letter: { lead: 15, gapsAfter: { 0: 5 } },
+  /*
+    라디오 도입 — 주파수를 맞추는 잡음이 깔리는 자리다. 소리가 있으므로
+    기다림으로 느껴지지 않는다. 다만 10초는 길어 절반으로 줄였다.
+  */
+  b4_radio: { lead: 5 },
+  /*
+    B면 편지에 있던 앞 무음 15초와 첫 줄 뒤 5초는 걷어냈다.
+
+    릴이 감기는 시간을 소리로 표현한 것이었는데, 정작 그 20초 동안 아무
+    소리도 나지 않아 앱이 멈춘 것처럼 보였다. 카세트를 뒤집는 연출은
+    화면(cassette_flip)과 효과음이 이미 맡고 있어 두 번 할 일이 아니다.
+  */
   // 메모 직전 — 한동안 말 없이 숨소리만
-  b4_b: { lead: 4 },
-  // 울음 5초
-  b5_f: { lead: 5 },
+  b4_b: { lead: 2 },
+  // 울음
+  b5_f: { lead: 2.5 },
 }
 
 // ---------------------------------------------------------------------------
@@ -558,10 +584,12 @@ async function main() {
       }
 
       // 앞뒤 문장을 넘겨 감정 문맥을 잡게 한다
+      const bare = (t) =>
+        (t ?? '').replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').trim()
       const prompt = EMOTION[b.audioFile] ?? {
         emotion_type: 'smart',
-        previous_text: b.lines[i - 1]?.text ?? '',
-        next_text: b.lines[i + 1]?.text ?? '',
+        previous_text: bare(b.lines[i - 1]?.text),
+        next_text: bare(b.lines[i + 1]?.text),
       }
 
       const r = await synthLine({
@@ -569,7 +597,8 @@ async function main() {
         model: voices.model ?? 'ssfm-v30',
         role,
         cfg,
-        text: line.text,
+        // <br>은 자막에만 쓰는 줄바꿈 표시다 — 읽히면 소리에 섞인다
+        text: line.text.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').trim(),
         prompt,
       })
       parts.push(r.file)

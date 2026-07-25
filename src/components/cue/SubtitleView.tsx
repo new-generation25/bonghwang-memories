@@ -13,6 +13,7 @@
  */
 
 import { Cue } from '@/lib/cues'
+import { renderBreaks } from '@/lib/subtitleLines'
 
 interface SubtitleViewProps {
   cue: Cue
@@ -43,13 +44,10 @@ export default function SubtitleView({
       } text-ink ${opts.spaced ? 'mt-1.5' : ''}`}
     >
       {/*
-        화자 이름은 적지 않는다.
-
-        '라디오 DJ'·'아버지' 같은 노란 라벨을 앞에 붙였는데, 듣고 있으면
-        누구 목소리인지 알 수 있어 읽을 값이 없었다. 자막은 짧을수록
-        걸으면서 눈에 들어온다 — 대사만 남긴다.
+        화자 이름은 적지 않는다 — 듣고 있으면 누구인지 안다.
+        대사 안의 <br>은 대본에서 사람이 잡아둔 줄바꿈이다.
       */}
-      {line.text}
+      {renderBreaks(line.text)}
     </p>
   )
 

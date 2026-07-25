@@ -11,6 +11,7 @@
 
 import { initialFor, portraitFor } from '@/lib/cast'
 import { Cue, SPEAKER_NAMES } from '@/lib/cues'
+import { renderBreaks } from '@/lib/subtitleLines'
 
 interface CallScreenProps {
   cue: Cue
@@ -167,8 +168,8 @@ export default function CallScreen({
           : {})}
       >
         {/* 화자 이름은 적지 않는다 — 듣고 있으면 누구인지 안다 */}
-        {prev && <div className="call-bubble faded">{prev.text}</div>}
-        {current && <div className="call-bubble">{current.text}</div>}
+        {prev && <div className="call-bubble faded">{renderBreaks(prev.text)}</div>}
+        {current && <div className="call-bubble">{renderBreaks(current.text)}</div>}
       </div>
 
       {/* 하단 — 통화 중엔 파형만, 끝나면 카세트 컨트롤 바 */}
@@ -213,22 +214,22 @@ export default function CallScreen({
           */
           <div className="flex flex-col items-center">
             {/*
-              종료 버튼은 자리에 둔다 — 다만 눌리지 않는다.
+              종료 버튼은 생김새 그대로 둔다 — 다만 아무 일도 하지 않는다.
 
-              실제 통화 화면에는 늘 빨간 버튼이 있다. 없으면 화면이 통화로
-              보이지 않는다. 그런데 소영이 부탁을 하는 중에 그것이 눌리면,
-              이야기가 아니라 건너뛸 수 있는 절차가 된다.
+              실제 통화 화면에는 늘 빨간 버튼이 있고, 없으면 화면이 통화로
+              보이지 않는다. 흐리게 만들면 '고장 난 버튼'이 되어 더 눈에
+              걸린다. 그래서 색도 눌리는 손맛도 그대로 두고, 눌렀을 때
+              통화만 끊기지 않게 했다.
 
-              그래서 놓아두되 잠근다. 눌리지 않는 것은 색과 손맛으로 알린다 —
-              흐리게, 눌러도 눌린 느낌이 없게. 실물 통화 버튼도 상대가 받기
-              전에는 아무 반응이 없다.
+              소영이 부탁을 하는 중에 이것이 실제로 끊기면 이야기가 아니라
+              건너뛸 수 있는 절차가 된다. 급하면 화면 밖으로 나가는 길이
+              따로 있다.
             */}
             <button
               type="button"
-              disabled
-              aria-hidden
-              tabIndex={-1}
-              className="call-fab end mt-5 cursor-default opacity-35"
+              onClick={() => {}}
+              className="call-fab end mt-5"
+              aria-label="통화 종료"
             >
               <EndCallIcon />
             </button>
