@@ -28,10 +28,6 @@ interface CallScreenProps {
   /** 통화 종료 후 PLAY — 다음 단계로 */
   onAdvance: () => void
   advanceLabel: string
-  /** D9 — 15초가 지나 통화를 끊을 수 있는 상태 */
-  skippable?: boolean
-  /** 빨간 버튼 — 통화 끊기 */
-  onEndCall?: () => void
 }
 
 /**
@@ -87,8 +83,6 @@ export default function CallScreen({
   onSkip,
   onAdvance,
   advanceLabel,
-  skippable = false,
-  onEndCall,
 }: CallScreenProps) {
   const lines = cue.subtitleLines
   const portrait = portraitFor(cue)
@@ -219,21 +213,25 @@ export default function CallScreen({
           */
           <div className="flex flex-col items-center">
             {/*
-              통화 끊기 — 15초가 지나야 나타난다(D9).
-              그전에는 자리를 비워 둔다. 눌러도 안 되는 버튼을 보여주고
-              왜 안 되는지 설명하는 것보다, 될 때 나타나는 편이 깔끔하다.
+              종료 버튼은 자리에 둔다 — 다만 눌리지 않는다.
+
+              실제 통화 화면에는 늘 빨간 버튼이 있다. 없으면 화면이 통화로
+              보이지 않는다. 그런데 소영이 부탁을 하는 중에 그것이 눌리면,
+              이야기가 아니라 건너뛸 수 있는 절차가 된다.
+
+              그래서 놓아두되 잠근다. 눌리지 않는 것은 색과 손맛으로 알린다 —
+              흐리게, 눌러도 눌린 느낌이 없게. 실물 통화 버튼도 상대가 받기
+              전에는 아무 반응이 없다.
             */}
-            {skippable && onEndCall && (
-              <button
-                type="button"
-                onClick={onEndCall}
-                className="call-fab end mt-5"
-                aria-label="통화 종료"
-                style={{ animation: 'fadeIn 0.35s ease-out' }}
-              >
-                <EndCallIcon />
-              </button>
-            )}
+            <button
+              type="button"
+              disabled
+              aria-hidden
+              tabIndex={-1}
+              className="call-fab end mt-5 cursor-default opacity-35"
+            >
+              <EndCallIcon />
+            </button>
           </div>
         )}
       </div>

@@ -112,19 +112,24 @@ export default function DownloadPage() {
       logEvent('cache_done')
       setDone(true)
 
-      /*
-        나머지는 뒤에서 계속 받는다.
-
-        이 페이지를 떠나도 브라우저가 진행 중인 요청을 곧바로 죽이지는
-        않지만 보장되지도 않는다. 그래서 서비스워커에게도 같은 일을
-        맡긴다 — 워커는 화면과 무관하게 살아 있다. 둘 다 실패해도
-        재생할 때 그 파일만 받으면 되므로 이야기는 막히지 않는다.
-      */
       const rest = names.filter((n) => !INTRO_AUDIO.includes(n))
-      navigator.serviceWorker?.controller?.postMessage({
-        type: 'PRECACHE_AUDIO',
-        names: rest,
-      })
+
+      /*
+        나머지는 뒤에서 받되, 받는 일은 한 쪽만 맡는다.
+
+        페이지와 서비스워커에게 같은 목록을 함께 주었더니 8.7MB를 두 번
+        내려받았다. 그 둘이 화면 이동에 필요한 요청과 회선을 다투는 바람에
+        페이지 넘어가는 것이 눈에 띄게 굼떠졌다.
+
+        워커가 있으면 워커에게 맡긴다 — 화면이 바뀌어도 살아 있어서 더
+        맞는 자리다. 워커가 없을 때(개발 중이나 미지원 브라우저)만 페이지가
+        직접 받는다.
+      */
+      const sw = navigator.serviceWorker?.controller
+      if (sw) {
+        sw.postMessage({ type: 'PRECACHE_AUDIO', names: rest })
+        return
+      }
       for (const name of rest) {
         await fetchAudio(name)
         setFound((v) => v + 1)
