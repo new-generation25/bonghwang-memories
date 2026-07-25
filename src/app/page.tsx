@@ -48,6 +48,16 @@ export default function LandingPage() {
   const resumeTarget = (() => {
     if (available && !profile) return null
     if (!tour.paid) return null
+    /*
+      아직 한 걸음도 걷지 않았으면 '이어서'가 아니다.
+
+      phase의 처음 값이 'intro'라, 앱을 처음 연 사람과 방금 초기화한 사람에게도
+      '진행 중인 투어가 있습니다'가 떴다. 시작 시각도 없고 끝낸 큐도 없으면
+      아무것도 시작하지 않은 것이다.
+    */
+    if (tour.phase === 'intro' && !tour.startTime && !tour.lastCueCompleted) {
+      return null
+    }
     switch (tour.phase) {
       case 'intro':
         return '/intro'

@@ -331,22 +331,52 @@ export async function playCue(id: CueId): Promise<void> {
     emit({ audioAvailable: true })
     try {
       if (timeScale !== 1) el.playbackRate = timeScale
+      /*
+        먼저 제스처 문맥 안에서 재생 권한을 딴다.
+
+        iOS는 오디오 요소마다 '첫 재생은 사용자 조작 안에서'를 요구하고,
+        한 번 풀린 요소의 이후 play()는 막지 않는다. 그래서 여기서 한 번
+        틀고 곧바로 되감아 세워둔 뒤, 반 박자 뒤에 다시 튼다.
+
+        이 순서를 지키지 않고 play() 자체를 setTimeout 뒤로 미뤘더니
+        아이폰에서 목소리가 통째로 나오지 않았다.
+      */
       await el.play()
-      emit({ playing: true })
+      el.pause()
+      el.currentTime = 0
+
+      window.setTimeout(() => {
+        // 그사이 다른 큐로 넘어갔으면 이 재생은 버린다
+        if (audio !== el) return
+        el.play().then(
+          () => {
+            if (audio === el) emit({ playing: true })
+          },
+          () => {
+            if (audio === el) emit({ playing: false })
+          }
+        )
+      }, ENTRY_LEAD_MS)
     } catch {
       // 자동재생 차단 — UI가 "탭해서 계속" 버튼을 보여주도록 playing=false 유지
       emit({ playing: false })
     }
   } else {
-    // 합성 클록 — 자막만으로 진행
-    clockStartedAt = performance.now()
-    emit({ audioAvailable: false, playing: true })
-    clockTimer = setInterval(() => {
-      if (state.cueId !== id || !state.playing) return
-      const elapsed =
-        clockAccum + ((performance.now() - clockStartedAt) / 1000) * timeScale
-      tick(cue, elapsed, state.duration)
-    }, 250)
+    /*
+      합성 클록 — 자막만으로 진행. 오디오와 같은 사이를 둔다.
+      여기만 즉시 시작하면 음성이 없는 큐에서 자막이 튀어나온다.
+    */
+    window.setTimeout(() => {
+      if (state.cueId !== id) return
+      clockStartedAt = performance.now()
+      emit({ audioAvailable: false, playing: true })
+      clockTimer = setInterval(() => {
+        if (state.cueId !== id || !state.playing) return
+        const elapsed =
+          clockAccum + ((performance.now() - clockStartedAt) / 1000) * timeScale
+        tick(cue, elapsed, state.duration)
+      }, 250)
+    }, ENTRY_LEAD_MS)
   }
 }
 
@@ -365,10 +395,25 @@ export function pauseCue() {
 export function resumeCue() {
   if (state.playing || !state.cueId || state.ended) return
   if (audio) {
-    void audio.play().catch(() => {})
-  } else {
-    clockStartedAt = performance.now()
+    /*
+      재생이 실제로 시작된 뒤에 playing을 올린다.
+
+      전에는 실패를 삼키고 무조건 true로 올렸다. 그러면 파형은 움직이는데
+      소리는 나지 않아, 눌리긴 했으나 아무 일도 안 일어난 것처럼 보인다.
+      실패했으면 false로 남겨야 화면이 '탭해서 계속'을 다시 내민다.
+    */
+    const el = audio
+    el.play().then(
+      () => {
+        if (audio === el) emit({ playing: true })
+      },
+      () => {
+        if (audio === el) emit({ playing: false })
+      }
+    )
+    return
   }
+  clockStartedAt = performance.now()
   emit({ playing: true })
 }
 
@@ -542,21 +587,19 @@ function runDirective(directive: UiDirective, cueId: CueId) {
 // -----------------------------------------------------------------------------
 
 /**
- * 반 박자 두고 큐를 시작한다.
+ * 큐를 시작한다.
  *
- * 버튼을 누른 순간 소리가 나면, 화면이 아직 바뀌기 전이라 첫 문장이 이전
- * 화면 위에서 들린다. 전화가 연결되기도 전에 소영이 말하고, 미션 카드가
- * 아직 덮여 있는데 다음 대사가 시작된다. 카세트도 PLAY를 누르고 테이프가
- * 헤드에 닿기까지 잠깐이 있다 — 그 사이가 '이제 시작한다'를 만든다.
+ * **제스처 문맥 안에서 곧바로 불러야 한다.** 한때 이 자리에서 setTimeout으로
+ * playCue 전체를 미뤘는데, 그 사이 iOS의 사용자 제스처 문맥이 끊겨
+ * **아이폰에서 소영의 목소리가 통째로 나오지 않았다.** PC 크롬은 자동재생
+ * 정책이 느슨해 끝까지 드러나지 않았다.
  *
- * 세 진입점이 모두 이 함수를 지난다. 한 곳에만 넣었더니 거점 진입만
- * 자연스럽고 전화·미션 완료·빙고는 그대로 튀어나왔다.
- *
- * unlockAudio()는 호출부에서 제스처 안에 이미 실행된다 — 재생만 미룬다.
- * iOS는 한 번 풀린 요소의 뒤늦은 play()를 막지 않는다.
+ * 화면보다 목소리가 먼저 나오는 문제는 playCue 안에서 **오디오 재생만**
+ * 반 박자 미뤄 푼다(ENTRY_LEAD_MS). 화면·자막은 즉시 바뀌므로 통화가
+ * 연결되기 전에 아버지 얼굴이 남아 있는 일도 없어진다.
  */
 function startCueSoon(cueId: CueId) {
-  window.setTimeout(() => void playCue(cueId), ENTRY_LEAD_MS)
+  void playCue(cueId)
 }
 
 /**
