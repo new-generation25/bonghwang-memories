@@ -12,7 +12,13 @@
 
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import { CouponSpec, couponQrPayload, makeCouponCode } from '@/lib/coupons'
+import {
+  CouponSpec,
+  couponQrPayload,
+  couponSerial,
+  makeCouponCode,
+  reissueCoupon,
+} from '@/lib/coupons'
 import { useSuperAdmin } from '@/lib/superAdmin'
 
 interface CouponCardProps {
@@ -28,7 +34,16 @@ export default function CouponCard({ spec, uid, used = false }: CouponCardProps)
   // 슈퍼관리자가 건너뛰며 받은 쿠폰은 시험용 코드로 낸다 — 가게 확인
   // 화면이 알아보고 사용 기록을 남기지 않아 코드가 소진되지 않는다
   const superAdmin = useSuperAdmin()
-  const code = makeCouponCode(spec.id, uid, superAdmin)
+  /*
+    발급 순번. 가게에서 잘못 찍혀 소진된 코드는 다음 번호로 다시 낸다 —
+    앞 번호를 되돌리는 것이 아니라 다음 장을 뜯는 것이라, 지난 사용
+    기록은 그대로 남는다.
+  */
+  const [serial, setSerial] = useState(0)
+  useEffect(() => {
+    setSerial(couponSerial(spec.id, uid))
+  }, [spec.id, uid])
+  const code = makeCouponCode(spec.id, uid, superAdmin, serial)
 
   // 코드가 바뀌면 그려둔 QR을 버린다. 모드를 켜고 끄면 시험용/실제 코드가
   // 갈리는데, 캐시를 그대로 두면 펼쳐놓은 QR이 옛 코드로 남는다.
@@ -101,6 +116,27 @@ export default function CouponCard({ spec, uid, used = false }: CouponCardProps)
           <p className="mt-1 text-[10.5px] leading-snug text-ink-60">
             가게에서 이 QR을 찍어 주세요. 한 번만 사용할 수 있습니다.
           </p>
+
+          {/*
+            다시 받기 — 가게에서 실수로 두 번 찍혔거나, 미리 열어보다
+            소진됐을 때. 사용 기록은 지울 수 없으므로 되돌리는 대신 다음
+            번호를 낸다. 앞 번호의 기록은 그대로 남는다.
+
+            평소에는 눈에 띌 이유가 없어 작은 글자로 둔다 — 잘못 누르면
+            멀쩡한 코드가 새 번호로 바뀌어 헷갈린다.
+          */}
+          <button
+            type="button"
+            onClick={() => setSerial(reissueCoupon(spec.id, uid))}
+            className="mt-3 text-[11px] text-ink-60 underline underline-offset-2"
+          >
+            이미 사용됨으로 나오나요? 새 번호로 받기
+          </button>
+          {serial > 0 && (
+            <p className="mt-1 font-mono-retro text-[10px] text-ink-60">
+              {serial + 1}번째 발급
+            </p>
+          )}
         </div>
       )}
     </div>

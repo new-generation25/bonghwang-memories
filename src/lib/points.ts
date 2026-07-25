@@ -184,8 +184,20 @@ export async function award(refId: string, reason: PointReason): Promise<void> {
 
   try {
     await writeEntry(uid, entry)
-  } catch {
-    // 실패하면 대기열에 넣어 다음 기회에 올린다
+  } catch (err) {
+    /*
+      실패하면 대기열에 넣어 다음 기회에 올린다.
+
+      원인은 콘솔에 남긴다. 조용히 삼켰더니 "점수는 보이는데 랭킹에 안
+      뜬다"는 증상만 남고 왜인지를 알 길이 없었다 — 화면의 점수는 로컬
+      원장에서 오고 랭킹은 서버를 보기 때문에, 서버 쓰기가 막혀도 앱은
+      멀쩡해 보인다.
+    */
+    console.error('[포인트 적립 실패]', {
+      refId,
+      code: (err as { code?: string })?.code,
+      message: (err as { message?: string })?.message,
+    })
     queue()
   }
 }
@@ -241,7 +253,13 @@ export async function flushPendingPoints(uid: string): Promise<number> {
   for (const entry of pending) {
     try {
       await writeEntry(uid, entry)
-    } catch {
+    } catch (err) {
+      // 여기서 계속 실패하면 대기열이 영영 줄지 않는다 — 이유를 남긴다
+      console.error('[대기 포인트 올리기 실패]', {
+        refId: entry.refId,
+        code: (err as { code?: string })?.code,
+        message: (err as { message?: string })?.message,
+      })
       failed.push(entry)
     }
   }

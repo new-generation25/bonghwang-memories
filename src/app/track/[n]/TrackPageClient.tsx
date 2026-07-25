@@ -12,12 +12,13 @@
  * 지시자 실행은 모두 멱등이라 재실행이 안전하다.
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import CuePlayer from '@/components/cue/CuePlayer'
 import PlacePhoto from '@/components/cue/PlacePhoto'
 import CountInput from '@/components/mission/CountInput'
 import PhotoStep from '@/components/mission/PhotoStep'
+import QuizInput from '@/components/mission/QuizInput'
 import RecorderBside from '@/components/mission/RecorderBside'
 import UnlockGate from '@/components/mission/UnlockGate'
 import { useCue } from '@/hooks/useCue'
@@ -35,6 +36,7 @@ type Interaction =
   | { kind: 'photo'; track: number; actionId: 'M1_photo_done' | 'M2_photo_done'; label: string; prompt: string }
   | { kind: 'arphoto' }
   | { kind: 'posterphoto' }
+  | { kind: 'quiz' }
   | { kind: 'record' }
   | { kind: 'unlock' }
   | { kind: 'resume' }
@@ -67,7 +69,8 @@ const INTERACTIONS: Partial<Record<CueId, Interaction>> = {
   B3_B: { kind: 'return' },
   // TRACK 4 — 카페 탱자 : B4_A(이어서 재생) → 라디오 → B4_B(메모) → B4_C(완료)
   B4_A: { kind: 'resume' },
-  B4_B: { kind: 'record' },
+  // 라디오를 들은 뒤 — 곡 제목 한 문제 → '나의 육십 초'
+  B4_B: { kind: 'quiz' },
   B4_C: { kind: 'return' },
   // TRACK 5 — 방하림 : 포스터 → B5_T1(여쭤보기) → 증언 → B5_T3(B면 잠금해제)
   B5_A: { kind: 'posterphoto' },
@@ -81,6 +84,8 @@ export default function TrackPageClient({ n }: { n: number }) {
   const cueState = useCue()
   const tour = useTourState()
   const station = stationByTrack(n)
+  /** 트랙 4 — 곡 제목을 맞혔는지. 맞히면 그 자리에 '나의 육십 초'가 들어온다 */
+  const [quizDone, setQuizDone] = useState(false)
 
   // 방금 끝난 큐 (재생 중이면 아직 상호작용 없음)
   const endedCue =
@@ -194,6 +199,17 @@ export default function TrackPageClient({ n }: { n: number }) {
             missionLabel="MISSION 5 · 포스터"
             prompt="주변에 붙어 있는 포스터를 찾아 사진으로 보내주세요."
           />
+        )
+      case 'quiz':
+        /*
+          라디오를 듣고 곡 제목을 맞힌 뒤 '나의 육십 초'로 이어진다.
+          퀴즈가 관문이 아니라 한 박자라, 맞히면 같은 자리에서 메모가
+          그대로 열린다 — 화면을 갈아끼우면 흐름이 끊긴다.
+        */
+        return quizDone ? (
+          <RecorderBside />
+        ) : (
+          <QuizInput onDone={() => setQuizDone(true)} />
         )
       case 'record':
         return <RecorderBside />

@@ -39,15 +39,26 @@ export type TrackMissionType =
   | 'ar_photo'
   | 'record'
   | 'poster_photo'
+  | 'quiz'
   | 'unlock'
 
 export interface TrackMission {
-  id: 'M1' | 'M1b' | 'M2' | 'M3' | 'M4' | 'M5a' | 'M5b'
+  id: 'M1' | 'M1b' | 'M2' | 'M3' | 'M4q' | 'M4' | 'M5a' | 'M5b'
   track: 1 | 2 | 3 | 4 | 5
   type: TrackMissionType
   title: string
-  /** count_input: 정답 / unlock: 필요한 조각 수 */
-  validation?: { answer?: number; threshold?: number }
+  /**
+   * count_input: 정답 숫자 / unlock: 필요한 조각 수
+   * quiz: 정답 글자와, 정답으로 함께 인정할 표기들
+   */
+  validation?: {
+    answer?: number
+    threshold?: number
+    /** 화면에 보여줄 정답 표기 */
+    text?: string
+    /** 같은 답으로 받아줄 다른 표기 — 비교는 공백·문장부호를 지우고 한다 */
+    accept?: string[]
+  }
   reward?: { fragment?: FragmentId; coupon?: string }
   /** 완료 시 큐 엔진에 발화하는 액션 */
   onCompleteAction: ActionId
@@ -240,6 +251,25 @@ export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
     reward: { fragment: 'frag_3', coupon: 'cp3' },
     onCompleteAction: 'M3_photo_done',
   },
+  /*
+    라디오를 끝까지 들었는지 묻는 한 문제.
+
+    이 거점은 '같이 듣기'가 소원이라 듣는 것 말고 할 일이 없었다. 아버지가
+    딸을 '소녀'라 부르려고 그 곡을 신청했다는 것이 이 장면의 핵심인데,
+    흘려들으면 그냥 지나간다. 제목을 손으로 적어보면 한 번 더 남는다.
+  */
+  M4q: {
+    id: 'M4q',
+    track: 4,
+    type: 'quiz',
+    title: '아버지가 신청한 노래',
+    validation: {
+      text: '소녀',
+      // 띄어쓰기·따옴표는 지우고 비교하므로 여기엔 글자만 적는다
+      accept: ['소녀', '이문세소녀', '소녀(이문세)'],
+    },
+    onCompleteAction: 'M4_quiz_ok',
+  },
   M4: {
     id: 'M4',
     track: 4,
@@ -261,6 +291,12 @@ export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
     type: 'unlock',
     title: 'B면의 마지막 트랙',
     validation: { threshold: UNLOCK_THRESHOLD },
+    /*
+      조각은 주지 않는다 — FragmentId가 넷이고 트랙 5는 그 조각들을
+      끼워 넣는 자리다. 쿠폰은 준다. 방하림에 실제로 다녀왔기 때문이고,
+      이 값이 있어야 슈퍼관리자의 '여기까지 완료 처리'도 cp5를 찾는다.
+    */
+    reward: { coupon: 'cp5' },
     onCompleteAction: 'unlock_done',
   },
 }

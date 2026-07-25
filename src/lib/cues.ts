@@ -25,6 +25,7 @@ export type ActionId =
   | 'M1_photo_done'
   | 'M2_photo_done'
   | 'M3_photo_done'
+  | 'M4_quiz_ok'
   | 'M4_done'
   | 'M5a_done'
   | 'unlock_done'
@@ -579,8 +580,20 @@ export const CUES: Record<CueId, Cue> = {
       { text: '오늘 처음 만났는데… 너, 이제 내 친구야. 진심으로.' },
     ],
     next: 'B6_0',
-    // 4+1: 5번째 소원은 '다음 주' 리본으로 유보
-    ui: ['track_check:5', 'last_wish_reserved', 'album_build', 'phase:act2'],
+    /*
+      4+1: 5번째 소원은 '다음 주' 리본으로 유보.
+
+      소원은 유보돼도 방하림에는 실제로 다녀왔다. 쿠폰은 소원의 보상이
+      아니라 가게를 찾아간 값이라 여기서 준다 — 전에는 cp5만 빠져 있어서
+      다섯 곳을 다 걸은 사람이 쿠폰은 넉 장만 받았다.
+    */
+    ui: [
+      'track_check:5',
+      'last_wish_reserved',
+      'album_build',
+      'coupon:cp5',
+      'phase:act2',
+    ],
   },
 
   // ============================== ACT 2 — 빙고 개방 ==============================

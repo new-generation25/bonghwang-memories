@@ -23,7 +23,8 @@
       "mcp__claude-in-chrome__get_page_text",
       "mcp__claude-in-chrome__javascript_tool",
       "mcp__claude-in-chrome__find",
-      "Bash(kill %b10jolso2)"
+      "Bash(kill %b10jolso2)",
+      "Bash(cd \"F:/projects/bonghwang-memories\" && sed -n '/M4/,/},/p' src/lib/tracks.ts | head -20; echo \"=== validation 타입 ===\"; sed -n '36,60p' src/lib/tracks.ts)"
     ]
   }
 }
