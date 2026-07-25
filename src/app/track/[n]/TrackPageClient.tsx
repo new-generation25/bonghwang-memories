@@ -18,17 +18,31 @@ import CuePlayer from '@/components/cue/CuePlayer'
 import PlacePhoto from '@/components/cue/PlacePhoto'
 import CountInput from '@/components/mission/CountInput'
 import PhotoStep from '@/components/mission/PhotoStep'
+import SpeechAsk from '@/components/cue/SpeechAsk'
 import QuizInput from '@/components/mission/QuizInput'
 import RecorderBside from '@/components/mission/RecorderBside'
 import UnlockGate from '@/components/mission/UnlockGate'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { CUES, CueId, FragmentId } from '@/lib/cues'
-import { dispatchQr, dispatchTap, playCue, unlockAudio } from '@/lib/cueEngine'
+import {
+  dispatchQr,
+  dispatchTap,
+  pauseCue,
+  playCue,
+  resumeCue,
+  unlockAudio,
+} from '@/lib/cueEngine'
 import { stationByTrack } from '@/lib/tracks'
 import { mutateTour } from '@/lib/tourState'
 
 const NEUNGSOHWA_OVERLAY = '/images/neungsohwa-overlay.png'
+
+/** B1_B에서 소영이 말을 놓아도 되냐고 묻는 줄(0부터) */
+const SPEECH_ASK_LINE = 3
+
+/** 물음이 끝나고 창이 올라오기까지 — 생각할 틈 */
+const SPEECH_ASK_DELAY_MS = 1000
 
 /** 큐 종료 → 이어지는 상호작용 */
 type Interaction =
@@ -115,6 +129,38 @@ export default function TrackPageClient({ n }: { n: number }) {
     }))
     unlockAudio()
     if (station) dispatchQr(station.id)
+  }
+
+  /*
+    말 놓기 — 소영이 묻는 줄에 닿으면 재생을 멈추고 물어본다.
+
+    B1_B의 네 번째 줄이 "저기… 말 편하게 해도 될까요?"다. 그 줄이 지나가면
+    소영이 혼자 묻고 혼자 말을 놓는 꼴이라, 두 사람이 가까워지는 대목이
+    통째로 지나간다.
+
+    한 박자 두고 띄운다. 말이 끝나자마자 창이 덮으면 재촉하는 것처럼
+    보인다 — 실제로 그런 질문을 받으면 잠깐 생각한다.
+
+    한 번만 묻는다. 다시듣기로 그 줄을 또 지나도 이미 답한 사람에게
+    같은 것을 되묻지 않는다.
+  */
+  const [speechAsked, setSpeechAsked] = useState(false)
+  useEffect(() => {
+    if (speechAsked || tour.speechConsent) return
+    if (cueState.cueId !== 'B1_B' || cueState.subtitleIndex !== SPEECH_ASK_LINE) {
+      return
+    }
+    const t = window.setTimeout(() => {
+      pauseCue()
+      setSpeechAsked(true)
+    }, SPEECH_ASK_DELAY_MS)
+    return () => window.clearTimeout(t)
+  }, [cueState.cueId, cueState.subtitleIndex, speechAsked, tour.speechConsent])
+
+  const answerSpeech = (consent: 'yes' | 'no') => {
+    mutateTour({ speechConsent: consent })
+    setSpeechAsked(false)
+    resumeCue()
   }
 
   // §10 재개 — 엔진이 비어 있으면 마지막 완료 큐를 기준으로 복원
@@ -387,6 +433,9 @@ export default function TrackPageClient({ n }: { n: number }) {
         interaction이 있다는 것만 보고 막을 깔았더니, 보이지 않는 전체화면
         막이 데크를 포함한 모든 탭을 삼켜 화면이 멈춘 것처럼 됐다.
       */}
+      {/* 말 놓기 — 미션보다 위에 뜬다. 지금 답해야 이야기가 이어진다 */}
+      {speechAsked && <SpeechAsk onAnswer={answerSpeech} />}
+
       {interactionNode && (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-shell/55 px-4 pb-4">
           <div

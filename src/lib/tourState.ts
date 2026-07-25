@@ -36,6 +36,14 @@ export interface TourState {
   tracksCompleted: number[]
   /** D7: Track 1 종료(C1_5) 후 casual 고정 */
   speechMode: 'formal' | 'casual'
+  /**
+   * 소영이 말을 놓아도 되냐고 물었을 때의 대답.
+   *
+   * 지금은 어느 쪽을 골라도 이야기가 같게 흐른다 — 녹음이 반말 한 벌뿐이라
+   * 거절해도 다음 대사가 반말로 나온다. 그래도 답을 남겨두는 건 나중에
+   * 존댓말 벌을 넣을 때 이 값이 갈림길이 되기 때문이다.
+   */
+  speechConsent: 'yes' | 'no' | null
   bsideEntry: BsideEntry | null
   photos: TourPhoto[]
   bingo: { unlocked: boolean; cellsDone: string[]; lines: number }
@@ -59,6 +67,7 @@ export const INITIAL_TOUR_STATE: TourState = {
   fragments: [],
   tracksCompleted: [],
   speechMode: 'formal',
+  speechConsent: null,
   bsideEntry: null,
   photos: [],
   bingo: { unlocked: false, cellsDone: [], lines: 0 },
