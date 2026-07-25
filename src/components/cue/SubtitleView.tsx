@@ -42,12 +42,13 @@ export default function SubtitleView({
         opts.current ? 'opacity-100' : 'opacity-35'
       } text-ink ${opts.spaced ? 'mt-1.5' : ''}`}
     >
-      {line.speaker && (
-        // 시각 여백(mr) 외에 실제 공백도 둔다 — 스크린리더·복사 텍스트에서 라벨과 본문이 붙지 않도록
-        <span className="mr-1.5 font-mono-retro text-[11px] text-teal">
-          {line.speaker}{' '}
-        </span>
-      )}
+      {/*
+        화자 이름은 적지 않는다.
+
+        '라디오 DJ'·'아버지' 같은 노란 라벨을 앞에 붙였는데, 듣고 있으면
+        누구 목소리인지 알 수 있어 읽을 값이 없었다. 자막은 짧을수록
+        걸으면서 눈에 들어온다 — 대사만 남긴다.
+      */}
       {line.text}
     </p>
   )

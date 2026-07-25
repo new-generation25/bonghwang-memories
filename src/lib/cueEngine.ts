@@ -45,64 +45,6 @@ export const SKIP_AFTER_SEC = 15
 /** 소원을 이룬 순간 — 첫 번째와 마지막에만 쏜다(PointToast가 듣는다) */
 export const WISH_EVENT = 'bh:wish'
 
-/** 화면이 그려지고 첫 대사가 나오기까지의 사이 */
-const ENTRY_LEAD_MS = 500
-
-/**
- * 화면이 준비되지 않아도 결국 소리는 나야 한다.
- *
- * 큐를 그리는 화면이 notifyScreenReady를 부르지 않는 경로가 생기면
- * (새 화면을 붙이면서 빠뜨리는 식으로) 목소리가 영영 나오지 않는다.
- * 그럴 바엔 조금 이르더라도 나는 편이 낫다.
- */
-const START_FALLBACK_MS = 2000
-
-/**
- * 재생 대기 — 화면이 준비되면 튼다.
- *
- * 예전에는 권한을 딴 시점부터 0.5초를 셌다. 그런데 거점으로 넘어갈 때는
- * router.push로 화면이 통째로 갈리고, 그 전환이 0.5초보다 오래 걸린다.
- * 그래서 아직 플레이어 화면인데 소영의 첫 문장이 들리는 일이 났다.
- *
- * 이제 화면이 "다 그렸다"고 알려주면(notifyScreenReady) 그때부터 반 박자
- * 두고 튼다. 기다리는 것은 시간이 아니라 화면이다.
- */
-let pendingStart: (() => void) | null = null
-let pendingFallback: ReturnType<typeof setTimeout> | null = null
-
-function clearPendingStart() {
-  pendingStart = null
-  if (pendingFallback) {
-    clearTimeout(pendingFallback)
-    pendingFallback = null
-  }
-}
-
-function armStart(start: () => void) {
-  clearPendingStart()
-  pendingStart = start
-  pendingFallback = setTimeout(() => {
-    pendingFallback = null
-    fireStart()
-  }, START_FALLBACK_MS)
-}
-
-function fireStart() {
-  const start = pendingStart
-  clearPendingStart()
-  if (start) window.setTimeout(start, ENTRY_LEAD_MS)
-}
-
-/**
- * 큐를 그리는 화면이 다 그려졌다고 알린다.
- *
- * CuePlayer·CallScreen이 큐가 바뀔 때마다 부른다. 이미 재생 중이거나
- * 기다리는 것이 없으면 아무 일도 하지 않는다.
- */
-export function notifyScreenReady() {
-  if (pendingStart) fireStart()
-}
-
 const BASE_PATH = '/audio'
 const EXTENSIONS = ['m4a', 'mp3'] as const
 
@@ -322,8 +264,6 @@ function clearResources() {
     clearInterval(clockTimer)
     clockTimer = null
   }
-  // 아직 안 튼 재생이 남아 있으면 버린다 — 다른 큐로 넘어간 뒤에 울린다
-  clearPendingStart()
 }
 
 export function cancelPendingChain() {
@@ -413,33 +353,18 @@ export async function playCue(id: CueId): Promise<void> {
         아이폰에서 목소리가 통째로 나오지 않았다.
       */
       /*
-        음소거한 채로 권한을 따면 안 된다.
+        곧바로 튼다. 미루지 않는다.
 
-        play()와 pause() 사이에 첫 음절이 새는 것이 거슬려 muted=true로
-        감쌌더니, 아이폰에서 소영의 목소리가 통째로 나오지 않았다. iOS는
-        음소거 재생을 '자동재생'으로 보고 그냥 통과시킬 뿐, 그 요소의
-        오디오 잠금을 풀어주지 않는다. 나중에 muted를 꺼도 소리는 죽어
-        있다 — 잠금을 풀려면 소리가 나는 재생이 한 번 있어야 한다.
+        화면보다 소리가 먼저 나는 것이 거슬려 '한 번 틀고 세워뒀다가 반
+        박자 뒤에 다시 트는' 방식을 넣었다. 그랬더니 아이폰에서 목소리가
+        아예 나오지 않았다 — iOS는 사용자 조작 직후의 재생만 허락하는데,
+        세워두고 기다리는 사이(길게는 3초) 그 문맥이 끊긴다.
 
-        그래서 소리를 낸 채로 딴다. play()와 pause() 사이는 수십 밀리초라
-        거의 들리지 않고, 들린다 해도 안 들리는 것보다 낫다.
+        화면이 늦게 뜨는 문제는 여기서 풀 일이 아니다. 부르는 쪽에서
+        화면 전환을 먼저 걸고 큐를 시작한다(handleStationEnter).
       */
       await el.play()
-      el.pause()
-      el.currentTime = 0
-
-      armStart(() => {
-        // 그사이 다른 큐로 넘어갔으면 이 재생은 버린다
-        if (audio !== el) return
-        el.play().then(
-          () => {
-            if (audio === el) emit({ playing: true })
-          },
-          () => {
-            if (audio === el) emit({ playing: false })
-          }
-        )
-      })
+      emit({ playing: true })
     } catch {
       // 자동재생 차단 — UI가 "탭해서 계속" 버튼을 보여주도록 playing=false 유지
       emit({ playing: false })
@@ -449,17 +374,14 @@ export async function playCue(id: CueId): Promise<void> {
       합성 클록 — 자막만으로 진행. 오디오와 같은 사이를 둔다.
       여기만 즉시 시작하면 음성이 없는 큐에서 자막이 튀어나온다.
     */
-    armStart(() => {
-      if (state.cueId !== id) return
-      clockStartedAt = performance.now()
-      emit({ audioAvailable: false, playing: true })
-      clockTimer = setInterval(() => {
-        if (state.cueId !== id || !state.playing) return
-        const elapsed =
-          clockAccum + ((performance.now() - clockStartedAt) / 1000) * timeScale
-        tick(cue, elapsed, state.duration)
-      }, 250)
-    })
+    clockStartedAt = performance.now()
+    emit({ audioAvailable: false, playing: true })
+    clockTimer = setInterval(() => {
+      if (state.cueId !== id || !state.playing) return
+      const elapsed =
+        clockAccum + ((performance.now() - clockStartedAt) / 1000) * timeScale
+      tick(cue, elapsed, state.duration)
+    }, 250)
   }
 }
 
@@ -684,14 +606,12 @@ function runDirective(directive: UiDirective, cueId: CueId) {
 /**
  * 큐를 시작한다.
  *
- * **제스처 문맥 안에서 곧바로 불러야 한다.** 한때 이 자리에서 setTimeout으로
- * playCue 전체를 미뤘는데, 그 사이 iOS의 사용자 제스처 문맥이 끊겨
- * **아이폰에서 소영의 목소리가 통째로 나오지 않았다.** PC 크롬은 자동재생
- * 정책이 느슨해 끝까지 드러나지 않았다.
+ * **제스처 문맥 안에서 곧바로 불러야 한다.** 한때 화면이 다 그려지기를
+ * 기다렸다가 트는 방식을 넣었는데, 그 사이(길게는 3초) iOS의 사용자
+ * 제스처 문맥이 끊겨 아이폰에서 목소리가 아예 나오지 않았다.
  *
- * 화면보다 목소리가 먼저 나오는 문제는 playCue 안에서 **오디오 재생만**
- * 반 박자 미뤄 푼다(ENTRY_LEAD_MS). 화면·자막은 즉시 바뀌므로 통화가
- * 연결되기 전에 아버지 얼굴이 남아 있는 일도 없어진다.
+ * 화면보다 소리가 먼저 나는 문제는 부르는 쪽에서 푼다 — 화면 전환을
+ * 먼저 걸고 큐를 시작하면 순서가 맞는다(handleStationEnter).
  */
 function startCueSoon(cueId: CueId) {
   void playCue(cueId)

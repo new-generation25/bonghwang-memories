@@ -52,8 +52,19 @@ export default function PlayerHomePage() {
 
   const handleStationEnter = (station: Station) => {
     setShowScanner(false)
-    dispatchQr(station.id)
+    /*
+      화면 전환을 먼저 건다.
+
+      순서가 반대일 때는 소영의 첫 문장이 아직 플레이어 화면 위에서
+      들렸다. 한때 소리 쪽을 반 박자 미뤄 맞추려 했는데, 그 사이 iOS의
+      제스처 문맥이 끊겨 아이폰에서는 목소리가 통째로 나오지 않았다.
+
+      router.push를 먼저 부르면 라우팅이 시작되고, 그 다음 dispatchQr이
+      오디오 파일을 찾는 동안(수백 밀리초) 화면이 그려진다. 소리는 여전히
+      사용자 조작 안에서 시작되므로 iOS도 막지 않는다.
+    */
     router.push(`/track/${station.track}`)
+    dispatchQr(station.id)
   }
 
   /*

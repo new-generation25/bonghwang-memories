@@ -31,6 +31,21 @@ const MAX_SEC = 60
 
 type Mode = 'choose' | 'voice' | 'text'
 
+/**
+ * 이 브라우저가 담을 수 있는 소리 그릇을 고른다.
+ *
+ * 사파리는 mp4만 알고 webm을 모른다. 반대로 파이어폭스는 mp4를 못 담는
+ * 경우가 있다. 먼저 되는 것을 쓰고, 아무것도 확인되지 않으면 브라우저가
+ * 알아서 고르게 둔다(빈 옵션).
+ */
+function pickRecorderOptions(): MediaRecorderOptions | undefined {
+  const candidates = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
+  for (const mimeType of candidates) {
+    if (MediaRecorder.isTypeSupported?.(mimeType)) return { mimeType }
+  }
+  return undefined
+}
+
 export default function RecorderBside() {
   const [mode, setMode] = useState<Mode>('choose')
   const [micDeniedToast, setMicDeniedToast] = useState(false)
@@ -95,6 +110,18 @@ export default function RecorderBside() {
   }
 
   const startRecording = async () => {
+    /*
+      MediaRecorder가 아예 없는 기기도 있다(구형 iOS). 예외를 던지기 전에
+      글로 남기는 길로 넘긴다 — 마이크가 거부됐을 때와 같은 자리다.
+    */
+    if (typeof MediaRecorder === 'undefined') {
+      setMicError('이 기기에서는 녹음을 쓸 수 없어요. 글로 남겨주세요.')
+      setMicDeniedToast(true)
+      setMode('text')
+      setTimeout(() => setMicDeniedToast(false), 6000)
+      return
+    }
+
     try {
       const { stream, message } = await openStream({ audio: true })
       if (!stream) {
@@ -114,7 +141,18 @@ export default function RecorderBside() {
       analyser.fftSize = 1024
       source.connect(analyser)
 
-      const recorder = new MediaRecorder(stream)
+      /*
+        아이폰이 담을 수 있는 그릇으로 녹음한다.
+
+        형식을 지정하지 않으면 브라우저가 기본값을 고르는데, 사파리는
+        audio/webm을 아예 모르고 기본값으로 video/mp4를 잡기도 한다.
+        소리만 있는 스트림에 그 그릇을 씌우면 녹음이 시작조차 못 하거나
+        열리지 않는 파일이 나온다 — 아이폰에서 녹음기가 먹통이던 이유다.
+
+        지원하는 것 중 앞의 것을 쓴다. 사파리는 mp4, 크롬·안드로이드는
+        webm에서 걸린다. 셋 다 아니면 브라우저 기본값에 맡긴다.
+      */
+      const recorder = new MediaRecorder(stream, pickRecorderOptions())
       mediaRecorderRef.current = recorder
       chunksRef.current = []
       recorder.ondataavailable = (e) => {
