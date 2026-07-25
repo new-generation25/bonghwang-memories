@@ -4,4 +4,4 @@
  * 손으로 고치지 마라. 서버의 sw.js에 박힌 값과 견주어 다르면 새 배포가
  * 있다는 뜻이고, 앱이 스스로 새로고침한다.
  */
-export const BUILD_VERSION = 'v1.0.1784982610596'
+export const BUILD_VERSION = 'v1.0.1784983559207'
