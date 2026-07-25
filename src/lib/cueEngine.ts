@@ -153,6 +153,17 @@ const eventListeners = new Set<EventListener>()
 
 function emit(patch: Partial<CuePlaybackState>) {
   state = { ...state, ...patch }
+  /*
+    재생 중인지를 창에 걸어둔다.
+
+    서비스워커 업데이트를 적용할지 정하는 코드(layout.tsx)가 이 값을 본다.
+    새 버전으로 갈아타면 페이지가 새로고침되는데, 그것이 이야기 도중에
+    일어나면 재생이 끊기고 화면이 처음부터 다시 그려진다. React 밖에서
+    돌아가는 인라인 스크립트라 훅으로는 못 읽어 전역에 남긴다.
+  */
+  if (typeof window !== 'undefined') {
+    ;(window as unknown as Record<string, unknown>).__bhPlaying = state.playing
+  }
   stateListeners.forEach((l) => l(state))
 }
 

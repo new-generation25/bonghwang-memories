@@ -1,6 +1,6 @@
 // 캐시하는 파일(오디오 포함)을 교체할 때는 반드시 이 버전을 올려야 한다.
 // 버전이 같으면 기존 기기가 옛 캐시를 계속 쓴다.
-const CACHE_NAME = 'bonghwang-memories-v1.0.1784973483030';
+const CACHE_NAME = 'bonghwang-memories-v1.0.1784980743909';
 const urlsToCache = [
   '/manifest.json',
   '/icon-192x192.png',
@@ -52,9 +52,19 @@ const audioToCache = CUE_AUDIO_NAMES.flatMap((name) => [
   '/images/place/t4.png'
 ]);
 
-// Install - 정적 자원만 프리캐시하고 즉시 활성화
+/*
+  Install — 프리캐시만 하고 기다린다.
+
+  전에는 여기서 곧바로 skipWaiting()을 불렀다. 그러면 새 버전이 설치되는
+  순간 스스로 활성화되어, 페이지가 "업데이트하시겠습니까"를 띄우기도 전에
+  controllerchange가 나고 조용히 새로고침돼 버렸다. 어느 쪽이 먼저냐가
+  그때그때 달라서, 어떤 날은 묻고 어떤 날은 묻지 않았다.
+
+  이제는 대기 상태로 남아 있다가 페이지가 SKIP_WAITING을 보낼 때만
+  넘어간다. 언제 갈아탈지는 페이지가 정한다 — 이야기가 재생 중이면
+  끊지 않고 미룬다.
+*/
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       await cache.addAll(urlsToCache);

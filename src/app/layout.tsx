@@ -187,24 +187,53 @@ export default function RootLayout({
                 }
               });
 
-              // Service Worker 등록
+              /*
+                새 버전으로 갈아타는 시점을 페이지가 정한다.
+
+                묻지 않는다. 예전에는 confirm으로 물었는데, sw.js가 설치와
+                동시에 스스로 활성화하는 바람에 묻기도 전에 새로고침되는
+                일이 잦았다 — "어떤 때는 물어보고 어떤 때는 안 물어보는"
+                것이 그래서였다. 이제 워커는 기다리고, 갈아탈 자리는
+                여기서 고른다.
+
+                이야기가 재생 중이면 미룬다. 새로고침은 재생을 끊고 화면을
+                처음부터 다시 그리는 일이라, 걷는 도중에 일어나면 무슨 일이
+                난 줄 안다. 다음에 앱을 열 때 조용히 반영된다.
+              */
+              const applyUpdate = (reg) => {
+                if (!reg.waiting) return;
+                if (window.__bhPlaying) return;
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              };
+
               navigator.serviceWorker.register('/sw.js')
                 .then((registration) => {
-                  // 앱 시작 시 1회만 업데이트 확인
+                  // 지난번에 받아두고 아직 못 갈아탄 버전이 있으면 지금 적용한다.
+                  // updatefound는 '새로 설치될 때'만 오므로 이 확인이 없으면
+                  // 이미 대기 중인 새 버전을 영영 놓친다.
+                  applyUpdate(registration);
                   registration.update();
-                  
-                  // 업데이트 발견 시 처리
+
                   registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
-                    
+                    if (!newWorker) return;
                     newWorker.addEventListener('statechange', () => {
                       if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // 사용자에게 업데이트 알림
-                        if (confirm('새로운 버전이 있습니다. 업데이트하시겠습니까?')) {
-                          newWorker.postMessage({ type: 'SKIP_WAITING' });
-                        }
+                        applyUpdate(registration);
                       }
                     });
+                  });
+
+                  /*
+                    앱으로 돌아올 때마다 다시 확인한다.
+
+                    홈 화면에서 띄운 PWA는 좀처럼 죽지 않아서, 등록할 때 한 번
+                    본 것이 며칠 전 확인일 수 있다. 화면이 다시 보이는 순간이
+                    사실상의 '앱 시작'이다.
+                  */
+                  document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState !== 'visible') return;
+                    registration.update().then(() => applyUpdate(registration));
                   });
                 })
                 .catch((error) => {
