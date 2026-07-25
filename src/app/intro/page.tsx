@@ -35,6 +35,7 @@ import {
   skipCue,
   skipLine,
   stopCue,
+  unlockAudio,
 } from '@/lib/cueEngine'
 import { Ringback, startRingback } from '@/lib/ringback'
 import { mutateTour } from '@/lib/tourState'
@@ -135,6 +136,14 @@ export default function IntroPage() {
 
   /** 발신 — 벨소리를 울리며 신호가 가는 연출을 거친 뒤 통화 큐를 시작한다 */
   const startDialing = () => {
+    /*
+      전화를 거는 이 순간에 오디오 잠금을 푼다.
+
+      소영의 목소리는 발신음이 끝나는 타이머 안에서 시작된다(DIAL_MS 뒤).
+      그 자리는 사용자 조작에서 이미 멀어져 있어, iOS가 첫 재생을 막는다.
+      버튼을 누른 지금이 조작 안이므로 여기서 미리 풀어둔다.
+    */
+    unlockAudio()
     setStep('dialing')
     setCallButtonVisible(false)
     ringRef.current?.stop()

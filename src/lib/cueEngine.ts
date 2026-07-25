@@ -133,6 +133,28 @@ export function getCueState(): CuePlaybackState {
 // -----------------------------------------------------------------------------
 
 let audio: HTMLAudioElement | null = null
+
+/**
+ * 소리를 내는 요소는 하나만 만들어 계속 쓴다.
+ *
+ * iOS는 오디오 요소마다 '첫 재생은 사용자 조작 안에서'를 요구한다. 큐마다
+ * new Audio()를 만들면 그 요구가 매번 새로 걸리는데, 정작 재생이 시작되는
+ * 자리는 조작에서 멀어져 있을 때가 많다 — 전화는 발신음이 끝나는 타이머
+ * 안에서 시작되고, 미션 다음 대사는 사진을 보낸 뒤에 걸린다. 그래서
+ * 아이폰에서 소영의 목소리가 나오지 않았다.
+ *
+ * 요소를 하나로 두면 첫 조작(인트로의 PLAY) 한 번으로 잠금이 풀리고,
+ * 그 뒤로는 src만 갈아 끼우며 언제든 재생할 수 있다.
+ *
+ * 리스너는 addEventListener 대신 on* 속성으로 단다 — 요소를 재사용하므로
+ * 매번 더하면 옛 큐의 핸들러가 쌓인다.
+ */
+let sharedAudio: HTMLAudioElement | null = null
+
+function audioElement(): HTMLAudioElement {
+  if (!sharedAudio) sharedAudio = new Audio()
+  return sharedAudio
+}
 let clockTimer: ReturnType<typeof setInterval> | null = null
 let chainTimer: ReturnType<typeof setTimeout> | null = null
 /** auto_chain 예정 시각 — 백그라운드 타이머 스로틀링 복구용(§10) */
@@ -198,11 +220,23 @@ async function resolveSource(cue: Cue): Promise<string | null> {
 export function unlockAudio() {
   if (unlocked || typeof window === 'undefined') return
   try {
-    const silent = new Audio()
-    silent.muted = true
-    silent.src =
+    /*
+      공용 요소를 무음으로 한 번 틀어 잠금을 푼다.
+
+      muted로 틀면 iOS가 '자동재생'으로 보고 통과시킬 뿐 잠금을 풀어주지
+      않는다. 소리가 나는 재생이어야 하므로 muted를 쓰지 않고, 대신
+      길이 0인 무음 파일을 쓴다 — 실제로는 아무것도 들리지 않는다.
+
+      여기서 푼 요소를 playCue가 그대로 쓴다. 그래서 발신음이 끝나는
+      타이머 안에서 시작하는 통화도 막히지 않는다.
+    */
+    const el = audioElement()
+    el.src =
       'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
-    void silent.play().catch(() => {})
+    void el
+      .play()
+      .then(() => el.pause())
+      .catch(() => {})
     unlocked = true
   } catch {
     /* 치명적이지 않음 */
@@ -256,8 +290,12 @@ function elapsedAtSubtitle(cue: Cue, index: number, duration: number): number {
 
 function clearResources() {
   if (audio) {
+    /*
+      멈추기만 하고 요소는 남긴다. src를 비우거나 버리면 다음 큐에서 다시
+      잠금을 따야 하는데, 그 자리는 대개 사용자 조작에서 멀다.
+      리스너는 on* 속성이라 다음 큐가 덮어쓴다.
+    */
     audio.pause()
-    audio.src = ''
     audio = null
   }
   if (clockTimer) {
@@ -320,25 +358,33 @@ export async function playCue(id: CueId): Promise<void> {
   if (state.cueId !== id) return
 
   if (src) {
-    const el = new Audio(src)
+    /*
+      잠금이 풀린 그 요소에 src만 갈아 끼운다.
+
+      큐마다 new Audio()를 만들면 iOS가 매번 '첫 재생'으로 보고 사용자
+      조작을 요구한다. 재생이 시작되는 자리는 조작에서 멀 때가 많아서
+      (발신음이 끝나는 타이머, 사진을 보낸 뒤) 그때마다 막혔다.
+    */
+    const el = audioElement()
+    el.src = src
     audio = el
-    el.addEventListener('loadedmetadata', () => {
+    el.onloadedmetadata = () => {
       if (audio === el && el.duration && isFinite(el.duration)) {
         emit({ duration: el.duration })
       }
-    })
-    el.addEventListener('timeupdate', () => {
+    }
+    el.ontimeupdate = () => {
       if (audio === el) {
         tick(cue, el.currentTime, el.duration && isFinite(el.duration) ? el.duration : cue.durationSec)
       }
-    })
-    el.addEventListener('ended', () => {
+    }
+    el.onended = () => {
       if (audio === el) finishCue(cue)
-    })
-    el.addEventListener('error', () => {
+    }
+    el.onerror = () => {
       // 재생 중 오류 → 합성 클록으로 전환하지 않고 그 지점에서 종료 처리
       if (audio === el) finishCue(cue)
-    })
+    }
     emit({ audioAvailable: true })
     try {
       if (timeScale !== 1) el.playbackRate = timeScale
