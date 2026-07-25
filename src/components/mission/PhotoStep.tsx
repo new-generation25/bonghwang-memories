@@ -56,6 +56,25 @@ export default function PhotoStep({
   const handleConfirm = async () => {
     if (!preview || saving) return
     setSaving(true)
+
+    /*
+      보내기 전에 폰에 남긴다.
+
+      버튼을 둘로 두었더니 '저장'은 곁다리로 보여 대부분 그냥 지나쳤다.
+      그러면 여행이 끝난 뒤 폰에 사진이 한 장도 없다 — 앱 데이터를 지우면
+      통째로 사라지는데 그걸 알 방법이 없다.
+
+      공유 시트는 사용자 조작 안에서만 열린다. setSaving 다음 줄에서
+      바로 불러야 그 문맥이 남는다 — await를 먼저 하면 시트가 막힌다.
+
+      시트를 닫아도(저장하지 않아도) 미션은 그대로 진행한다. 저장은
+      권하는 것이지 관문이 아니다.
+    */
+    if (!saved) {
+      const r = await savePhotoToDevice(preview, track)
+      if (r === 'shared' || r === 'downloaded') setSaved(true)
+    }
+
     const idbKey = `photo-t${track}-${Date.now()}`
     try {
       await putDataUrl(idbKey, preview)
@@ -107,28 +126,6 @@ export default function PhotoStep({
               </button>
             </div>
 
-            {/*
-              폰에 남기기.
-
-              웹은 사진첩에 직접 쓸 수 없어서, 여기까지 온 사진도 브라우저
-              안에만 있다. 사파리 데이터를 지우면 여행 사진이 통째로 사라지고
-              카톡으로 보낼 길도 없다. 누르면 공유 시트가 열려 '이미지 저장'
-              한 번으로 사진첩에 들어간다.
-
-              작게 둔다 — 걸으면서 보는 화면이라 설명이 길면 읽지 않는다.
-              지금 할 일은 소영에게 보내는 것이고, 저장은 곁다리다.
-            */}
-            <button
-              type="button"
-              onClick={async () => {
-                const r = await savePhotoToDevice(preview, track)
-                if (r === 'shared' || r === 'downloaded') setSaved(true)
-              }}
-              className="mt-2 ml-auto block text-[11px] text-ink-60 underline underline-offset-2"
-            >
-              {saved ? '✓ 폰에 저장했어요' : '📥 이 사진 폰에 저장'}
-            </button>
-
             <div ref={confirmRef} className="cta-band mt-2.5 flex items-end gap-2">
               <div className="min-h-[42px] flex-1 rounded-full border border-line bg-paper px-4 py-2.5 text-[13px] text-ink-60">
                 사진 1장
@@ -152,8 +149,13 @@ export default function PhotoStep({
               </button>
             </div>
           </div>
-          <p className="mt-1.5 text-center text-[11px] text-ink-60">
-            소영에게 보냅니다
+          {/*
+            누르면 무슨 일이 일어나는지 미리 말한다. 공유 시트는 카톡·인스타가
+            나열된 창이라, 예고 없이 뜨면 소영과 무관한 화면이 왜 나왔는지
+            모른다. 한 줄 적어두면 그 창이 저장하는 자리임을 안다.
+          */}
+          <p className="mt-1.5 text-center text-[11px] leading-relaxed text-ink-60">
+            소영에게 보내고, 내 폰에도 저장합니다
           </p>
         </div>
       ) : (
