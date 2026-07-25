@@ -157,9 +157,15 @@ export default function DownloadPage() {
               : '오디오 준비 중 — 자막 모드로 진행합니다'
             : `골목의 소리를 담는 중… ${progress}%`}
         </p>
-        <p className="mt-1 text-center text-[11px] text-ink-60">
-          {done ? '나머지 이야기는 걸으면서 받아둘게요' : '골목에서 신호가 끊겨도 들을 수 있도록 미리 담아둡니다'}
-        </p>
+        {/*
+          다 받으면 설명을 거둔다. 준비가 끝난 마당에 무엇을 더 받는지는
+          참여자가 알 일이 아니다 — 남은 것은 뒤에서 알아서 받는다.
+        */}
+        {!done && (
+          <p className="mt-1 text-center text-[11px] text-ink-60">
+            골목에서 신호가 끊겨도 들을 수 있도록 미리 담아둡니다
+          </p>
+        )}
 
         {done && (
           <button
