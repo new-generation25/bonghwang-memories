@@ -42,8 +42,63 @@ import { logEvent } from './analytics'
 /** D9 — 스킵 허용 시점(초) */
 export const SKIP_AFTER_SEC = 15
 
-/** 거점에 들어서고 첫 대사가 나오기까지의 사이 */
+/** 화면이 그려지고 첫 대사가 나오기까지의 사이 */
 const ENTRY_LEAD_MS = 500
+
+/**
+ * 화면이 준비되지 않아도 결국 소리는 나야 한다.
+ *
+ * 큐를 그리는 화면이 notifyScreenReady를 부르지 않는 경로가 생기면
+ * (새 화면을 붙이면서 빠뜨리는 식으로) 목소리가 영영 나오지 않는다.
+ * 그럴 바엔 조금 이르더라도 나는 편이 낫다.
+ */
+const START_FALLBACK_MS = 2000
+
+/**
+ * 재생 대기 — 화면이 준비되면 튼다.
+ *
+ * 예전에는 권한을 딴 시점부터 0.5초를 셌다. 그런데 거점으로 넘어갈 때는
+ * router.push로 화면이 통째로 갈리고, 그 전환이 0.5초보다 오래 걸린다.
+ * 그래서 아직 플레이어 화면인데 소영의 첫 문장이 들리는 일이 났다.
+ *
+ * 이제 화면이 "다 그렸다"고 알려주면(notifyScreenReady) 그때부터 반 박자
+ * 두고 튼다. 기다리는 것은 시간이 아니라 화면이다.
+ */
+let pendingStart: (() => void) | null = null
+let pendingFallback: ReturnType<typeof setTimeout> | null = null
+
+function clearPendingStart() {
+  pendingStart = null
+  if (pendingFallback) {
+    clearTimeout(pendingFallback)
+    pendingFallback = null
+  }
+}
+
+function armStart(start: () => void) {
+  clearPendingStart()
+  pendingStart = start
+  pendingFallback = setTimeout(() => {
+    pendingFallback = null
+    fireStart()
+  }, START_FALLBACK_MS)
+}
+
+function fireStart() {
+  const start = pendingStart
+  clearPendingStart()
+  if (start) window.setTimeout(start, ENTRY_LEAD_MS)
+}
+
+/**
+ * 큐를 그리는 화면이 다 그려졌다고 알린다.
+ *
+ * CuePlayer·CallScreen이 큐가 바뀔 때마다 부른다. 이미 재생 중이거나
+ * 기다리는 것이 없으면 아무 일도 하지 않는다.
+ */
+export function notifyScreenReady() {
+  if (pendingStart) fireStart()
+}
 
 const BASE_PATH = '/audio'
 const EXTENSIONS = ['m4a', 'mp3'] as const
@@ -253,6 +308,8 @@ function clearResources() {
     clearInterval(clockTimer)
     clockTimer = null
   }
+  // 아직 안 튼 재생이 남아 있으면 버린다 — 다른 큐로 넘어간 뒤에 울린다
+  clearPendingStart()
 }
 
 export function cancelPendingChain() {
@@ -341,11 +398,20 @@ export async function playCue(id: CueId): Promise<void> {
         이 순서를 지키지 않고 play() 자체를 setTimeout 뒤로 미뤘더니
         아이폰에서 목소리가 통째로 나오지 않았다.
       */
+      /*
+        권한을 따는 동안은 소리를 죽인다.
+
+        play()와 pause() 사이는 찰나지만 브라우저가 그 사이를 실제로
+        재생한다 — 첫 음절이 '툭' 하고 새어 나온다. 화면이 아직 안 바뀐
+        시점이라 더 도드라진다.
+      */
+      el.muted = true
       await el.play()
       el.pause()
       el.currentTime = 0
+      el.muted = false
 
-      window.setTimeout(() => {
+      armStart(() => {
         // 그사이 다른 큐로 넘어갔으면 이 재생은 버린다
         if (audio !== el) return
         el.play().then(
@@ -356,7 +422,7 @@ export async function playCue(id: CueId): Promise<void> {
             if (audio === el) emit({ playing: false })
           }
         )
-      }, ENTRY_LEAD_MS)
+      })
     } catch {
       // 자동재생 차단 — UI가 "탭해서 계속" 버튼을 보여주도록 playing=false 유지
       emit({ playing: false })
@@ -366,7 +432,7 @@ export async function playCue(id: CueId): Promise<void> {
       합성 클록 — 자막만으로 진행. 오디오와 같은 사이를 둔다.
       여기만 즉시 시작하면 음성이 없는 큐에서 자막이 튀어나온다.
     */
-    window.setTimeout(() => {
+    armStart(() => {
       if (state.cueId !== id) return
       clockStartedAt = performance.now()
       emit({ audioAvailable: false, playing: true })
@@ -376,7 +442,7 @@ export async function playCue(id: CueId): Promise<void> {
           clockAccum + ((performance.now() - clockStartedAt) / 1000) * timeScale
         tick(cue, elapsed, state.duration)
       }, 250)
-    }, ENTRY_LEAD_MS)
+    })
   }
 }
 

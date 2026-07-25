@@ -9,7 +9,9 @@
  * PLAY를 눌러야 다음 단계로 넘어간다 (D9 — 시간 기반 자동진행 금지).
  */
 
+import { useEffect } from 'react'
 import { initialFor, portraitFor } from '@/lib/cast'
+import { notifyScreenReady } from '@/lib/cueEngine'
 import { Cue, SPEAKER_NAMES } from '@/lib/cues'
 
 interface CallScreenProps {
@@ -92,6 +94,14 @@ export default function CallScreen({
 }: CallScreenProps) {
   const lines = cue.subtitleLines
   const portrait = portraitFor(cue)
+
+  /*
+    통화 화면이 다 그려졌다고 알린다 — 그래야 소영이 말하기 시작한다.
+    이 신호가 없으면 아직 발신 화면인 채로 첫 문장이 들린다.
+  */
+  useEffect(() => {
+    notifyScreenReady()
+  }, [cue.id])
   // 문자 말풍선 — 직전 줄(흐림) + 현재 줄(강조) 2줄만
   const prev = subtitleIndex > 0 ? lines[subtitleIndex - 1] : null
   const current = lines[subtitleIndex] ?? null

@@ -9,8 +9,16 @@
  */
 
 import { CUES } from '@/lib/cues'
-import { endCue, pauseCue, replayCue, resumeCue, skipLine } from '@/lib/cueEngine'
+import {
+  endCue,
+  notifyScreenReady,
+  pauseCue,
+  replayCue,
+  resumeCue,
+  skipLine,
+} from '@/lib/cueEngine'
 import { useCue } from '@/hooks/useCue'
+import { useEffect } from 'react'
 import CallFrame from './CallFrame'
 import DeckControls from './DeckControls'
 import SubtitleView from './SubtitleView'
@@ -59,6 +67,17 @@ export default function CuePlayer({
 }: CuePlayerProps = {}) {
   const cueState = useCue()
   const { cueId, playing, elapsed, duration, subtitleIndex, ended, audioAvailable, pendingAutoChain } = cueState
+
+  /*
+    화면이 다 그려졌다고 알린다 — 그래야 소리가 난다.
+
+    큐를 시작한 쪽은 소리를 틀지 않고 대기시켜 둔다. 거점으로 넘어갈 때는
+    router.push로 화면이 통째로 갈리는데, 그 전환이 끝나기 전에 소리가
+    나면 아직 이전 화면인 채로 소영이 말하기 시작한다.
+  */
+  useEffect(() => {
+    if (cueId) notifyScreenReady()
+  }, [cueId])
 
   if (!cueId) return null
   const cue = CUES[cueId]
