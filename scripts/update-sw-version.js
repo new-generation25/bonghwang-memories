@@ -1,5 +1,23 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
+
+/**
+ * 이 판이 어느 커밋인지.
+ *
+ * Vercel은 빌드할 때 커밋 해시를 환경변수로 준다. 로컬에서는 git에게
+ * 직접 묻는다. 둘 다 없으면 빈 값으로 두고, 화면은 그 줄을 접는다 —
+ * 없는 값을 '알 수 없음'이라 적어봐야 읽는 사람이 할 일이 없다.
+ */
+function commitHash() {
+  const fromCi = process.env.VERCEL_GIT_COMMIT_SHA;
+  if (fromCi) return fromCi.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+  } catch (e) {
+    return '';
+  }
+}
 
 // 현재 타임스탬프를 기반으로 한 버전 생성
 const timestamp = Date.now();
@@ -29,6 +47,7 @@ try {
     그 생명주기는 브라우저마다 다르고 iOS PWA에서는 특히 굼뜨다.
   */
   const versionTs = path.join(__dirname, '../src/lib/buildVersion.ts');
+  const commit = commitHash();
   fs.writeFileSync(
     versionTs,
     `/**
@@ -38,6 +57,9 @@ try {
  * 있다는 뜻이고, 앱이 스스로 새로고침한다.
  */
 export const BUILD_VERSION = '${version}'
+
+/** 이 판이 어느 커밋인지 — 관리자 화면에서 반영 여부를 눈으로 가린다 */
+export const BUILD_COMMIT = '${commit}'
 `,
     'utf8'
   );

@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { isAdminUser } from '@/lib/admin'
+import { BUILD_COMMIT } from '@/lib/buildVersion'
 import {
   openSuperAdminPanel,
   setSuperAdmin,
@@ -94,8 +95,22 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
             </div>
 
             {profile ? (
-              <p className="mt-1 text-[12px] text-ink-60">
-                기록자 <b className="text-ink">{profile.nickname}</b>
+              <p className="mt-1 flex items-baseline justify-between gap-2 text-[12px] text-ink-60">
+                <span>
+                  기록자 <b className="text-ink">{profile.nickname}</b>
+                </span>
+                {/*
+                  이 판이 어느 커밋인지 — 관리자에게만.
+
+                  "고쳤다는데 그대로다"를 확인하려고 조작 패널까지 세 번을
+                  들어가야 했다. 설정을 여는 순간 보이면 그걸로 끝난다.
+                  참여자에게는 알릴 값이 아니라 관리자 계정에서만 뜬다.
+                */}
+                {isAdminUser() && BUILD_COMMIT && (
+                  <span className="shrink-0 font-mono-retro text-[10px] text-ink-60">
+                    {BUILD_COMMIT}
+                  </span>
+                )}
               </p>
             ) : (
               <p className="mt-1 text-[12px] text-ink-60">

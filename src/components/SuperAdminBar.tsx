@@ -36,7 +36,6 @@ import {
 import { couponForTrack } from '@/lib/coupons'
 import { award } from '@/lib/points'
 import type { FragmentId } from '@/lib/cues'
-import { BUILD_VERSION } from '@/lib/buildVersion'
 
 /** 거점 다섯 — 넘버링은 카세트 라벨과 같은 A면 표기를 쓴다 */
 const TRACKS = [1, 2, 3, 4, 5] as const
@@ -45,8 +44,6 @@ export default function SuperAdminBar() {
   const on = useSuperAdmin()
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  /** 서버에 올라간 판 — 이 화면과 견주면 반영 여부가 가려진다 */
-  const [serverVer, setServerVer] = useState<string | null>(null)
 
   /*
    * 앱바 색을 바꾼다.
@@ -70,16 +67,6 @@ export default function SuperAdminBar() {
     window.addEventListener(SUPER_PANEL_EVENT, show)
     return () => window.removeEventListener(SUPER_PANEL_EVENT, show)
   }, [])
-
-  // 패널을 열 때마다 서버 판을 다시 읽는다 — 배포 직후에 바로 확인한다
-  useEffect(() => {
-    if (!open) return
-    setServerVer(null)
-    fetch('/sw.js', { cache: 'no-store' })
-      .then((r) => r.text())
-      .then((t) => setServerVer(t.match(/bonghwang-memories-(v[\d.]+)/)?.[1] ?? '?'))
-      .catch(() => setServerVer('?'))
-  }, [open])
 
   if (!on) return null
 
@@ -233,26 +220,6 @@ export default function SuperAdminBar() {
               관리자 계정의 기록은 콘트롤 패널 집계에서 빠집니다.
             </p>
 
-            {/*
-              지금 이 화면이 어느 판인지.
-
-              "고쳤다는데 그대로다"를 확인할 길이 없었다. 지금 돌고 있는
-              번들의 버전과 서버에 올라간 버전을 나란히 놓으면, 반영이
-              됐는지 눈으로 가려진다 — 두 값이 같으면 최신이다.
-
-              참여자에게는 알릴 값이 아니라 여기(조작 패널)에만 둔다.
-            */}
-            <div className="mt-3 border-t border-line pt-2 text-center font-mono-retro text-[10px] leading-relaxed text-ink-60">
-              <p>이 화면 {BUILD_VERSION}</p>
-              <p>
-                서버{' '}
-                {serverVer === null
-                  ? '확인 중…'
-                  : serverVer === BUILD_VERSION
-                    ? `${serverVer} · 최신`
-                    : `${serverVer} · 새 판 있음`}
-              </p>
-            </div>
       </div>
     </div>
   )
