@@ -19,6 +19,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { submitOnCtrlEnter } from '@/lib/submitOnEnter'
+import { saveAudioToDevice } from '@/lib/savePhoto'
 import { putBlob } from '@/lib/blobStore'
 import { dispatchAction, getCueState } from '@/lib/cueEngine'
 import { playRecStart, playRecStop } from '@/lib/sfx'
@@ -256,7 +257,7 @@ export default function RecorderBside() {
         onChange={(e) => setUploadConsent(e.target.checked)}
         className="mt-0.5"
       />
-      완주 테이프에 담아 보관할까요? (서버에 저장 — 동의하지 않아도 내 기기에는 남아요)
+      완주 테이프에 담아 보관할까요? (서버에 저장 — 동의하지 않아도 내 폰과 이 앱에는 남아요)
     </label>
   )
 
@@ -366,8 +367,19 @@ export default function RecorderBside() {
                   다시 녹음
                 </button>
                 <button
-                  onClick={() =>
-                    complete(
+                  onClick={async () => {
+                    /*
+                      담기 전에 폰에도 남긴다.
+
+                      사진과 같은 규칙이다 — 앱 안에만 두면 데이터를
+                      지우는 순간 사라지고, 60초짜리 개인적인 메모인데
+                      정작 본인 폰에는 안 남는 것이 어긋난다.
+
+                      공유 시트는 사용자 조작 안에서만 열리므로 여기서
+                      바로 부른다. 닫아도(저장하지 않아도) 그대로 진행한다.
+                    */
+                    if (recordedBlob) await saveAudioToDevice(recordedBlob)
+                    await complete(
                       {
                         type: 'voice',
                         idbKey: 'bside-voice',
@@ -375,7 +387,7 @@ export default function RecorderBside() {
                       },
                       recordedBlob
                     )
-                  }
+                  }}
                   disabled={saving}
                   className="flex-1 rounded-xl bg-teal py-3 font-display text-[14px] text-cream disabled:opacity-60"
                 >

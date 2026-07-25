@@ -4,7 +4,7 @@
  * 손으로 고치지 마라. 서버의 sw.js에 박힌 값과 견주어 다르면 새 배포가
  * 있다는 뜻이고, 앱이 스스로 새로고침한다.
  */
-export const BUILD_VERSION = 'v1.0.1784989474807'
+export const BUILD_VERSION = 'v1.0.1784989969679'
 
 /** 이 판이 어느 커밋인지 — 관리자 화면에서 반영 여부를 눈으로 가린다 */
-export const BUILD_COMMIT = 'd24af55'
+export const BUILD_COMMIT = '59cbb24'

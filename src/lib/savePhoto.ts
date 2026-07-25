@@ -18,6 +18,20 @@
 
 export type SaveResult = 'shared' | 'downloaded' | 'cancelled' | 'failed'
 
+/**
+ * 녹음한 목소리를 기기에 남긴다.
+ *
+ * 사진과 같은 길이다 — 웹은 파일을 직접 쓸 수 없으니 공유 시트를 열고,
+ * 거기서 '파일에 저장'을 누르면 남는다. 60초짜리 개인적인 메모인데
+ * 정작 본인 폰에는 안 남는 것이 어긋나서 붙였다.
+ */
+export async function saveAudioToDevice(blob: Blob): Promise<SaveResult> {
+  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const ext = (blob.type.split('/')[1] ?? 'm4a').split(';')[0]
+  const name = `봉황메모리즈-나의육십초-${stamp}.${ext}`
+  return shareOrDownload(new File([blob], name, { type: blob.type }), name)
+}
+
 /** dataURL → File. 공유 시트는 File만 받는다 */
 function toFile(dataUrl: string, name: string): File | null {
   try {
@@ -46,12 +60,17 @@ export async function savePhotoToDevice(
   const name = `봉황메모리즈-A${track}-${stamp}.jpg`
   const file = toFile(dataUrl, name)
   if (!file) return 'failed'
+  return shareOrDownload(file, name)
+}
 
-  /*
-    canShare로 먼저 물어본다. 파일 공유를 지원하지 않는 브라우저에서
-    share()를 그냥 부르면 예외가 나는데, 그걸 실패로 보고하면 사용자는
-    되지도 않을 버튼을 계속 누르게 된다.
-  */
+/**
+ * 공유 시트로 내보내고, 안 되면 내려받는다.
+ *
+ * canShare로 먼저 물어본다. 파일 공유를 지원하지 않는 브라우저에서
+ * share()를 그냥 부르면 예외가 나는데, 그걸 실패로 보고하면 사용자는
+ * 되지도 않을 버튼을 계속 누르게 된다.
+ */
+async function shareOrDownload(file: File, name: string): Promise<SaveResult> {
   const nav = navigator as Navigator & {
     canShare?: (data: ShareData) => boolean
   }
