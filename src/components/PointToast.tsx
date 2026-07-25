@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { WISH_EVENT } from '@/lib/cueEngine'
 import { PointEntry, POINTS_EVENT, REASON_LABEL } from '@/lib/points'
 import { playPoint } from '@/lib/sfx'
 
@@ -17,10 +18,45 @@ interface Toast extends PointEntry {
   key: string
 }
 
+/**
+ * 소원을 이룬 순간의 알림 — 첫 번째와 마지막에만 뜬다.
+ *
+ * 다섯 번 다 띄우면 의식이 절차가 된다. 가운데 셋은 소영이 대사로 이미
+ * 말해주므로 화면이 또 말할 필요가 없다.
+ */
+interface WishToast {
+  key: string
+  track: number
+}
+
+const WISH_LABEL: Record<number, string> = {
+  1: '첫 번째 소원을 이뤘어요',
+  5: '다섯 가지 소원, 모두 이뤘어요',
+}
+
 const LIFETIME_MS = 3200
+
+/** 소원 알림은 조금 더 머문다 — 읽고 넘어갈 값이 있는 문장이다 */
+const WISH_LIFETIME_MS = 4200
 
 export default function PointToast() {
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [wishes, setWishes] = useState<WishToast[]>([])
+
+  useEffect(() => {
+    const onWish = (e: Event) => {
+      const d = (e as CustomEvent<{ track: number }>).detail
+      if (!d || !WISH_LABEL[d.track]) return
+      const key = `wish-${d.track}-${Date.now()}`
+      setWishes((prev) => [...prev, { key, track: d.track }])
+      window.setTimeout(
+        () => setWishes((prev) => prev.filter((w) => w.key !== key)),
+        WISH_LIFETIME_MS
+      )
+    }
+    window.addEventListener(WISH_EVENT, onWish)
+    return () => window.removeEventListener(WISH_EVENT, onWish)
+  }, [])
 
   useEffect(() => {
     const onAward = (e: Event) => {
@@ -42,7 +78,7 @@ export default function PointToast() {
     return () => window.removeEventListener(POINTS_EVENT, onAward)
   }, [])
 
-  if (toasts.length === 0) return null
+  if (toasts.length === 0 && wishes.length === 0) return null
 
   return (
     <div
@@ -51,6 +87,19 @@ export default function PointToast() {
       role="status"
       aria-live="polite"
     >
+      {wishes.map((w) => (
+        <div
+          key={w.key}
+          className="point-toast flex items-center gap-2.5 rounded-full bg-sunset-yellow px-5 py-2.5 shadow-lg"
+        >
+          <span className="text-[15px] leading-none" aria-hidden>
+            ✦
+          </span>
+          <span className="text-[13px] font-bold text-shell">
+            {WISH_LABEL[w.track]}
+          </span>
+        </div>
+      ))}
       {toasts.map((t) => (
         <div
           key={t.key}

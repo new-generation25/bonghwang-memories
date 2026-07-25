@@ -42,6 +42,9 @@ import { logEvent } from './analytics'
 /** D9 — 스킵 허용 시점(초) */
 export const SKIP_AFTER_SEC = 15
 
+/** 소원을 이룬 순간 — 첫 번째와 마지막에만 쏜다(PointToast가 듣는다) */
+export const WISH_EVENT = 'bh:wish'
+
 /** 화면이 그려지고 첫 대사가 나오기까지의 사이 */
 const ENTRY_LEAD_MS = 500
 
@@ -621,8 +624,20 @@ function runDirective(directive: UiDirective, cueId: CueId) {
   } else if (directive.startsWith('track_check:')) {
     const track = parseInt(directive.slice('track_check:'.length), 10)
     // 점수는 최초 완료에만 — 다시듣기(D9)로 지시자가 재실행돼도 중복 적립 금지
-    if (!getTourState().tracksCompleted.includes(track)) {
+    const first = !getTourState().tracksCompleted.includes(track)
+    if (first) {
       void award(`main-${track}`, 'mainMission')
+      /*
+        첫 소원과 마지막 소원에만 알린다.
+
+        다섯 번 다 띄우면 의식이 절차가 된다. 가운데 셋은 소영이 이미
+        "두 번째 소원, 이뤘다"고 말해주므로 화면이 또 말할 필요가 없다.
+        처음은 이렇게 쌓인다는 것을 알려주는 자리고, 마지막은 다섯이 다
+        찼음을 확인하는 자리다.
+      */
+      if ((track === 1 || track === 5) && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(WISH_EVENT, { detail: { track } }))
+      }
     }
     completeTrack(track)
   } else if (directive === 'speech_mode:casual') {

@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import MissionCamera from '@/components/MissionCamera'
 import { useRevealOnChange } from '@/hooks/useRevealOnChange'
+import { savePhotoToDevice } from '@/lib/savePhoto'
 import type { ActionId } from '@/lib/cues'
 import { putDataUrl } from '@/lib/blobStore'
 import { dispatchAction } from '@/lib/cueEngine'
@@ -37,6 +38,8 @@ export default function PhotoStep({
   const [preview, setPreview] = useState<string | null>(null)
   const confirmRef = useRevealOnChange<HTMLDivElement>(preview, Boolean(preview))
   const [saving, setSaving] = useState(false)
+  /** 폰에 저장했는지 — 눌렀는지 알려줘야 또 누르지 않는다 */
+  const [saved, setSaved] = useState(false)
 
   /** 방향 센서가 붙어 찍혔으면 AR, 아니면 정적 프레임 폴백(D11) */
   const [arActive, setArActive] = useState(false)
@@ -103,6 +106,28 @@ export default function PhotoStep({
                 ×
               </button>
             </div>
+
+            {/*
+              폰에 남기기.
+
+              웹은 사진첩에 직접 쓸 수 없어서, 여기까지 온 사진도 브라우저
+              안에만 있다. 사파리 데이터를 지우면 여행 사진이 통째로 사라지고
+              카톡으로 보낼 길도 없다. 누르면 공유 시트가 열려 '이미지 저장'
+              한 번으로 사진첩에 들어간다.
+
+              작게 둔다 — 걸으면서 보는 화면이라 설명이 길면 읽지 않는다.
+              지금 할 일은 소영에게 보내는 것이고, 저장은 곁다리다.
+            */}
+            <button
+              type="button"
+              onClick={async () => {
+                const r = await savePhotoToDevice(preview, track)
+                if (r === 'shared' || r === 'downloaded') setSaved(true)
+              }}
+              className="mt-2 ml-auto block text-[11px] text-ink-60 underline underline-offset-2"
+            >
+              {saved ? '✓ 폰에 저장했어요' : '📥 이 사진 폰에 저장'}
+            </button>
 
             <div ref={confirmRef} className="cta-band mt-2.5 flex items-end gap-2">
               <div className="min-h-[42px] flex-1 rounded-full border border-line bg-paper px-4 py-2.5 text-[13px] text-ink-60">
