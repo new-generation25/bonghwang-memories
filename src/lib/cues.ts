@@ -213,7 +213,7 @@ export const CUES: Record<CueId, Cue> = {
     audioFile: 'b0_call',
     // 기존 준비 음성(개정본)을 첫 통화 번들로 활용
     audioAliases: ['intro-soyoung'],
-    durationSec: 70,
+    durationSec: 78,
     subtitleLines: [
       { text: '…여보세요? 아, 진짜 걸어주셨네요. 감사합니다.' },
       { text: '갑자기 이상한 부탁이라 놀라셨죠. 저는 강소영이라고 해요.' },
@@ -228,6 +228,14 @@ export const CUES: Record<CueId, Cue> = {
       { text: '그래서… 같이 가주시겠어요? 제가 전화 통화하며 함께 걸을게요.' },
       { text: '소원은 제가 이룰 거예요. 그냥, 옆에서 같이 걸어주시면 돼요.' },
       { text: '첫 번째 장소는 거기서 3분이에요. 우물이 있던 자리라고, 아빠한테 옛날에 들은 적이 있어요. 지금은 카페가 됐대요.' },
+      /*
+        마지막은 부탁으로 끝난다.
+
+        전에는 장소 안내로 끊겨서, 통화가 끝났는데도 무엇을 하라는 것인지
+        말해준 적이 없었다. '동행 시작' 버튼만 덩그러니 남았다. 소영이 직접
+        물어야 그 버튼이 대답이 된다.
+      */
+      { text: '저랑 같이 걸어주실래요?' },
     ],
     sfx: { in: 'call_ring' },
     next: null,
