@@ -162,6 +162,28 @@ export default function RootLayout({
         {/* PWA Service Worker 등록 및 자동 업데이트 */}
         <script dangerouslySetInnerHTML={{
           __html: `
+            /*
+              배포가 바뀌면 JS 청크 이름도 바뀐다.
+
+              옛 화면이 참조하던 청크가 새 배포에서 사라지면 스크립트가
+              404를 맞고, 앱이 아예 뜨지 못해 빈 화면만 남는다. 배포 도중에
+              앱을 열면 실제로 일어난다 — 사용자에게는 '검정 화면에서 멈춤'으로
+              보인다.
+
+              한 번은 새로고침해서 최신 HTML을 받아본다. 그래도 안 되면
+              무한 새로고침이 되므로 세션당 한 번만 시도한다.
+            */
+            window.addEventListener('error', (e) => {
+              const msg = (e && e.message) || '';
+              const isChunk = /Loading chunk|ChunkLoadError|Importing a module script failed|error loading dynamically imported module/i.test(msg);
+              if (!isChunk) return;
+              try {
+                if (sessionStorage.getItem('bh_chunk_retry') === '1') return;
+                sessionStorage.setItem('bh_chunk_retry', '1');
+              } catch (err) { return; }
+              window.location.reload();
+            }, true);
+
             // Service Worker 등록
             if ('serviceWorker' in navigator) {
               const swHost = window.location.hostname;

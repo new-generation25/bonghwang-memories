@@ -59,7 +59,8 @@ export default function PointToast() {
       return
     }
     setUpdated(true)
-    const t = window.setTimeout(() => setUpdated(false), WISH_LIFETIME_MS)
+    // 짧게. 읽으라고 붙잡는 문구가 아니라 깜빡임의 까닭을 대는 한 줄이다
+    const t = window.setTimeout(() => setUpdated(false), 1000)
     return () => window.clearTimeout(t)
   }, [])
 

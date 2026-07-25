@@ -1,36 +1,19 @@
 // 캐시하는 파일(오디오 포함)을 교체할 때는 반드시 이 버전을 올려야 한다.
 // 버전이 같으면 기존 기기가 옛 캐시를 계속 쓴다.
-const CACHE_NAME = 'bonghwang-memories-v1.0.1784981431840';
+const CACHE_NAME = 'bonghwang-memories-v1.0.1784982050279';
 const urlsToCache = [
   '/manifest.json',
   '/icon-192x192.png',
   '/icon-512x512.png'
 ];
 
-// 번들 오디오(§12) — 골목에서 신호가 끊겨도 재생되어야 하므로 미리 받아둔다(D8).
-// 파일명은 src/lib/cues.ts의 audioFile과 1:1 대응. 아직 준비되지 않은
-// 파일이 있을 수 있어 개별로 담고 실패는 무시한다.
-// (addAll은 하나만 404여도 설치 전체가 실패한다)
-const CUE_AUDIO_NAMES = [
-  // INTRO
-  'b0_tape', 'b0_call',
-  // TRACK 1~5
-  'b1_a', 'b1_s', 'b1_b',
-  'b2_a', 'b2_b',
-  'b3_a', 'b3_b',
-  'b4_a', 'b4_radio', 'b4_b', 'b4_c',
-  'b5_a', 'b5_t1', 'b5_t2', 'b5_t3', 'b5_letter', 'b5_f',
-  // ACT 2 + FINALE
-  'b6_0', 'b6_x_bunsik', 'b6_x_byeokhwa', 'b6_x_bonghwangdae',
-  'b7_0', 'b7_1',
-  // 구 파일명 별칭 (B0_CALL)
-  'intro-soyoung'
-];
+/*
+  설치 때 담는 것 — 그림과 효과음만.
 
-const audioToCache = CUE_AUDIO_NAMES.flatMap((name) => [
-  `/audio/${name}.m4a`,
-  `/audio/${name}.mp3`
-]).concat([
+  번들 오디오는 여기서 빼고 앱이 순서대로 받는다(인트로 먼저). 설치가
+  10MB를 기다리면 새 버전으로 갈아타는 것도 그만큼 늦어진다.
+*/
+const assetsToCache = [
   // SFX (선택 — 없으면 조용히 생략)
   '/audio/sfx/tape_hiss.mp3',
   '/audio/sfx/tape_stop.mp3',
@@ -50,7 +33,7 @@ const audioToCache = CUE_AUDIO_NAMES.flatMap((name) => [
   '/images/place/t2.png',
   '/images/place/t3.png',
   '/images/place/t4.png'
-]);
+];
 
 /*
   Install — 프리캐시만 하고 기다린다.
@@ -65,11 +48,21 @@ const audioToCache = CUE_AUDIO_NAMES.flatMap((name) => [
   끊지 않고 미룬다.
 */
 self.addEventListener('install', (event) => {
+  /*
+    설치 때는 뼈대만 담는다.
+
+    전에는 여기서 오디오 26개(10MB)를 통째로 받았다. 앱도 같은 파일을
+    받고 있으니 같은 것을 두 번 내려받는 셈이고, 설치가 끝나야 새
+    버전으로 갈아탈 수 있어 업데이트도 그만큼 늦어졌다.
+
+    오디오는 앱이 순서대로 받고(인트로 먼저), 못 받은 것은 PRECACHE_AUDIO
+    메시지로 이 워커가 마저 받는다.
+  */
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       await cache.addAll(urlsToCache);
       await Promise.all(
-        audioToCache.map((url) => cache.add(url).catch(() => null))
+        assetsToCache.map((url) => cache.add(url).catch(() => null))
       );
     })
   );
@@ -106,9 +99,41 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 수동 업데이트 트리거
+// 수동 업데이트 트리거 + 나머지 오디오 뒤늦게 받기
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (!event.data) return;
+
+  if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+    return;
+  }
+
+  /*
+    인트로 뒤의 오디오를 화면과 무관하게 받아둔다.
+
+    받는 일을 페이지에만 맡기면 다른 화면으로 넘어가는 순간 요청이
+    끊길 수 있다. 워커는 화면이 바뀌어도 살아 있으므로 여기서도 같은
+    일을 한다 — 이미 캐시에 있으면 건너뛰니 두 번 받지 않는다.
+  */
+  if (event.data.type === 'PRECACHE_AUDIO' && Array.isArray(event.data.names)) {
+    event.waitUntil(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        for (const name of event.data.names) {
+          for (const ext of ['m4a', 'mp3']) {
+            const url = `/audio/${name}.${ext}`;
+            if (await cache.match(url)) break;
+            try {
+              const res = await fetch(url);
+              if (res.ok) {
+                await cache.put(url, res.clone());
+                break;
+              }
+            } catch (e) {
+              // 이 확장자는 없거나 네트워크 오류 — 다음으로
+            }
+          }
+        }
+      })
+    );
   }
 });

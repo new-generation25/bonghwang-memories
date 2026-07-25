@@ -18,19 +18,51 @@ import { logEvent } from '@/lib/analytics'
 
 const EXTENSIONS = ['m4a', 'mp3'] as const
 
-/** 큐 전체의 후보 오디오 URL 목록 */
-function candidateUrls(): string[] {
+/**
+ * 여기까지만 받으면 시작할 수 있다 — 인트로 두 개.
+ *
+ * 전에는 26개 10.4MB를 다 받아야 문이 열렸다. 골목에 서서 그걸 기다리는
+ * 동안 할 일이 없고, 신호가 약하면 몇 분이 걸린다. 정작 그때 필요한 건
+ * 테이프와 첫 통화뿐이다(1.7MB).
+ *
+ * 나머지는 뒤에서 계속 받는다. 첫 거점까지 걸어가는 몇 분이면 대개
+ * 끝나고, 혹시 못 받았어도 재생할 때 그 파일만 받으면 된다.
+ */
+const INTRO_AUDIO = ['b0_tape', 'b0_call', 'intro-soyoung']
+
+/** 큐 전체의 오디오 이름 — 인트로가 앞에 오도록 정렬한다 */
+function audioNames(): string[] {
   const names = new Set<string>()
   for (const id of ALL_CUE_IDS) {
     const cue = CUES[id]
     names.add(cue.audioFile)
     for (const alias of cue.audioAliases ?? []) names.add(alias)
   }
-  const urls: string[] = []
-  names.forEach((name) => {
-    for (const ext of EXTENSIONS) urls.push(`/audio/${name}.${ext}`)
-  })
-  return urls
+  const all = Array.from(names)
+  const rest = all.filter((n) => !INTRO_AUDIO.includes(n))
+  return [...INTRO_AUDIO.filter((n) => names.has(n)), ...rest]
+}
+
+/**
+ * 한 이름의 오디오를 받는다.
+ *
+ * m4a를 먼저 찾고 없으면 mp3를 쓴다. 예전에는 둘 다 HEAD로 물어보고
+ * 다시 GET을 했는데, m4a가 하나도 없는 지금은 그 절반이 404를 맞는
+ * 헛걸음이었다. 바로 받아보고 안 되면 다음 확장자로 넘어간다.
+ */
+async function fetchAudio(name: string): Promise<boolean> {
+  for (const ext of EXTENSIONS) {
+    try {
+      const res = await fetch(`/audio/${name}.${ext}`)
+      if (res.ok) {
+        await res.blob()
+        return true
+      }
+    } catch {
+      // 이 확장자는 없거나 네트워크 오류 — 다음으로
+    }
+  }
+  return false
 }
 
 export default function DownloadPage() {
@@ -55,23 +87,23 @@ export default function DownloadPage() {
     if (started.current || !tour.paid) return
     started.current = true
 
-    const urls = candidateUrls()
-    setTotal(urls.length)
+    const names = audioNames()
+    setTotal(INTRO_AUDIO.length)
 
     ;(async () => {
+      /*
+        인트로 몫만 기다린다.
+
+        문이 열리는 조건이 '전부 받기'였을 때는 골목에 서서 10MB를
+        기다려야 했다. 정작 그때 필요한 건 테이프와 첫 통화뿐이다.
+      */
       let foundCount = 0
       let checkedCount = 0
-      // 존재 확인 후 실제 GET으로 받아 SW 캐시에 태운다
-      for (const url of urls) {
-        try {
-          const head = await fetch(url, { method: 'HEAD' })
-          if (head.ok) {
-            await fetch(url).then((r) => r.blob())
-            foundCount++
-            setFound(foundCount)
-          }
-        } catch {
-          // 네트워크 오류 — 해당 파일만 건너뛴다
+      const intro = names.filter((n) => INTRO_AUDIO.includes(n))
+      for (const name of intro) {
+        if (await fetchAudio(name)) {
+          foundCount++
+          setFound(foundCount)
         }
         checkedCount++
         setChecked(checkedCount)
@@ -79,6 +111,24 @@ export default function DownloadPage() {
       mutateTour({ audioCacheReady: true })
       logEvent('cache_done')
       setDone(true)
+
+      /*
+        나머지는 뒤에서 계속 받는다.
+
+        이 페이지를 떠나도 브라우저가 진행 중인 요청을 곧바로 죽이지는
+        않지만 보장되지도 않는다. 그래서 서비스워커에게도 같은 일을
+        맡긴다 — 워커는 화면과 무관하게 살아 있다. 둘 다 실패해도
+        재생할 때 그 파일만 받으면 되므로 이야기는 막히지 않는다.
+      */
+      const rest = names.filter((n) => !INTRO_AUDIO.includes(n))
+      navigator.serviceWorker?.controller?.postMessage({
+        type: 'PRECACHE_AUDIO',
+        names: rest,
+      })
+      for (const name of rest) {
+        await fetchAudio(name)
+        setFound((v) => v + 1)
+      }
     })()
   }, [tour.paid])
 
@@ -103,12 +153,12 @@ export default function DownloadPage() {
         <p className="mt-3 text-center font-mono-retro text-[12px] tracking-wider text-ink-60">
           {done
             ? found > 0
-              ? `음성 ${found}개 준비 완료`
+              ? '이야기를 시작할 수 있어요'
               : '오디오 준비 중 — 자막 모드로 진행합니다'
             : `골목의 소리를 담는 중… ${progress}%`}
         </p>
         <p className="mt-1 text-center text-[11px] text-ink-60">
-          골목에서 신호가 끊겨도 들을 수 있도록 미리 담아둡니다
+          {done ? '나머지 이야기는 걸으면서 받아둘게요' : '골목에서 신호가 끊겨도 들을 수 있도록 미리 담아둡니다'}
         </p>
 
         {done && (
