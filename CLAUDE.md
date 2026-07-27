@@ -44,19 +44,26 @@ Next.js 14 App Router · TypeScript · Tailwind · Firebase · 서비스워커.
 
 ## 대본을 고칠 때
 
-대사는 `src/lib/cues.ts`에 있지만 **읽고 고치는 자리는 [`docs/SCRIPT.md`](docs/SCRIPT.md)다.**
+**[`docs/SCRIPT.md`](docs/SCRIPT.md)가 대사의 원본이다.** `src/lib/cues.ts`는
+거기서 받아 적는 쪽이다 — 손으로 옮기지 마라.
 
-1. `docs/SCRIPT.md`에서 글을 고치거나 `<br>`을 옮긴다
-2. `src/lib/cues.ts`의 같은 줄에 옮겨 적는다
-3. 글자가 바뀌었으면 굽는다 — `node scripts/generate-audio.mjs --only <파일명>`
-4. `python3 scripts/dump-script.py`로 다시 뽑아 대조한다
+```bash
+npm run script:check    # 무엇이 바뀌는지 먼저 본다 (아무것도 안 건드림)
+npm run script:bake     # 되쓰기 → 금지어 → 바뀐 줄만 굽기 → 길이 → sw 버전
+```
 
-- **줄을 나누거나 합치면 오디오도 다시 구워야 한다.** 줄 하나가 TTS 한 조각이라
+- **`<br>`만 옮겼으면 굽지 않는다.** `generate-audio.mjs`가 걷어낸 뒤 해시를
+  만들어서 캐시 키에 안 들어간다. 화면은 `subtitleLines.ts`가 그린다.
+  TTS로 넘어가면 '비알'이라고 읽으므로 걷어내는 것이다.
+- **줄을 나누거나 합치면 그 큐는 통째로 다시 굽는다.** 줄 하나가 TTS 한 조각이라
   줄 수가 곧 숨의 개수다. 글자가 같아도 나뉜 자리가 다르면 다른 음성이다.
-- `<br>`은 화면 전용이다. TTS로 넘어가면 '비알'이라고 읽는다
-  (`generate-audio.mjs`가 걷어내고, 화면은 `subtitleLines.ts`가 그린다).
-- **오디오를 바꿨으면 `node scripts/update-sw-version.js`.** 안 올리면 기존 기기는
-  서비스워커 캐시에서 옛 음성을 계속 듣는다.
+  `script:bake`가 굽기 뒤 `fix-durations.mjs`로 `durationSec`을 다시 잰다.
+- **큐를 새로 만들거나 지우는 것은 SCRIPT.md로 못 한다.** `trigger`·`next`·`ui`를
+  대본이 표현하지 못한다 — `cues.ts`에서 먼저 만들고 `npm run script:dump`로
+  대본을 따라오게 한다. 되쓰기는 큐 집합이 어긋나면 멈춘다.
+- 같은 글자인데 목소리가 마음에 안 들면 `/debug/script`에서 **줄별로** 굽고 저장한다.
+- `script:bake`는 ffmpeg와 `TYPECAST_API_KEY`가 필요하다. 없는 자리에서는
+  `npm run script:apply`까지만 돌린다(되쓰기 + 금지어 검사).
 - Typecast는 같은 설정으로 구워도 결과가 매번 다르다. 마음에 드는 것이 나오면
   그 파일을 남겨라. (API 제약 상세는 `docs/HANDOFF_2026-07-23.md` §2)
 
@@ -96,6 +103,6 @@ scripts/voices.json    보이스 설정 (voices.example.json이 템플릿)
 | | |
 |---|---|
 | `docs/HANDOFF_<날짜>.md` | **가장 최근 것이 현재 상태.** 세션 처음에 읽고 끝에 적는다 |
-| `docs/SCRIPT.md` | 대본 전문 — 여기서 고친다 |
+| `docs/SCRIPT.md` | **대사의 원본.** 배경·연표·인물 + 대본 전문. 안 정한 칸과 어긋난 곳도 여기 |
 | `docs/FLOW.md` | 랜딩부터 피날레까지 전체 진행 흐름 |
 | `docs/HANDOFF_*.md` | 아카이브. "왜 그렇게 했나"를 캘 때만 연다 |
