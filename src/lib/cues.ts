@@ -34,7 +34,7 @@ export type ActionId =
 /** 번들 ID — 명세서 §6/§12 기준. 파일명은 소문자(b0_tape 등) */
 export type CueId =
   | 'B0_TAPE' | 'B0_CALL'
-  | 'B1_A' | 'B1_S' | 'B1_B'
+  | 'B1_A' | 'B1_OK' | 'B1_S' | 'B1_B'
   | 'B2_A' | 'B2_B'
   | 'B3_A' | 'B3_B'
   | 'B4_A' | 'B4_RADIO' | 'B4_B' | 'B4_C'
@@ -258,13 +258,42 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'qr', ref: 't1' },
     audioFile: 'b1_a',
-    durationSec: 40,
+    // 실측 24초. 음성이 있으면 재생기가 실제 길이로 덮지만, 음성을 못 받은
+    // 자막 모드에서는 이 값이 그대로 쓰인다 — 실제보다 길면 마지막 자막이
+    // 그만큼 멈춰 선 채 미션이 열리지 않는다
+    durationSec: 24,
     subtitleLines: [
       { text: '맞아요, 거기예요.<br>엄마 아빠가 처음 만난 곳.' },
       { text: '근데 어떻게 만났는지는 저도 몰라요.<br>그 얘기를 해주는 게 첫 번째 소원이었는데,<br>아빠는 이제 그 얘길 꺼려 하세요.' },
       { text: '마당에 초록 덩굴 보이세요?<br>꽈리처럼 생긴 열매가 달린 풀이요.<br>풍선초라고, 그게 힌트래요.' },
       { text: '열매가 몇 개 열렸는지 세어봐 주실래요?' },
-      { text: '그리고… 가게에 그 시절을 기억하시는 사장님이 계실 거예요.<br>이야기를 청해봐 주세요.' },
+    ],
+    next: null,
+    ui: ['show_mission:M1'],
+  },
+
+  /*
+    개수를 맞히면 소영이 대답한다.
+
+    전에는 이 말이 입력 카드 안에 글자로만 있었다 — 소영은 통화로 함께
+    걷는 인물인데(D2) 정답을 맞힌 순간에만 목소리가 사라졌다.
+    큐로 올려 자막과 목소리가 함께 나오게 한다.
+
+    사장님 안내도 여기로 옮겼다. 도착 통화(B1_A)에서 미리 일러두면
+    세기도 전에 다음 할 일을 듣게 되고, 맞힌 뒤 같은 말을 또 하게 된다.
+  */
+  B1_OK: {
+    id: 'B1_OK',
+    track: 1,
+    channel: 'call',
+    speaker: 'soyoung',
+    voiceAge: null,
+    trigger: { type: 'action_event', ref: 'M1_count_ok' },
+    audioFile: 'b1_ok',
+    durationSec: 7,
+    subtitleLines: [
+      { text: '맞아요, 일곱 개.' },
+      { text: '가게에 그 시절을 기억하시는 사장님이 계실 거예요.<br>이야기를 청해봐 주세요.' },
     ],
     next: null,
     ui: ['show_mission:M1'],

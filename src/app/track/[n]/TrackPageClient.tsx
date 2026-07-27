@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation'
 import CuePlayer from '@/components/cue/CuePlayer'
 import PlacePhoto from '@/components/cue/PlacePhoto'
 import CountInput from '@/components/mission/CountInput'
+import ListenStep from '@/components/mission/ListenStep'
 import PhotoStep from '@/components/mission/PhotoStep'
 import SpeechAsk from '@/components/cue/SpeechAsk'
 import QuizInput from '@/components/mission/QuizInput'
@@ -45,6 +46,7 @@ const SPEECH_ASK_LINE = 3
 /** 큐 종료 → 이어지는 상호작용 */
 type Interaction =
   | { kind: 'count' }
+  | { kind: 'listen'; label: string; prompt: string; button: string }
   | { kind: 'photo'; track: number; actionId: 'M1_photo_done' | 'M2_photo_done'; label: string; prompt: string }
   | { kind: 'arphoto' }
   | { kind: 'posterphoto' }
@@ -57,8 +59,14 @@ type Interaction =
   | { kind: 'bingo' }
 
 const INTERACTIONS: Partial<Record<CueId, Interaction>> = {
-  // TRACK 1 — 봉황1935 : B1_A(개수→사장님) → B1_S(사진) → B1_B(완료)
+  // TRACK 1 — 봉황1935 : B1_A(개수) → B1_OK(듣기 안내) → B1_S(사진) → B1_B(완료)
   B1_A: { kind: 'count' },
+  B1_OK: {
+    kind: 'listen',
+    label: 'MISSION 1 · 이야기',
+    prompt: '가게 안으로 들어가, 사장님께 그 시절 이야기를 청해보세요.',
+    button: '👵 사장님의 이야기 듣기 ▶',
+  },
   B1_S: {
     kind: 'photo',
     track: 1,
@@ -228,6 +236,14 @@ export default function TrackPageClient({ n }: { n: number }) {
     switch (interaction.kind) {
       case 'count':
         return <CountInput />
+      case 'listen':
+        return (
+          <ListenStep
+            label={interaction.label}
+            prompt={interaction.prompt}
+            button={interaction.button}
+          />
+        )
       case 'photo':
         return (
           <PhotoStep

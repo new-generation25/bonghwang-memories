@@ -2,14 +2,17 @@
 
 /**
  * M1 — 풍선초 열매 개수 입력 (count_input, 정답 7).
- * 정답이면 [사장님의 이야기 듣기] 버튼이 열린다 — 사장님 증언(B1_S)은
- * 자동재생이 아니라 사용자 탭(D4·T4)으로 재생한다.
+ *
+ * 맞히면 이 카드는 사라지고 소영이 대답한다(B1_OK). 정답 문구와
+ * [사장님의 이야기 듣기] 버튼은 그 큐가 끝난 뒤 다음 카드가 맡는다 —
+ * 세는 일과 듣는 일은 다른 차례이고, 한 카드에 겹쳐 두면 정답을 맞힌
+ * 순간 화면이 두 가지를 동시에 말하게 된다.
+ *
  * 오답은 횟수 제한 없이 다시 셀 수 있다 — 미션 실패 개념이 아니다.
  */
 
 import { useState } from 'react'
-import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
-import { useRevealOnChange } from '@/hooks/useRevealOnChange'
+import { dispatchAction } from '@/lib/cueEngine'
 import { submitOnEnter } from '@/lib/submitOnEnter'
 import { TRACK_MISSIONS } from '@/lib/tracks'
 
@@ -17,14 +20,14 @@ export default function CountInput() {
   const [value, setValue] = useState('')
   const [wrong, setWrong] = useState(false)
   const [solved, setSolved] = useState(false)
-  const nextRef = useRevealOnChange<HTMLDivElement>(solved, solved)
 
   const answer = TRACK_MISSIONS.M1.validation?.answer ?? 7
 
   const handleSubmit = () => {
     if (parseInt(value, 10) === answer) {
       setSolved(true)
-      dispatchAction('M1_count_ok') // 분석 이벤트용 — 큐는 탭으로 재생
+      // 이 액션이 B1_OK를 깨운다 — 소영의 대답이 자막·목소리로 함께 나온다
+      dispatchAction('M1_count_ok')
     } else {
       setWrong(true)
     }
@@ -79,23 +82,11 @@ export default function CountInput() {
         </p>
       )}
 
+      {/* 맞힌 뒤에는 소영이 말한다 — 여기서 또 말하지 않는다 */}
       {solved && (
-        <div className="mt-4 border-t border-line pt-4">
-          <p className="text-[12.5px] text-ink-60">
-            맞아요, 일곱 개. 가게에 그 시절을 기억하시는 사장님이 계실 거예요.
-          </p>
-          <div ref={nextRef} className="cta-band mt-3">
-            <button
-              onClick={() => {
-                unlockAudio()
-                dispatchTap('LISTEN')
-              }}
-              className="btn-teal w-full text-[14px]"
-            >
-              👵 사장님의 이야기 듣기 ▶
-            </button>
-          </div>
-        </div>
+        <p className="mt-3 border-t border-line pt-3 text-[12.5px] text-teal-dk">
+          ✓ 맞았어요
+        </p>
       )}
     </div>
   )
