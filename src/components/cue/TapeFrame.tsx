@@ -29,7 +29,9 @@ export default function TapeFrame({ cue, playing, progress }: TapeFrameProps) {
         headRight={`SIDE ${side}`}
         side={side}
         progress={progress}
-        spin={playing ? 'right' : 'none'}
+        // 양쪽이 같이 돈다 — 한쪽만 돌면 테이프가 어디로 가는지 보이지 않는다.
+        // 멈춤은 그대로 둔다. 릴이 서는 것이 ⏸ 표시보다 먼저 눈에 들어온다
+        spin={playing ? 'both' : 'none'}
         scale={CASSETTE_SCALE}
       />
       {/*

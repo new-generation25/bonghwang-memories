@@ -151,7 +151,7 @@ export default function FinalePage() {
             headRight="DONE"
             side="done"
             progress={100}
-            spin="none"
+            spin="both"
             scale={CASSETTE_SCALE}
           />
         </div>

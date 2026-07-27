@@ -457,36 +457,20 @@ a {
 }
 
 /*
- * 감긴 테이프.
+ * 릴에는 감긴 테이프를 그리지 않는다.
  *
- * 릴이 도는 것만으로는 '돌아가는 원'이지 카세트가 아니다. 실제 카세트는
- * 한쪽 뭉치가 얇아지는 만큼 다른 쪽이 두꺼워지고, 그 두께가 창 너머로
- * 그대로 보인다 — 얼마나 남았는지를 숫자 없이 알려주는 것이 그 두께다.
+ * 실물 카세트의 둥근 구멍으로는 축이 물리는 검정 허브와 흰 플랜지만 보인다.
+ * 갈색 테이프가 보이는 자리는 가운데 창(.tamount)이다 — 셸이 릴 둘레를
+ * 가리기 때문이다.
  *
- * 안쪽 끝은 허브에 닿고(27%), 가득 차면 플랜지 바로 안까지 온다(8%).
- * %로 두어 30px 릴과 22px 릴이 같은 비율로 감긴다.
+ * 전에는 릴 안에 --fill만큼 두꺼워지는 원을 그렸다. 그 원이 흰 플랜지
+ * 안쪽에 생겨 실물과 어긋났고, 색이 어두울 때는 검정 허브와 뭉쳐
+ * '허브 크기가 들쭉날쭉하다'로, 갈색으로 밝히니 이번엔 흰 원 안의
+ * 엉뚱한 갈색 원으로 읽혔다. 남은 양은 .tamount가 이미 맡고 있다.
  *
- * 결은 repeating-radial-gradient로 낸다 — 얇은 테이프가 겹겹이 감긴
- * 동심원이다. 위에 얹은 conic 한 조각은 도는 것이 보이게 하는 빛이다.
- * 뭉치가 두꺼워지면 살(::before)을 덮어 가리는데, 그러면 회전이 읽히지
- * 않기 때문이다.
+ * --fill은 남는다. 회전 속도(.reel.spin)를 계산하는 데 쓴다.
+ * 회전은 ::before의 살 무늬가 돌면서 보인다.
  */
-.reel::after {
-  content: '';
-  position: absolute;
-  inset: calc(27% - 19% * var(--fill));
-  border-radius: 50%;
-  background:
-    conic-gradient(
-      from 0deg,
-      rgba(255, 255, 255, 0.14) 0 10deg,
-      transparent 10deg 360deg
-    ),
-    repeating-radial-gradient(circle, #241a12 0 1.5px, #3b2c1e 1.5px 3px);
-  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.55);
-  z-index: 1;
-  transition: inset 0.5s ease;
-}
 
 .reel .hub {
   position: absolute;

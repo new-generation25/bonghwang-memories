@@ -202,7 +202,7 @@ export default function IntroPage() {
                     headRight=""
                     side="A"
                     progress={12}
-                    spin="none"
+                    spin="both"
                     scale={0.68}
                   />
                 </div>

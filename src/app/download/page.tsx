@@ -147,7 +147,8 @@ export default function DownloadPage() {
         headRight="LOADING"
         side="A"
         progress={progress}
-        spin={done ? 'none' : 'right'}
+        // 다 받으면 선다 — 이 화면에서 릴이 도는 것은 받는 중이라는 뜻이다
+        spin={done ? 'none' : 'both'}
         scale={CASSETTE_SCALE}
       />
 

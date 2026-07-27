@@ -103,7 +103,7 @@ export default function PlayerHomePage() {
           headRight={completedCount >= 5 ? 'SIDE A ✓' : 'SIDE A'}
           side={completedCount >= 5 ? 'done' : 'A'}
           progress={progress}
-          spin="none"
+          spin="both"
           scale={CASSETTE_SCALE}
         />
       </div>

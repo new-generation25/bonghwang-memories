@@ -320,24 +320,34 @@ function drawTapeWindow(ctx: Ctx, top: number) {
   rr(ctx, x + 92, cy - 22, winW - 184, 44, 4)
   ctx.fill()
 
+  /*
+    허브 비율은 화면(.reel)에서 가져온다 — 릴 30px 기준 허브 14px.
+    인증서만 허브가 작으면 같은 카세트로 안 보인다.
+
+    릴에 감긴 테이프는 그리지 않는다. 실물처럼 둥근 구멍으로는 허브와
+    플랜지만 보이고, 갈색 테이프는 위의 가운데 띠가 맡는다.
+  */
+  const REEL_R = 28
+  const HUB_R = Math.round(REEL_R * (14 / 30)) // 13
+
   for (const cx of [x + 50, x + winW - 50]) {
     ctx.fillStyle = '#EFEBE2'
     ctx.beginPath()
-    ctx.arc(cx, cy, 28, 0, Math.PI * 2)
+    ctx.arc(cx, cy, REEL_R, 0, Math.PI * 2)
     ctx.fill()
     // 릴 살 — 원본은 conic gradient지만 캔버스에는 없어 부채꼴로 대신한다
     ctx.fillStyle = '#B9B2A6'
-    for (let i = 0; i < 10; i++) {
-      const a = (i * Math.PI * 2) / 10
+    for (let s = 0; s < 10; s++) {
+      const a = (s * Math.PI * 2) / 10
       ctx.beginPath()
       ctx.moveTo(cx, cy)
-      ctx.arc(cx, cy, 28, a, a + Math.PI / 10)
+      ctx.arc(cx, cy, REEL_R, a, a + Math.PI / 10)
       ctx.closePath()
       ctx.fill()
     }
     ctx.fillStyle = '#141210'
     ctx.beginPath()
-    ctx.arc(cx, cy, 10, 0, Math.PI * 2)
+    ctx.arc(cx, cy, HUB_R, 0, Math.PI * 2)
     ctx.fill()
   }
 }
