@@ -38,6 +38,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CUES, CueId, SPEAKER_NAMES } from '@/lib/cues'
 
+/**
+ * 번호는 /debug/voice의 후보 번호와 같게 맞춘다 — 거기서 "8번이 좋다"고
+ * 고른 뒤 여기서 다른 사람이 나오면 안 된다. 1~7번은 7/23 후보(v21),
+ * 8~17번은 7/27 오디션(v30)이다.
+ */
 const CANDIDATES = [
   'tc_68257f68bc6e3c161ab5078d',
   'tc_660e46188b5f4761eb8e36d6',
@@ -46,7 +51,24 @@ const CANDIDATES = [
   'tc_6539f9a955c3de938ae20ed9',
   'tc_645b3ef82c2f52f412ede389',
   'tc_62ce545fb130717df10ea37a',
+  'tc_69fc0cff784968297fb45daa',
+  'tc_69e0462f3e5413d26878521e',
+  'tc_694395d43f2c8d9d43e9a897',
+  'tc_68d4b115f0486108a7eefb37',
+  'tc_685cdfad4027aeec7d097a28',
+  'tc_6800a387534948f191cc952b',
+  'tc_684a7a1446e2a628b5b07230',
+  'tc_67919fb54fd00e0217d2cff0',
+  'tc_678884b481dfbfa3e4075a18',
+  'tc_677627eb0c63239147ab40a4',
 ]
+
+/**
+ * 열었을 때 이미 골라져 있어야 하는 것 — 지금 아버지 목소리(8번 Sanghyun,
+ * voices.json의 father_young·father_old)다. 다시 굽는 일의 대부분이
+ * 아버지 대사인데 매번 목록에서 찾아 고르면 엉뚱한 배우로 굽기 쉽다.
+ */
+const DEFAULT_VOICE = 'tc_69fc0cff784968297fb45daa'
 
 const EMOTION_LABEL: Record<string, string> = {
   normal: '보통',
@@ -222,7 +244,7 @@ export default function ScriptBakePage() {
   const [block, setBlock] = useState(
     CUES.B0_TAPE.subtitleLines.map((l) => l.text).join('\n')
   )
-  const [voiceId, setVoiceId] = useState(CANDIDATES[0])
+  const [voiceId, setVoiceId] = useState(DEFAULT_VOICE)
   const [base, setBase] = useState<Tuning>(BASE)
   const [rows, setRows] = useState<Row[]>([])
   const [metas, setMetas] = useState<Record<string, VoiceMeta>>({})

@@ -40,9 +40,25 @@ interface Body {
   nextText?: string
 }
 
-/** 괄호 안 연기 지시는 읽지 않는다 — 지문까지 낭독하면 못 쓴다 */
-function stripDirections(text: string): string {
-  return text.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
+/**
+ * 소리로 갈 것만 남긴다.
+ *
+ * · 괄호 안 연기 지시 — 지문까지 낭독하면 못 쓴다
+ * · `<br>` — 자막에만 쓰는 줄바꿈 표시다. 그대로 넘기면 "비알"이라고 읽는다
+ *
+ * `<br>`을 여기서만 걷어내는 이유: 화면 쪽 텍스트에는 남아 있어야 한다.
+ * /api/debug/apply-cue가 그 텍스트로 subtitleLines를 갱신하는데, 미리 지워
+ * 보내면 자막 줄바꿈이 통째로 사라진다.
+ *
+ * 걷어내는 방식은 generate-audio.mjs와 한 글자도 다르면 안 된다 — 같은 대사가
+ * 여기서와 굽기 파이프라인에서 다른 소리로 나오면 고른 의미가 없다.
+ */
+function stripForSpeech(text: string): string {
+  return text
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /** 값이 범위를 벗어나면 API가 400을 주므로 여기서 잘라둔다 */
@@ -72,7 +88,7 @@ export async function POST(req: Request) {
   }
 
   const voiceId = body.voiceId?.trim()
-  const text = stripDirections(body.text ?? '')
+  const text = stripForSpeech(body.text ?? '')
 
   if (!voiceId || !text) {
     return NextResponse.json(
@@ -116,8 +132,10 @@ export async function POST(req: Request) {
         줄을 따로 구우면 각 줄이 '처음이자 끝'인 것처럼 읽혀 억양이 뚝뚝
         끊기는데, 앞뒤 문장을 알려주면 그 흐름에 맞춰 읽는다(읽지는 않는다).
       */
-      ...(body.previousText ? { previous_text: body.previousText } : {}),
-      ...(body.nextText ? { next_text: body.nextText } : {}),
+      ...(body.previousText
+        ? { previous_text: stripForSpeech(body.previousText) }
+        : {}),
+      ...(body.nextText ? { next_text: stripForSpeech(body.nextText) } : {}),
       /*
         seed — 같은 값이면 같은 결과가 나온다.
         이게 없으면 같은 설정으로 구워도 길이가 매번 달라(실측 4.375 /
