@@ -187,7 +187,7 @@ export const CUES: Record<CueId, Cue> = {
     audioFile: 'b0_tape',
     // 실제 파일 길이 57.4초 — 줄별로 구워 이어붙인 값이다.
     // 자막은 오디오 타임라인에 맞춰 넘어가므로 이 값이 어긋나면 자막이 밀린다.
-    durationSec: 58,
+    durationSec: 59,
     subtitleLines: [
       { text: '…잘 돌아가나, 이거. 흠흠..' },
       { text: '소영아. 아빠다.<br>곧 나온다더라. 이름은 정해놨다.' },
@@ -220,7 +220,7 @@ export const CUES: Record<CueId, Cue> = {
     audioFile: 'b0_call',
     // 기존 준비 음성(개정본)을 첫 통화 번들로 활용
     audioAliases: ['intro-soyoung'],
-    durationSec: 78,
+    durationSec: 79,
     subtitleLines: [
       { text: '…여보세요? 아, 진짜 걸어주셨네요. 감사합니다.' },
       { text: '갑자기 이상한 부탁이라 놀라셨죠.<br>저는 강소영이라고 해요.' },
@@ -466,7 +466,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: 'young',
     trigger: { type: 'user_tap', ref: 'RESUME' },
     audioFile: 'b4_radio',
-    durationSec: 40,
+    durationSec: 39,
     subtitleLines: [
       { speaker: '라디오 DJ', text: "다음 사연, 봉황동 강민수 씨.<br>신청곡은 이문세 '소녀'입니다." },
       { speaker: '아버지', text: '…딸아이가 여섯 살입니다.<br>아들을 바랐는데, 세상에서 제일 예쁜 아이가 왔습니다.' },
@@ -487,7 +487,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'auto_chain', ref: 'B4_RADIO' },
     audioFile: 'b4_b',
-    durationSec: 28,
+    durationSec: 26,
     subtitleLines: [
       { text: '…네 번째 소원, 방금 이뤘다.<br>같이 들었으니까. 삼십팔 년 걸렸네.' },
       { text: '나 이따가 아빠한테 직접 말할래.<br>사랑한다고. 오늘은 말할 수 있을 것 같아.' },
@@ -599,14 +599,14 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: 'old',
     trigger: { type: 'user_tap', ref: 'BSIDE' },
     audioFile: 'b5_letter',
-    durationSec: 40,
+    durationSec: 48,
     subtitleLines: [
-      { speaker: '소영', text: '잠깐, 끄지 마. …같이 듣자.<br>나도 지금 아빠 옆에서 들을게.' },
-      { speaker: '아버지', text: '소영아. 이 테이프 뒷면… 네가 찾았구나.<br>다섯 가지 소원, 다 이뤘니?' },
-      { speaker: '아버지', text: '아빠는 요즘 자꾸 잊어버린다.<br>그래서 잊어버리기 전에, 여기다 해둔다.' },
-      { speaker: '아버지', text: '미안하다.<br>사랑한다는 말, 너무 늦게 한다.' },
-      { speaker: '아버지', text: '다음 주에, 가족오락관 같이 나가자.<br>마지막 소원은 아빠가 직접 이루고 싶다.' },
-      { speaker: '아버지', text: '…고맙다, 소영아. 아빠가.' },
+      { text: '잠깐, 끄지 마. …같이 듣자.<br>나도 지금 아빠 옆에서 들을게.' },
+      { text: '소영아. 이 테이프 뒷면… 네가 찾았구나.<br>다섯 가지 소원, 다 이뤘니?' },
+      { text: '아빠는 요즘 자꾸 잊어버린다.<br>그래서 잊어버리기 전에, 여기다 녹음 해둔다.' },
+      { text: '미안하다.<br>사랑한다는 말, 이게 뭐라고 너무 늦게 하는구나.' },
+      { text: '다음 주에, 가족오락관 같이 나가자.<br>마지막 소원은 아빠가 직접 이루고 싶다.' },
+      { text: '…고맙다, 소영아.' },
     ],
     sfx: { in: 'tape_hiss', out: 'tape_stop' },
     next: 'B5_F',
@@ -620,7 +620,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'auto_chain', ref: 'B5_LETTER' },
     audioFile: 'b5_f',
-    durationSec: 29,
+    durationSec: 26,
     subtitleLines: [
       { text: '…네 개 이뤘어요, 아빠.<br>마지막 하나는 남겨둘게요. 그건 아빠 거니까.' },
       { text: '…야. 진짜 고마워.<br>네가 같이 걸어줘서, 여기까지 왔어.<br>나 혼자였으면 첫 골목에서 돌아갔을 거야.' },
@@ -739,7 +739,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: 'old',
     trigger: { type: 'auto_chain', ref: 'B7_0' },
     audioFile: 'b7_1',
-    durationSec: 5,
+    durationSec: 4,
     subtitleLines: [
       { speaker: '아버지(멀리서)', text: '소영아, 누구랑 통화하노?' },
       { speaker: '소영', text: '내 친구!' },

@@ -148,8 +148,9 @@ const EMOTION = {
     B4_RADIO(1988)는 남들이 듣는 방송에 사연을 보낸 자리라 더 또렷하다.
     다만 끝에서 딸 이름을 부를 때 목이 멘다 — 그래서 normal에 강도를 준다.
 
-    B5_LETTER(현재·76세)가 정점이다. 기억을 잃어가는 중에 "미안하다"를
-    남기는 대목이라, 가장 낮고 느리게 간다.
+    B5_LETTER(현재)가 정점이다. 기억을 잃어가는 중에 "미안하다"를 남기는
+    대목이라 아버지 대사 중 가장 느리게 간다(0.88×). 피치는 젊은 쪽과 같은
+    -2다 — 더 내리면 나이가 아니라 다른 사람이 된다.
 
     B7_1은 옆방에서 딸을 부르는 한마디다. 속삭임이 아니라 평범한 노인의
     말투여야 앞의 무게가 일상으로 풀린다.
@@ -159,7 +160,9 @@ const EMOTION = {
   b2_b: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.1 },
   b4_b: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.4 },
   b5_t3: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.0 },
-  b5_letter: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.35 },
+  // 1.35는 앞 배우(승화) 기준이었다. Sanghyun은 sad가 더 짙게 실려서 그대로 두면
+  // 흐느끼는 쪽으로 넘어간다 — 7/27 오디션에서 고른 1.1로 낮춘다
+  b5_letter: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.1 },
   b5_f: { emotion_type: 'preset', emotion_preset: 'sad', emotion_intensity: 1.3 },
   // happy 프리셋은 음색 자체를 바꿔서 다른 사람처럼 들렸다. 이 대사는 밝아지는
   // 전환점이지 다른 인물이 아니다 — normal로 두고 강도만 살짝 올려 톤만 밝힌다.

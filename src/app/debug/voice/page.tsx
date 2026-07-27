@@ -16,19 +16,45 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+/**
+ * 후보를 두 차례에 나눠 구웠고 **굽는 조건이 서로 다르다.**
+ * 나란히 놓고 들을 때 이걸 모르면 목소리가 아니라 설정을 고르게 된다.
+ *
+ * · 1차(1~7번) — 아래 LINE 대사 + PRESET. 늙은 쪽은 sad 1.1 / 0.88× / -2
+ * · 2차(8~17번) — voices.json의 father_young·father_old 값 그대로.
+ *   normal 고정, 젊은 -2 / 0.94×, 늙은 -5 / 0.85×. 대사도 b0_tape·b5_letter에서
+ *   짧게 세 줄씩 끊어 이어붙인 것이다(줄 사이 0.6초)
+ *
+ * 2차가 실제 배포 설정이다. 1차는 조정판에서 같은 값으로 다시 구워 견주면 된다.
+ */
+type Batch = 1 | 2
+
 interface Candidate {
   no: number
   voiceId: string
+  batch: Batch
 }
 
 const CANDIDATES: Candidate[] = [
-  { no: 1, voiceId: 'tc_68257f68bc6e3c161ab5078d' },
-  { no: 2, voiceId: 'tc_660e46188b5f4761eb8e36d6' },
-  { no: 3, voiceId: 'tc_6583e016e1060e8bebe9a695' },
-  { no: 4, voiceId: 'tc_657139d23be20e08b0e92bae' },
-  { no: 5, voiceId: 'tc_6539f9a955c3de938ae20ed9' },
-  { no: 6, voiceId: 'tc_645b3ef82c2f52f412ede389' },
-  { no: 7, voiceId: 'tc_62ce545fb130717df10ea37a' },
+  { no: 1, voiceId: 'tc_68257f68bc6e3c161ab5078d', batch: 1 },
+  { no: 2, voiceId: 'tc_660e46188b5f4761eb8e36d6', batch: 1 },
+  { no: 3, voiceId: 'tc_6583e016e1060e8bebe9a695', batch: 1 },
+  { no: 4, voiceId: 'tc_657139d23be20e08b0e92bae', batch: 1 },
+  { no: 5, voiceId: 'tc_6539f9a955c3de938ae20ed9', batch: 1 },
+  // 6번이 지금 쓰고 있는 목소리다 — 갈아탈 대상이라 목록에 남겨 견준다
+  { no: 6, voiceId: 'tc_645b3ef82c2f52f412ede389', batch: 1 },
+  { no: 7, voiceId: 'tc_62ce545fb130717df10ea37a', batch: 1 },
+  // 2차 — 전부 ssfm-v30. 1차는 모두 v21이라 모델 세대부터 다르다
+  { no: 8, voiceId: 'tc_69fc0cff784968297fb45daa', batch: 2 },
+  { no: 9, voiceId: 'tc_69e0462f3e5413d26878521e', batch: 2 },
+  { no: 10, voiceId: 'tc_694395d43f2c8d9d43e9a897', batch: 2 },
+  { no: 11, voiceId: 'tc_68d4b115f0486108a7eefb37', batch: 2 },
+  { no: 12, voiceId: 'tc_685cdfad4027aeec7d097a28', batch: 2 },
+  { no: 13, voiceId: 'tc_6800a387534948f191cc952b', batch: 2 },
+  { no: 14, voiceId: 'tc_684a7a1446e2a628b5b07230', batch: 2 },
+  { no: 15, voiceId: 'tc_67919fb54fd00e0217d2cff0', batch: 2 },
+  { no: 16, voiceId: 'tc_678884b481dfbfa3e4075a18', batch: 2 },
+  { no: 17, voiceId: 'tc_677627eb0c63239147ab40a4', batch: 2 },
 ]
 
 type Age = 'young' | 'old'
@@ -325,10 +351,16 @@ export default function VoiceLabPage() {
           아버지 목소리 고르기
         </h1>
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-60">
-          위쪽은 미리 구워둔 후보 7명, 아래쪽은{' '}
+          위쪽은 미리 구워둔 후보 17명, 아래쪽은{' '}
           <b className="text-ink">감정·속도·피치를 바꿔 다시 굽는</b> 조정판입니다.
           한 사람이 젊은 아버지와 늙은 아버지를 다 소화해야 하니 가로로 이어서
           들어보세요.
+        </p>
+        <p className="mt-2 rounded-lg border border-line bg-paper px-3 py-2 text-[11.5px] leading-relaxed text-ink-60">
+          <b className="text-ink">1차(1~7번)와 2차(8~17번)는 굽는 조건이 다릅니다.</b>{' '}
+          2차가 <span className="font-mono-retro text-[10.5px]">voices.json</span>의
+          실제 배포 설정(normal · 젊은 −2/0.94×, 늙은 −5/0.85×)이고, 1차는 늙은 쪽을
+          sad로 구운 것입니다. 끝까지 견주려면 조정판에서 같은 값으로 다시 구우세요.
         </p>
 
         {/* ── 후보 목록 ─────────────────────────── */}
@@ -355,6 +387,21 @@ export default function VoiceLabPage() {
                   {metas[c.voiceId] && (
                     <span className="ml-1.5 text-[12px] font-normal text-ink-60">
                       {metas[c.voiceId].name}
+                    </span>
+                  )}
+                  {/* 어느 차례에 구운 것인지 — 조건이 달라 라벨 없이는 헷갈린다 */}
+                  <span
+                    className={`ml-1.5 rounded px-1.5 py-0.5 font-mono-retro text-[9.5px] font-normal ${
+                      c.batch === 2
+                        ? 'bg-teal/12 text-teal-dk'
+                        : 'bg-ink/8 text-ink-60'
+                    }`}
+                  >
+                    {c.batch === 2 ? '2차' : '1차'}
+                  </span>
+                  {c.voiceId === 'tc_645b3ef82c2f52f412ede389' && (
+                    <span className="ml-1 rounded bg-ink/8 px-1.5 py-0.5 font-mono-retro text-[9.5px] font-normal text-ink-60">
+                      현재
                     </span>
                   )}
                 </span>
