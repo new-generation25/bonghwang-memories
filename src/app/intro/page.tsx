@@ -155,15 +155,6 @@ export default function IntroPage() {
     }, DIAL_MS)
   }
 
-  const handleCancelDial = () => {
-    if (dialTimer.current) clearTimeout(dialTimer.current)
-    ringRef.current?.stop()
-    ringRef.current = null
-    setStep('tape')
-    // 취소하면 다시 걸 수 있도록 안내를 되살린다
-    setCallButtonVisible(true)
-  }
-
   const handleAccept = () => {
     stopCue()
     mutateTour({
@@ -353,15 +344,14 @@ export default function IntroPage() {
           */}
           <div className="call-screen-body" />
 
-          <div className="call-screen-foot flex justify-center">
-            <button
-              onClick={handleCancelDial}
-              className="call-fab end"
-              aria-label="발신 취소"
-            >
-              <HandsetIcon />
-            </button>
-          </div>
+          {/*
+            발신 취소 버튼은 두지 않는다.
+
+            통화 화면에서 '통화 종료'를 없앤 것과 같은 이유다 — 이 전화는
+            이야기가 시작되는 자리라 끊고 나갈 길을 열어둘 곳이 아니다.
+            신호는 6초 남짓이고 그 뒤 소영이 받는다.
+          */}
+          <div className="call-screen-foot" />
         </div>
       )}
 

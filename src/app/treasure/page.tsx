@@ -20,7 +20,7 @@ import { bingoOpen, useSuperAdmin } from '@/lib/superAdmin'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { playBingoLine } from '@/lib/sfx'
-import { markBingoCell, mutateTour, addCoupon } from '@/lib/tourState'
+import { markBingoCell, mutateTour } from '@/lib/tourState'
 import {
   POINT_TABLE,
   POINTS_EVENT,
@@ -68,11 +68,20 @@ export default function BingoPage() {
     return () => window.removeEventListener(POINTS_EVENT, sync)
   }, [])
 
-  // 줄 수가 늘면 저장 + 새 줄마다 포인트·아이템
+  /*
+    줄 수가 늘면 저장 + 새 줄마다 포인트.
+
+    전에는 `addCoupon('bingo-line-N')`도 함께 불렀다. 그런데 그 id는 쿠폰
+    카탈로그(lib/coupons.ts)에 없어서 '나의 기록'이 조용히 걸러냈다 —
+    받는 순간 사라지는 보상이었다. 덤으로 관리자 통계의 쿠폰 수만 줄 수만큼
+    부풀렸다.
+
+    진짜 아이템을 주려면 어느 가게가 무엇을 내주는지부터 정해야 한다.
+    그때 카탈로그에 넣고 여기서 다시 부르면 된다.
+  */
   useEffect(() => {
     if (lines > tour.bingo.lines) {
       for (let i = tour.bingo.lines + 1; i <= lines; i++) {
-        addCoupon(`bingo-line-${i}`)
         void award(`bingo-line-${i}`, 'treasureLine')
         logEvent('bingo_line', { n: i })
       }
@@ -293,8 +302,7 @@ export default function BingoPage() {
         <div className="card-paper mb-5 p-4 shadow-lg">
           <p className="text-[12px] leading-relaxed text-ink-60">
             골목을 걷다가 마음에 드는 곳을 발견하면 칸을 눌러 기록하세요.
-            가로·세로·대각선 5칸을 이으면 빙고 — 빙고를 완성할 때마다
-            포인트 또는 아이템을 얻을 수 있어요.
+            가로·세로·대각선 5칸을 이으면 빙고 — 한 줄마다 포인트를 드려요.
           </p>
           <p className="mt-2 font-mono-retro text-[11px] text-teal">
             칸 하나 +{POINT_TABLE.bonusMission}P · 빙고 한 줄 +
@@ -377,8 +385,14 @@ export default function BingoPage() {
               오늘의 투어를 마칠까요?
             </h3>
             <p className="mt-1 text-[12.5px] leading-relaxed text-ink-60">
+              {/*
+                '돌아올 수 없다'고 적혀 있었지만 사실이 아니었다 — 빙고 탭의
+                잠금은 bingo.unlocked만 보고, 그 값은 한 번 켜지면 꺼지지
+                않는다. 마치는 것은 다섯 소원에 대한 것이고 골목 빙고는
+                언제든 다시 열린다.
+              */}
               지금까지의 기록으로 &lsquo;우리의 테이프&rsquo;를 만듭니다.
-              마치고 나면 골목 빙고로 돌아올 수 없어요.
+              골목 빙고는 나중에 다시 이어서 채울 수 있어요.
             </p>
             <p className="mt-2 font-mono-retro text-[11px] text-teal">
               발견 {act2Done} / 20 · 빙고 {lines}줄
