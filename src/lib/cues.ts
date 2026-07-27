@@ -599,7 +599,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: 'old',
     trigger: { type: 'user_tap', ref: 'BSIDE' },
     audioFile: 'b5_letter',
-    durationSec: 48,
+    durationSec: 42,
     subtitleLines: [
       { text: '잠깐, 끄지 마. …같이 듣자.<br>나도 지금 아빠 옆에서 들을게.' },
       { text: '소영아. 이 테이프 뒷면… 네가 찾았구나.<br>다섯 가지 소원, 다 이뤘니?' },
@@ -739,7 +739,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: 'old',
     trigger: { type: 'auto_chain', ref: 'B7_0' },
     audioFile: 'b7_1',
-    durationSec: 4,
+    durationSec: 5,
     subtitleLines: [
       { speaker: '아버지(멀리서)', text: '소영아, 누구랑 통화하노?' },
       { speaker: '소영', text: '내 친구!' },
