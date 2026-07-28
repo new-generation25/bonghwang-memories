@@ -17,7 +17,17 @@
  */
 
 export type StationId = 'intro' | 't1' | 't2' | 't3' | 't4' | 't5'
-export type TapId = 'PLAY' | 'CALL' | 'LISTEN' | 'RESUME' | 'ASK' | 'BSIDE' | 'FINISH'
+export type TapId =
+  | 'PLAY'
+  | 'CALL'
+  | 'LISTEN'
+  | 'RESUME'
+  | 'ASK'
+  | 'BSIDE'
+  | 'FINISH'
+  /* 말 놓기 물음의 대답(D7). 참여자가 창에서 고르는 순간이 곧 탭이다 */
+  | 'SPEECH_YES'
+  | 'SPEECH_NO'
 
 export type ActionId =
   | 'M1_count_ok'
@@ -33,7 +43,7 @@ export type ActionId =
 /** 번들 ID — 명세서 §6/§12 기준. 파일명은 소문자(b0_tape 등) */
 export type CueId =
   | 'B0_TAPE' | 'B0_CALL'
-  | 'B1_A' | 'B1_OK' | 'B1_S' | 'B1_B'
+  | 'B1_A' | 'B1_OK' | 'B1_S' | 'B1_B' | 'B1_YES' | 'B1_NO'
   | 'B2_A' | 'B2_B'
   | 'B3_A' | 'B3_B'
   | 'B4_A' | 'B4_RADIO' | 'B4_B' | 'B4_C'
@@ -312,7 +322,14 @@ export const CUES: Record<CueId, Cue> = {
     ui: ['show_mission:M1b'],
   },
 
-  // 존댓말→반말 전환은 이 번들 안에서만 일어난다 (D7)
+  /*
+    물음으로 끝난다. 대답은 다음 번들이 받는다 — B1_YES / B1_NO.
+
+    예전에는 한 번들 안에서 물음 뒤에 재생을 멈췄다가 대답을 받고 이어
+    재생했다. 그러면 어느 쪽을 골라도 뒤에 이미 구워둔 "…고마워. 이제
+    말 놓을게."가 나온다. 거절한 사람에게 고맙다고 답하는 꼴이라, 물어본
+    것이 시늉이 된다. 대답이 갈리려면 소리도 갈려야 한다.
+  */
   B1_B: {
     id: 'B1_B',
     track: 1,
@@ -321,27 +338,63 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'action_event', ref: 'M1_photo_done' },
     audioFile: 'b1_b',
-    durationSec: 37,
+    durationSec: 21,
     subtitleLines: [
       { text: '…아버지가 그런 말을 했다고요?<br>상상이 안 돼요, 진짜.' },
       { text: "저한텐 평생 '밥 먹었나' 그 말밖에 안 하셨는데." },
       { text: '첫 번째 소원을 이뤘네요.<br>엄마와의 러브스토리를 방금 들었으니까.' },
-      /*
-        이 줄이 끝나면 화면이 물어본다(SpeechAsk). 대답할 때까지 재생이
-        멈추므로, 다음 줄은 이미 승낙을 받은 뒤에 나온다.
-      */
       { text: '저기… 말 편하게 해도 될까요?<br>왠지 오래 알던 사이 같아서요.' },
+    ],
+    next: null,
+    // 말투는 아직 바꾸지 않는다 — 대답을 듣기 전이다
+    ui: ['reel_advance', 'track_check:1', 'coupon:cp1'],
+  },
+
+  // 승낙 — 존댓말→반말 전환은 여기서 일어난다 (D7)
+  B1_YES: {
+    id: 'B1_YES',
+    track: 1,
+    channel: 'call',
+    speaker: 'soyoung',
+    voiceAge: null,
+    trigger: { type: 'user_tap', ref: 'SPEECH_YES' },
+    audioFile: 'b1_yes',
+    durationSec: 15,
+    subtitleLines: [
       { text: '…고마워. 이제 말 놓을게.' },
       { text: '다음 가게는, 그 골목 쭉 가다가 파란 타일 건물 지나서였는데…<br>아직 있으려나 모르겠다.' },
       { text: '미야상회라고, 조그만 구멍가게야.<br>파란 타일 건물은 옛날 목욕탕이야.' },
     ],
     next: null,
-    ui: [
-      'reel_advance',
-      'track_check:1',
-      'coupon:cp1',
-      'speech_mode:casual',
+    ui: ['speech_mode:casual'],
+  },
+
+  /*
+    거절 — 그래도 말은 놓는다 (D7: 전환은 한 번, 되돌리지 않는다).
+
+    거절을 무시하는 것처럼 보이면 안 되니 한 박자 물러섰다가, 소영이
+    스스로 다시 청한다. 이 사람은 19년 만에 아버지를 이해하려고 내려온
+    사람이고, 옆에서 걸어주는 이가 남으로 남는 쪽을 못 견딘다.
+    존댓말 벌을 따로 굽지 않는 이상 대사는 결국 반말로 이어져야 하는데,
+    그 이유를 이야기 안에서 만들어주는 것이 이 번들이다.
+  */
+  B1_NO: {
+    id: 'B1_NO',
+    track: 1,
+    channel: 'call',
+    speaker: 'soyoung',
+    voiceAge: null,
+    trigger: { type: 'user_tap', ref: 'SPEECH_NO' },
+    audioFile: 'b1_no',
+    durationSec: 23,
+    subtitleLines: [
+      { text: '아… 네. 그럴 수도 있죠, 갑자기 그러면.' },
+      { text: '그래도 친구가 되어주면 좋겠는데.<br>…말 편하게 하자.' },
+      { text: '다음 가게는, 그 골목 쭉 가다가 파란 타일 건물 지나서였는데…<br>아직 있으려나 모르겠다.' },
+      { text: '미야상회라고, 조그만 구멍가게야.<br>파란 타일 건물은 옛날 목욕탕이야.' },
     ],
+    next: null,
+    ui: ['speech_mode:casual'],
   },
 
   // ============================== TRACK 2 — 미야상회 ==============================

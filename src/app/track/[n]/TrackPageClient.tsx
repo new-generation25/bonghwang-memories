@@ -27,22 +27,11 @@ import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { logEvent } from '@/lib/analytics'
 import { CUES, CueId } from '@/lib/cues'
-import {
-  dispatchQr,
-  dispatchTap,
-  pauseCue,
-  playCue,
-  resumeCue,
-  unlockAudio,
-} from '@/lib/cueEngine'
-import { timingsFor } from '@/lib/audioTimings'
+import { dispatchQr, dispatchTap, playCue, unlockAudio } from '@/lib/cueEngine'
 import { stationByTrack } from '@/lib/tracks'
 import { mutateTour } from '@/lib/tourState'
 
 const NEUNGSOHWA_OVERLAY = '/images/neungsohwa-overlay.png'
-
-/** B1_B에서 소영이 말을 놓아도 되냐고 묻는 줄(0부터) */
-const SPEECH_ASK_LINE = 3
 
 /** 큐 종료 → 이어지는 상호작용 */
 type Interaction =
@@ -75,7 +64,14 @@ const INTERACTIONS: Partial<Record<CueId, Interaction>> = {
     label: 'MISSION 1 · 기록',
     prompt: '풍선초 앞에서 사진 한 장 — 오늘 우리의 첫 번째 기록이에요.',
   },
+  /*
+    B1_B는 말 놓기 물음으로 끝난다. 아직 대답하지 않았으면 그 위에
+    SpeechAsk 창이 덮으므로 이 버튼은 보이지 않는다 — 다시듣기로 이
+    번들을 또 들었을 때(이미 대답한 사람) 길이 막히지 않게 두는 것이다.
+  */
   B1_B: { kind: 'return' },
+  B1_YES: { kind: 'return' },
+  B1_NO: { kind: 'return' },
   // TRACK 2 — 미야상회 : 도착 번들이 곧 미션 안내
   B2_A: {
     kind: 'photo',
@@ -135,48 +131,27 @@ export default function TrackPageClient({ n }: { n: number }) {
   }
 
   /*
-    말 놓기 — 소영이 묻는 줄에 닿으면 재생을 멈추고 물어본다.
+    말 놓기 — B1_B가 물음으로 끝나면 창이 올라온다.
 
-    B1_B의 네 번째 줄이 "저기… 말 편하게 해도 될까요?"다. 그 줄이 지나가면
-    소영이 혼자 묻고 혼자 말을 놓는 꼴이라, 두 사람이 가까워지는 대목이
-    통째로 지나간다.
+    예전에는 한 번들 한가운데서 재생을 멈추고 물었다. 그러면 대답이
+    무엇이든 뒤에 이어 구워둔 "…고마워. 이제 말 놓을게."가 나온다 —
+    거절한 사람에게 고맙다고 답하는 꼴이라 물음이 시늉이 됐다.
+    지금은 대답이 다음 번들을 고른다(B1_YES / B1_NO).
 
-    물음이 끝까지 들린 뒤에 뜬다. 한 번만 묻는다 — 다시듣기로 그 줄을
-    또 지나도 이미 답한 사람에게 같은 것을 되묻지 않는다.
+    한 번만 묻는다 — 다시듣기로 이 번들을 또 들어도 이미 답한 사람에게
+    같은 것을 되묻지 않는다.
   */
-  const [speechAsked, setSpeechAsked] = useState(false)
-  useEffect(() => {
-    if (speechAsked || tour.speechConsent) return
-    if (cueState.cueId !== 'B1_B') return
+  const askSpeech =
+    endedCue === 'B1_B' && !tour.speechConsent && !cueState.playing
 
-    /*
-      물음이 다 들린 뒤에 멈춘다.
-
-      자막이 그 줄로 넘어가는 순간에 띄웠더니 "…왠지 오래 알던 사이
-      같아서요"가 채 나오기도 전에 창이 덮었다. 묻다 만 사람에게 답하는
-      꼴이라 대화가 끊긴다.
-
-      다음 줄이 시작하는 시각에서 조금 앞당겨 멈춘다 — 딱 그 시각에
-      멈추면 "…고마워"의 첫 소리가 새어 나온다. 승낙하기 전에 고맙다는
-      말이 들리면 물음이 시늉이 된다.
-    */
-    const t = timingsFor('b1_b', CUES.B1_B.subtitleLines.length)
-    const askAt = t ? t[SPEECH_ASK_LINE + 1] - 0.2 : 0
-    if (!askAt || cueState.elapsed < askAt) return
-
-    pauseCue()
-    setSpeechAsked(true)
-  }, [
-    cueState.cueId,
-    cueState.elapsed,
-    speechAsked,
-    tour.speechConsent,
-  ])
-
+  /**
+   * 대답이 곧 다음 번들의 트리거다(D9 — 사용자 탭으로만 재생이 시작된다).
+   * 창을 누른 그 제스처 안에서 불러야 iOS가 소리를 막지 않는다.
+   */
   const answerSpeech = (consent: 'yes' | 'no') => {
     mutateTour({ speechConsent: consent })
-    setSpeechAsked(false)
-    resumeCue()
+    unlockAudio()
+    dispatchTap(consent === 'yes' ? 'SPEECH_YES' : 'SPEECH_NO')
   }
 
   // §10 재개 — 엔진이 비어 있으면 마지막 완료 큐를 기준으로 복원
@@ -477,7 +452,7 @@ export default function TrackPageClient({ n }: { n: number }) {
         막이 데크를 포함한 모든 탭을 삼켜 화면이 멈춘 것처럼 됐다.
       */}
       {/* 말 놓기 — 미션보다 위에 뜬다. 지금 답해야 이야기가 이어진다 */}
-      {speechAsked && <SpeechAsk onAnswer={answerSpeech} />}
+      {askSpeech && <SpeechAsk onAnswer={answerSpeech} />}
 
       {interactionNode && (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-shell/55 px-4 pb-4">
