@@ -69,6 +69,11 @@ export default function AdminPage() {
   const [acc, setAcc] = useState({ loginId: '', password: '', shopId: '' })
   const [accMsg, setAccMsg] = useState('')
   const [accBusy, setAccBusy] = useState(false)
+  /*
+    등록 칸은 접어둔다. 평소에 보는 것은 목록이고, 가게를 새로 넣는 일은
+    개업 때 한 번이다 — 늘 펼쳐두면 정작 봐야 할 표가 아래로 밀린다.
+  */
+  const [panel, setPanel] = useState<'none' | 'shop' | 'account'>('none')
 
   const loadShops = useCallback(async () => {
     try {
@@ -350,9 +355,7 @@ export default function AdminPage() {
       {/* ───── 가게 관리 ───── */}
       <Section title="골목 가게 관리" hint={`등록 ${shops.length}곳`}>
         {shops.length === 0 ? (
-          <Empty>
-            아직 등록된 가게가 없습니다. 아래 「가게 문서 심기」부터 하세요.
-          </Empty>
+          <Empty>아직 등록된 가게가 없습니다. 아래 [＋ 가게 등록]부터 하세요.</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-[12px]">
@@ -408,8 +411,27 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* 등록은 접어둔다 — 평소에 보는 것은 위의 목록이다 */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => setPanel(panel === 'shop' ? 'none' : 'shop')}
+            className="rounded-xl border border-line bg-paper px-3 py-2 text-[12px] font-bold text-ink"
+          >
+            {panel === 'shop' ? '✕ 닫기' : '＋ 가게 등록'}
+          </button>
+          <button
+            onClick={() => setPanel(panel === 'account' ? 'none' : 'account')}
+            className="rounded-xl border border-line bg-paper px-3 py-2 text-[12px] font-bold text-ink"
+          >
+            {panel === 'account' ? '✕ 닫기' : '＋ 가게 계정 만들기'}
+          </button>
+        </div>
+
         {/* 가게 계정 만들기 */}
-        <div className="mt-5 rounded-xl border border-line bg-paper p-3">
+        <div
+          hidden={panel !== 'account'}
+          className="mt-3 rounded-xl border border-line bg-paper p-3"
+        >
           <p className="font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
             가게 계정 만들기
           </p>
@@ -475,10 +497,13 @@ export default function AdminPage() {
           </p>
         </div>
 
-        {/* 가게 문서 심기 */}
-        <div className="mt-3 rounded-xl border border-line bg-paper p-3">
+        {/* 가게 등록 — shops.json 붙여넣기 */}
+        <div
+          hidden={panel !== 'shop'}
+          className="mt-3 rounded-xl border border-line bg-paper p-3"
+        >
           <p className="font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
-            가게 문서 심기
+            가게 등록
           </p>
           <p className="mt-1 text-[10.5px] leading-relaxed text-ink-60">
             <span className="font-mono-retro">node scripts/make-shop-qr.mjs</span> 가
