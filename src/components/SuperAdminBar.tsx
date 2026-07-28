@@ -145,7 +145,7 @@ export default function SuperAdminBar() {
 
             <Row
               label="여기까지 완료 처리"
-              hint="조각 · 쿠폰 · 포인트까지 실제 완주와 같게 채웁니다"
+              hint="J-카드 줄 · 쿠폰 · 포인트까지 실제 완주와 같게 채웁니다"
             >
               {TRACKS.map((t) => (
                 <Key key={t} onClick={() => completeUpTo(t)}>

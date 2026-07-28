@@ -147,6 +147,16 @@ export default function PlayerHomePage() {
         >
           🗺 길 안내 지도 보기
         </button>
+
+        {/*
+          거점 사이를 걷는 화면이 여기다(F-6). 출발 전 안내는 /download에서
+          한 번 다 읽었으므로 여기서는 한 줄만 — 되풀이하면 읽지 않는다.
+        */}
+        {completedCount < 5 && (
+          <p className="mt-4 text-center text-[11.5px] leading-relaxed text-ink-60">
+            걸을 땐 화면을 주머니에. 소영의 목소리는 계속 들려요.
+          </p>
+        )}
       </div>
 
       {/* GPS 접근 알림 — 재생 트리거 아님 (D9) */}

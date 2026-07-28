@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
+import SafetyNote from '@/components/SafetyNote'
 import { ALL_CUE_IDS, CUES } from '@/lib/cues'
 import { mutateTour } from '@/lib/tourState'
 import { useTourHydrated, useTourState } from '@/hooks/useTourState'
@@ -173,14 +174,22 @@ export default function DownloadPage() {
           </p>
         )}
 
+        {/*
+          안전 안내는 준비가 끝난 뒤에만 보여준다(F-6). 받는 중에 띄우면
+          진행률 옆에서 같이 깜빡여 둘 다 안 읽힌다. 여기가 걷기 시작
+          직전이라 지금 읽는 것이 가장 오래 남는다.
+        */}
         {done && (
-          <button
-            onClick={() => router.push('/intro')}
-            className="btn-teal mt-6 w-full text-[15px]"
-            style={{ animation: 'slideUp 0.4s ease-out' }}
-          >
-            테이프 발견하러 가기 ▶
-          </button>
+          <>
+            <SafetyNote className="mt-5" />
+            <button
+              onClick={() => router.push('/intro')}
+              className="btn-teal mt-4 w-full text-[15px]"
+              style={{ animation: 'slideUp 0.4s ease-out' }}
+            >
+              테이프 발견하러 가기 ▶
+            </button>
+          </>
         )}
       </div>
 
