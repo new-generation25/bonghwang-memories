@@ -14,6 +14,11 @@
  * 언제 보느냐 —
  *  · 앱을 열 때 한 번
  *  · 다른 앱에 갔다 돌아올 때마다
+ *  · 열어둔 채로 있어도 몇 분에 한 번
+ *
+ * 마지막 것이 없어서 한 번 당했다. 골목 빙고는 칸을 하나씩 채우며 오래
+ * 머무는 화면이라 탭을 벗어날 일이 없다 — 그동안 새 판이 두 번 올라갔는데
+ * 화면은 옛 코드 그대로였고, 새로 넣은 뽑기가 "안 나온다"로 보였다.
  *
  * 언제 새로고침하지 않느냐 —
  *  · 이야기가 재생 중일 때. 새로고침은 재생을 끊고 화면을 처음부터 다시
@@ -38,6 +43,15 @@ async function serverVersion(): Promise<string | null> {
 }
 
 const RELOADED_KEY = 'bh_version_reloaded'
+
+/**
+ * 열어둔 채로 있을 때 다시 보는 간격.
+ *
+ * sw.js는 몇 백 바이트라 자주 물어도 부담이 없지만, 걷는 90분 동안
+ * 골목에서 데이터를 쓰는 값이기도 하다. 새 판이 올라오고 5분 안에는
+ * 따라잡는 정도면 충분하다.
+ */
+const CHECK_INTERVAL_MS = 5 * 60 * 1000
 
 export default function VersionGate() {
   useEffect(() => {
@@ -85,8 +99,13 @@ export default function VersionGate() {
       if (document.visibilityState === 'visible') void check()
     }
     document.addEventListener('visibilitychange', onVisible)
+
+    // 화면을 벗어나지 않아도 따라잡는다 — 빙고판처럼 오래 머무는 자리가 있다
+    const timer = setInterval(() => void check(), CHECK_INTERVAL_MS)
+
     return () => {
       cancelled = true
+      clearInterval(timer)
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [])
