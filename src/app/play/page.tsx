@@ -17,7 +17,6 @@ import QRGate from '@/components/QRGate'
 import { useProximityNotice } from '@/hooks/useProximityNotice'
 import { useTourState } from '@/hooks/useTourState'
 import { dispatchQr } from '@/lib/cueEngine'
-import { useSuperAdmin } from '@/lib/superAdmin'
 import { Station, TRACK_STATIONS, stationByTrack } from '@/lib/tracks'
 
 /**
@@ -44,7 +43,16 @@ export default function PlayerHomePage() {
   const completedCount = tour.tracksCompleted.length
   const progress = (completedCount / 5) * 100
 
-  // 다음 입장 거점 — 완료된 트랙의 다음 (전부 완료면 없음)
+  /*
+    아직 이루지 않은 소원들 — QR 게이트가 받아주는 거점.
+    순서를 강제하지 않는다. 어느 거점 QR을 찍어도 그 미션이 열린다 —
+    골목에서는 발길이 순서를 앞지르기도 한다.
+  */
+  const remaining = TRACK_STATIONS.filter(
+    (s) => !tour.tracksCompleted.includes(s.track)
+  )
+
+  // 접근 안내(GPS 토스트)용 권장 다음 거점 — 이야기의 순서는 여전히 이쪽이다
   const nextTrack =
     completedCount >= 5 ? null : Math.max(0, ...tour.tracksCompleted) + 1
   const nextStation = nextTrack ? stationByTrack(nextTrack) : null
@@ -67,18 +75,6 @@ export default function PlayerHomePage() {
     router.push(`/track/${station.track}`)
     dispatchQr(station.id)
   }
-
-  /*
-    슈퍼관리자는 소원 줄을 눌러 그 거점으로 바로 들어간다.
-
-    거점 QR은 현장에 붙어 있어 책상에서는 통과할 수 없고, 뒤쪽 거점을
-    고칠 때마다 앞의 넷을 순서대로 걸어올 수는 없다. 조작 패널에도 같은
-    이동이 있지만, 어느 소원인지 이름을 보고 고르는 자리는 여기다.
-
-    들어가는 길은 참여자와 같다 — QR을 찍었을 때와 같은 handleStationEnter를
-    탄다. 따로 만들면 그 경로에서만 나는 버그를 못 잡는다.
-  */
-  const superAdmin = useSuperAdmin()
 
   // pb-32 — 하단 탭바(84px)와 안전영역을 덮는 여백. 탭바를 쓰는 화면 공통값
   return (
@@ -109,94 +105,41 @@ export default function PlayerHomePage() {
         />
       </div>
 
-      {/* 트랙 리스트 */}
+      {/*
+        트랙 리스트는 J-카드로 통합했다(F-1). 같은 다섯 소원을 목록과
+        카드가 두 번 보여주고 있었다.
+
+        QR 버튼도 하나로 합쳤다 — 스캔값(BH88:T*)이 어느 거점인지 스스로
+        말하므로, 버튼이 소원마다 붙어 '어느 QR인지'를 설명할 필요가 없다.
+        어느 거점 QR을 찍어도 그 소원의 미션이 열린다. 순서는 소영의
+        대사와 지도가 안내할 뿐, 코드가 강제하지 않는다.
+
+        빙고 진입 카드는 예전에 뺐다 — 하단 탭의 '빙고'가 같은 일을 한다.
+        슈퍼관리자의 임의 거점 입장은 조작 패널(SuperAdminBar)의 이동이 맡는다.
+      */}
       <div className="mx-auto mt-4 w-full max-w-[380px] px-4">
-        {TRACK_STATIONS.map((station) => {
-          const done = tour.tracksCompleted.includes(station.track)
-          const isNext = station.track === nextTrack
-          return (
-            <div
-              key={station.id}
-              onClick={superAdmin ? () => handleStationEnter(station) : undefined}
-              role={superAdmin ? 'button' : undefined}
-              tabIndex={superAdmin ? 0 : undefined}
-              className={`mt-2 flex items-center gap-3 rounded-xl border px-4 py-3 ${
-                done
-                  ? 'border-teal/40 bg-teal/10'
-                  : isNext
-                    ? 'border-sunset-yellow bg-paper shadow-sm'
-                    : // 슈퍼관리자에게는 흐리게 두지 않는다 — 눌리는 줄이라
-                      // 잠긴 것처럼 보이면 안 된다
-                      `border-line bg-paper/60 ${superAdmin ? '' : 'opacity-60'}`
-              } ${superAdmin ? 'cursor-pointer active:scale-[0.99]' : ''}`}
+        <JCard />
+
+        {completedCount < 5 && (
+          <div className="cta-band mt-4">
+            <button
+              onClick={() => setShowScanner(true)}
+              aria-label="거점 QR 스캔"
+              /*
+                실물 QR처럼 검정. 티얼은 이 앱의 구조색이라 앱바·탭·버튼이
+                이미 쓰고 있어서, 여기까지 초록이면 '누르는 곳'이 아니라
+                '또 하나의 장식'으로 묻힌다. 검정 QR은 거점에 붙은 실물과
+                같은 그림이라 무엇을 찾아야 하는지도 같이 알려준다.
+              */
+              className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-shell py-3.5 text-cream active:scale-[0.99]"
             >
-              {/*
-                A면의 몇 번째 곡. 바로 위 카세트 라벨에 SIDE A가 찍혀 있어
-                A1·A2로 이어 읽힌다. 'T1'은 트랙의 약자였지만 그 뜻이
-                글자만으로는 읽히지 않았다.
-              */}
-              <span className="font-mono-retro text-[13px] text-ink-60">
-                {done ? '✓' : `A${station.track}`}
+              <QrIcon />
+              <span className="font-display text-[15px]">
+                거점 QR 찍고 소원 이루기
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13.5px] font-bold text-ink">
-                  {station.wish}
-                </p>
-                <p className="font-mono-retro text-[10.5px] text-ink-60">
-                  {done
-                    ? '소원 완료'
-                    : isNext
-                      ? `다음 거점 — ${station.name}`
-                      : superAdmin
-                        ? // 잠겨 있지만 눌러서 들어갈 수 있다는 것을 말해준다
-                          `🔓 ${station.name} — 눌러서 입장`
-                        : '잠김'}
-                </p>
-              </div>
-
-              {/*
-                지금 차례인 소원에만 QR 버튼이 붙는다.
-                화면 아래 큰 버튼 하나로 두면 '어느 거점의 QR인지'를 버튼
-                글자로 다시 설명해야 했다. 그 소원 옆에 있으면 설명이 필요 없다.
-              */}
-              {isNext && (
-                <button
-                  onClick={(e) => {
-                    // 줄 전체가 눌리는 슈퍼관리자 모드에서 두 번 걸리지 않게
-                    e.stopPropagation()
-                    setShowScanner(true)
-                  }}
-                  aria-label={`${station.name} 거점 QR 스캔`}
-                  /*
-                    실물 QR처럼 검정. 티얼은 이 앱의 구조색이라 앱바·탭·버튼이
-                    이미 쓰고 있어서, 여기까지 초록이면 '누르는 곳'이 아니라
-                    '또 하나의 장식'으로 묻힌다. 검정 QR은 거점에 붙은 실물과
-                    같은 그림이라 무엇을 찾아야 하는지도 같이 알려준다.
-                  */
-                  className="flex shrink-0 flex-col items-center gap-0.5 rounded-lg bg-shell px-2.5 py-1.5 text-cream active:scale-95"
-                >
-                  <QrIcon />
-                  <span className="font-mono-retro text-[9px] tracking-wider">
-                    SCAN
-                  </span>
-                </button>
-              )}
-            </div>
-          )
-        })}
-
-        {/*
-          빙고 진입 카드는 뺐다. 하단 탭에 '빙고'가 생기면서 같은 일을
-          두 곳에서 하게 됐고, 잠겼을 때의 안내도 탭 쪽이 더 정확하다
-          (눌러보면 무엇을 끝내야 열리는지 말해준다).
-
-          QR 버튼도 여기 있던 것을 지웠다 — 지금 차례인 소원 옆으로 옮겼다.
-        */}
-
-        {/* J-카드 — 케이스 속지의 다섯 소원. 진행 화면에 상시 노출(F-1) */}
-        <div className="mt-5">
-          <JCard />
-        </div>
+            </button>
+          </div>
+        )}
 
         <button
           onClick={() => router.push('/exploration')}
@@ -222,9 +165,9 @@ export default function PlayerHomePage() {
         </div>
       )}
 
-      {showScanner && nextStation && (
+      {showScanner && remaining.length > 0 && (
         <QRGate
-          allowedStations={[nextStation.id]}
+          allowedStations={remaining.map((s) => s.id)}
           onSuccess={handleStationEnter}
           onClose={() => setShowScanner(false)}
         />

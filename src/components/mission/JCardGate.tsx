@@ -72,12 +72,12 @@ export default function JCardGate() {
         ).map((s, i) => {
           const filled = done.includes(s.track)
           return (
-            <div key={s.id} className="flex items-baseline gap-2 py-0.5">
+            <div key={s.id} className="flex items-baseline gap-2 py-1">
               <span className="font-mono-retro text-[9.5px] text-ink-60">
                 A{s.track}
               </span>
               <span
-                className={`min-w-0 flex-1 truncate font-pen text-[17px] ${
+                className={`min-w-0 flex-1 truncate font-pen text-[20px] ${
                   filled ? 'text-ink' : 'text-ink-60/70'
                 }`}
                 style={

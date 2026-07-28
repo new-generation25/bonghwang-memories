@@ -617,6 +617,8 @@ function runDirective(directive: UiDirective, cueId: CueId) {
       if ((track === 1 || track === 5) && typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent(WISH_EVENT, { detail: { track } }))
       }
+      // J-카드 줄이 그어지는 순간(F-7). 트랙 5는 카드에 줄이 없다 — 아버지의 몫
+      if (track <= 4) logEvent('jcard_line_done', { track })
     }
     completeTrack(track)
   } else if (directive === 'speech_mode:casual') {

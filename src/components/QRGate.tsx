@@ -5,7 +5,8 @@
  *
  * 기존 QRScanner(jsQR)를 감싸 페이로드를 검증한다:
  *  - 등록된 거점 QR(BH88:*)만 통과. 다른 QR은 오류 안내 후 재시도.
- *  - 순서 강제: allowedStations에 없는 거점은 "아직 차례가 아니에요".
+ *  - allowedStations에 없는 거점은 거절 — 지금은 '아직 안 이룬 소원 전부'가
+ *    들어오므로 사실상 완료한 거점만 걸린다. 순서는 강제하지 않는다.
  *  - QR 훼손·카메라 거부 → 4자리 수동 코드 입력 폴백.
  *  - 개발용 테스트 스캔('test-qr-code-data')은 허용 목록의 첫 거점으로 처리.
  */
@@ -51,10 +52,20 @@ export default function QRGate({
       setError('봉황 메모리즈 거점 QR이 아니에요. 입구의 QR을 다시 확인해주세요.')
       return false
     }
-    // 슈퍼관리자는 차례가 아닌 거점도 연다 — 뒤쪽 거점을 고칠 때
-    // 앞의 거점 QR을 현장에서 찍어올 수는 없다
+    // 슈퍼관리자는 목록 밖 거점도 연다 — 뒤쪽 거점을 고칠 때
+    // 현장의 QR을 찍어올 수는 없다
     if (!canSkipOrder() && !allowedStations.includes(station.id)) {
-      setError(`아직 ${station.name} 차례가 아니에요. 소영의 안내를 따라가 주세요.`)
+      /*
+        허용 목록은 '아직 안 이룬 소원'이라, 여기 걸리는 것은 대부분
+        이미 이룬 소원의 QR을 다시 찍은 경우다. 인트로 QR처럼 애초에
+        다시 들어갈 수 없는 것도 있다.
+      */
+      const done = getTourState().tracksCompleted.includes(station.track)
+      setError(
+        done
+          ? `${station.name}의 소원은 이미 이뤘어요. 대사는 트랙 화면에서 다시 들을 수 있어요.`
+          : '지금은 들어갈 수 없는 거점이에요.'
+      )
       return false
     }
     /*

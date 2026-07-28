@@ -28,8 +28,6 @@ import {
   REASON_LABEL,
   type PointEntry,
 } from '@/lib/points'
-import { TRACK_STATIONS } from '@/lib/tracks'
-import { formatElapsed } from '@/lib/tourState'
 
 export default function MyRecordPage() {
   const router = useRouter()
@@ -55,7 +53,6 @@ export default function MyRecordPage() {
     return () => window.removeEventListener(POINTS_EVENT, sync)
   }, [])
 
-  const doneCount = tour.tracksCompleted.length
   const recent = [...history].reverse().slice(0, 12)
 
   return (
@@ -108,52 +105,9 @@ export default function MyRecordPage() {
           </div>
         )}
 
-        {/* 투어 진행도 */}
-        <div className="card-paper mb-5 overflow-hidden shadow-lg">
-          <div className="stripe-rule" />
-          <div className="p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-vintage text-sm font-black text-teal-dk">
-                📼 투어 진행도
-              </h2>
-              <span className="font-mono-retro text-[10px] text-ink-60">
-                {doneCount} / 5 · {formatElapsed(tour.startTime)}
-              </span>
-            </div>
-
-            <div className="mt-3 space-y-1.5">
-              {TRACK_STATIONS.map((station) => {
-                const done = tour.tracksCompleted.includes(station.track)
-                return (
-                  <div key={station.id} className="flex items-center gap-2">
-                    <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] ${
-                        done ? 'bg-teal text-cream' : 'bg-line text-ink-60'
-                      }`}
-                    >
-                      {done ? '✓' : station.track}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
-                      {station.wish}
-                    </span>
-                    <span className="shrink-0 text-[11px] text-ink-60">
-                      {station.name}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-
-            {tour.bingo.unlocked && (
-              <p className="mt-3 border-t border-line pt-2 font-mono-retro text-[11px] text-ink-60">
-                골목 빙고 {tour.bingo.cellsDone.length}칸 · {tour.bingo.lines}줄
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* J-카드 — 케이스 속지의 다섯 소원(F-1). 진행도가 '어디까지'라면
-            이 카드는 '무엇을 위해'다 — 아버지의 손글씨 그대로 상시 노출 */}
+        {/* J-카드 — 케이스 속지의 다섯 소원(F-1)이 곧 진행도다.
+            같은 다섯 줄을 진행도 카드로 또 보여주면 화면이 두 번 말한다 —
+            경과 시간·빙고 요약까지 J-카드가 흡수했다. */}
         <div className="mb-5">
           <JCard />
         </div>
