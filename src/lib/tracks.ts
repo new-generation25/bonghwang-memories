@@ -78,7 +78,7 @@ export interface TrackMission {
  * 현장 리허설을 프로덕션 빌드로 해야 한다면 NEXT_PUBLIC_REHEARSAL=1을 걸고
  * 배포하되, 판매 시작 전에 그 환경변수를 반드시 지운다.
  */
-const REHEARSAL =
+export const REHEARSAL =
   process.env.NODE_ENV !== 'production' ||
   process.env.NEXT_PUBLIC_REHEARSAL === '1'
 

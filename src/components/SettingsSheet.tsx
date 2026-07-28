@@ -22,6 +22,7 @@ import {
   superAdminSwitch,
 } from '@/lib/superAdmin'
 import { isSfxMuted, playDeckKey, setSfxMuted } from '@/lib/sfx'
+import { REHEARSAL } from '@/lib/tracks'
 import NicknameEditor from '@/components/NicknameEditor'
 
 interface SettingsSheetProps {
@@ -177,8 +178,14 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
                 </span>
               </button>
 
-              {/* 관리자 전용 — 참여자에게는 항목이 아예 보이지 않는다 */}
-              {isAdminUser() && (
+              {/*
+                관리자 전용 — 참여자에게는 항목이 아예 보이지 않는다.
+                리허설 빌드에서는 계정 없이도 보인다. 자동 검증이 구글
+                OAuth를 통과할 수 없어서, 계정을 요구하면 이 아래 화면
+                전체가 검증 밖으로 빠진다(superAdmin.ts와 같은 이유).
+                배포본은 그대로 관리자 이메일을 요구한다.
+              */}
+              {(isAdminUser() || REHEARSAL) && (
                 <>
                   <button
                     onClick={() => {

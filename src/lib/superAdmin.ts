@@ -22,7 +22,7 @@
 import { useEffect, useState } from 'react'
 import { isAdminUser } from './admin'
 import { subscribeAuth } from './auth'
-import { BINGO_ALWAYS_OPEN } from './tracks'
+import { BINGO_ALWAYS_OPEN, REHEARSAL } from './tracks'
 
 const STORAGE_KEY = 'bh_super_admin'
 
@@ -45,10 +45,15 @@ function load(): boolean {
  *
  * 저장값만 보면 관리자가 로그아웃한 뒤에도 켜진 채로 남는다. 같은 기기를
  * 다음 사람이 쓰면 걷지 않고 전 거점이 열린다.
+ *
+ * 리허설 빌드에서만 계정 확인을 건너뛴다. 자동 검증(Playwright)은 구글
+ * OAuth 창을 통과할 수 없어서, 계정을 요구하면 이 모드가 지나는 화면
+ * 전체가 검증 밖으로 빠진다. 프로덕션 빌드는 그대로 관리자 이메일을
+ * 요구하므로 배포본에서 열리는 문은 늘어나지 않는다.
  */
 export function isSuperAdmin(): boolean {
   if (enabled === null) enabled = load()
-  return enabled && isAdminUser()
+  return enabled && (REHEARSAL || isAdminUser())
 }
 
 /** 저장된 스위치 값 — 계정과 무관하게 토글 UI가 보여줄 상태 */

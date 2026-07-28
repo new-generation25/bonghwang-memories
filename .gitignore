@@ -60,3 +60,7 @@ public/audio/_raw/
 
 # 가게 스티커 — postToken이 들어 있다. 올라가면 가게에 가지 않고도 쿠폰을 태울 수 있다
 shop-qr/
+
+# Playwright 산출물 — 리포트와 실패 스크린샷은 돌릴 때마다 새로 생긴다
+/playwright-report/
+/test-results/

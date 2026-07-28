@@ -24,7 +24,13 @@
       "mcp__claude-in-chrome__javascript_tool",
       "mcp__claude-in-chrome__find",
       "Bash(kill %b10jolso2)",
-      "Bash(cd \"F:/projects/bonghwang-memories\" && sed -n '/M4/,/},/p' src/lib/tracks.ts | head -20; echo \"=== validation 타입 ===\"; sed -n '36,60p' src/lib/tracks.ts)"
+      "Bash(cd \"F:/projects/bonghwang-memories\" && sed -n '/M4/,/},/p' src/lib/tracks.ts | head -20; echo \"=== validation 타입 ===\"; sed -n '36,60p' src/lib/tracks.ts)",
+      "Bash(node scripts/check-forbidden.js)",
+      "Bash(git add *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://firebasestorage.googleapis.com/v0/b/bonghwang-memories.firebasestorage.app/o\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://firebasestorage.googleapis.com/v0/b/bonghwang-memories.appspot.com/o\")",
+      "Bash(curl -s -X POST \"https://firebasestorage.googleapis.com/v0/b/bonghwang-memories.firebasestorage.app/o?name=posts/_probe.txt\" -H \"Content-Type: text/plain\" --data \"probe\" -w \"\\\\nHTTP %{http_code}\\\\n\")",
+      "Bash(curl -s -D - -o /dev/null http://localhost:3000/community)"
     ]
   }
 }
