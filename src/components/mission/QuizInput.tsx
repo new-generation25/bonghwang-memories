@@ -16,6 +16,7 @@
  */
 
 import { useState } from 'react'
+import { logEvent } from '@/lib/analytics'
 import { dispatchAction, replayCue, unlockAudio } from '@/lib/cueEngine'
 import { useRevealOnChange } from '@/hooks/useRevealOnChange'
 import { submitOnEnter } from '@/lib/submitOnEnter'
@@ -58,6 +59,8 @@ export default function QuizInput({ onDone }: QuizInputProps) {
     } else {
       setWrong((n) => n + 1)
       setShowWrong(true)
+      // 어디서 막히는지 세는 값이다(F-7) — 오답에 벌은 없다
+      logEvent('mission_wrong', { id: 'M4q' })
     }
   }
 

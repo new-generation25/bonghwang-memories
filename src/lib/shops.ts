@@ -38,6 +38,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
+import { logEvent } from './analytics'
 import { db } from './firebase'
 import { COUPONS, parseCouponCode } from './coupons'
 
@@ -163,6 +164,12 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
       byUid: opts.byUid,
       token: opts.token ?? '',
       usedAt: serverTimestamp(),
+    })
+    // §11 계측 — 주 경로는 참여자 계정으로, 보조 경로는 가게 계정으로 남는다
+    logEvent('coupon_used', {
+      id: parsed.couponId,
+      shopId: opts.shopId,
+      via: opts.via,
     })
     return { kind: 'ok' }
   } catch (err) {

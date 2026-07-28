@@ -73,6 +73,32 @@ service cloud.firestore {
         allow create: if isOwner(userId) || isAdmin();
         allow update, delete: if isAdmin();
       }
+
+      // ───────── 계측 이벤트 배치 ─────────
+      // 이벤트마다 문서를 만들지 않고 모아서 한 문서로 온다(telemetry.ts).
+      // 정정은 열지 않는다 — 지표를 사후에 고치기 시작하면 못 믿게 된다.
+      match /events/{batchId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId)
+                      && request.resource.data.keys().hasOnly(['events', 'flushedAt'])
+                      && request.resource.data.keys().hasAll(['events', 'flushedAt'])
+                      && request.resource.data.events is list
+                      && request.resource.data.events.size() <= 500
+                      && request.resource.data.flushedAt == request.time;
+        allow update: if false;
+        // 데모 데이터 정리용
+        allow delete: if isAdmin();
+      }
+    }
+
+    // ───────── 컬렉션 그룹 조회 (관리자 대시보드) ─────────
+    // 중첩 match는 그 경로로 들어온 질의만 허용한다. collectionGroup()으로
+    // 전 참여자를 한 번에 읽으려면 이 꼴의 규칙이 따로 있어야 한다.
+    match /{path=**}/events/{batchId} {
+      allow read: if isAdmin();
+    }
+    match /{path=**}/points/{refId} {
+      allow read: if isAdmin();
     }
 
     // ───────── 설문 정의 ─────────

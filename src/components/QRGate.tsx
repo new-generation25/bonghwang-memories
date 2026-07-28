@@ -12,10 +12,12 @@
 
 import { useState } from 'react'
 import QRScanner from '@/components/QRScanner'
+import { logEvent } from '@/lib/analytics'
 import type { StationId } from '@/lib/cues'
 import { submitOnEnter } from '@/lib/submitOnEnter'
 import { playQrOk } from '@/lib/sfx'
 import { canSkipOrder, useSuperAdmin } from '@/lib/superAdmin'
+import { getTourState } from '@/lib/tourState'
 import {
   CAMERA_SCAN_ENABLED,
   Station,
@@ -61,6 +63,11 @@ export default function QRGate({
       이 소리가 첫 문장 위에 얹히지 않는다.
     */
     playQrOk()
+    // 유입 경로별 스캔 집계(F-7). 거절 경로에서는 내지 않는다 — 위와 같은 이유다
+    logEvent('qr_scan', {
+      station: station.id,
+      via: getTourState().entryVia ?? '자연',
+    })
     onSuccess(station)
     return true
   }

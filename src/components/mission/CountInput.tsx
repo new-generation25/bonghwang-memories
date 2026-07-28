@@ -12,6 +12,7 @@
  */
 
 import { useState } from 'react'
+import { logEvent } from '@/lib/analytics'
 import { dispatchAction } from '@/lib/cueEngine'
 import { submitOnEnter } from '@/lib/submitOnEnter'
 import { TRACK_MISSIONS } from '@/lib/tracks'
@@ -30,6 +31,8 @@ export default function CountInput() {
       dispatchAction('M1_count_ok')
     } else {
       setWrong(true)
+      // 어디서 막히는지 세는 값이다(F-7) — 오답에 벌은 없다
+      logEvent('mission_wrong', { id: 'M1' })
     }
   }
 

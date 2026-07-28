@@ -247,6 +247,46 @@ export async function fetchAllPoints(): Promise<AdminPointEntry[]> {
   }
 }
 
+export interface AdminEvent {
+  uid: string
+  name: string
+  props: Record<string, unknown>
+  /** 발생 시각(epoch ms) — 배치가 늦게 올라와도 이 값이 원래 시각이다 */
+  at: number
+}
+
+/**
+ * 계측 이벤트 전량 — 배치 문서(users/{uid}/events/{batchId})를 펼쳐 돌려준다.
+ *
+ * 정렬 없이 읽는다: orderBy를 걸면 컬렉션 그룹 색인이 필요한데, 어차피
+ * 문서 안 events[]의 at으로 다시 세워야 해서 서버 정렬이 의미가 없다.
+ * 판매 전 스키마 검증 단계라 전량이 부담되지 않는다 — 커지면 여기서 자른다.
+ */
+export async function fetchEvents(): Promise<AdminEvent[]> {
+  if (!isFirebaseReady() || !db) return []
+  try {
+    const snap = await getDocs(collectionGroup(db, 'events'))
+    const out: AdminEvent[] = []
+    for (const d of snap.docs) {
+      // 경로: users/{uid}/events/{batchId}
+      const uid = d.ref.parent.parent?.id ?? ''
+      const list = d.data().events
+      if (!Array.isArray(list)) continue
+      for (const e of list) {
+        out.push({
+          uid,
+          name: String(e?.name ?? ''),
+          props: (e?.props ?? {}) as Record<string, unknown>,
+          at: Number(e?.at) || 0,
+        })
+      }
+    }
+    return out.sort((a, b) => b.at - a.at)
+  } catch {
+    return []
+  }
+}
+
 export interface AdminCouponUse {
   code: string
   couponId: string
@@ -295,5 +335,10 @@ export {
   averageDurationMin,
   surveySummary,
   shopSettlement,
+  eventBreakdown,
 } from './adminStats'
-export type { PeriodStats, ShopSettlementRow } from './adminStats'
+export type {
+  PeriodStats,
+  ShopSettlementRow,
+  EventBreakdownRow,
+} from './adminStats'

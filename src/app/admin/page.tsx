@@ -21,6 +21,7 @@ import { COUPONS, couponSpec } from '@/lib/coupons'
 import { addShop, fetchAllShops, setShopActive, type Shop } from '@/lib/shops'
 import {
   AdminCouponUse,
+  AdminEvent,
   AdminPointEntry,
   AdminPost,
   AdminSurveyResponse,
@@ -29,9 +30,11 @@ import {
   adminUids,
   averageDurationMin,
   cellPopularity,
+  eventBreakdown,
   excludeAdmins,
   fetchAllPoints,
   fetchCouponUses,
+  fetchEvents,
   fetchPosts,
   fetchSurveyResponses,
   fetchUsers,
@@ -52,6 +55,7 @@ export default function AdminPage() {
   const [responses, setResponses] = useState<AdminSurveyResponse[]>([])
   const [posts, setPosts] = useState<AdminPost[]>([])
   const [couponUses, setCouponUses] = useState<AdminCouponUse[]>([])
+  const [events, setEvents] = useState<AdminEvent[]>([])
   /*
     가게 문서 심기. postToken이 들어 있어 코드에 박아둘 수 없고(번들은 누구나
     읽는다), 콘솔 붙여넣기는 크롬이 막는다. 그래서 여기서 받는다.
@@ -93,18 +97,20 @@ export default function AdminPage() {
   const load = useCallback(async () => {
     setState('loading')
     try {
-      const [u, p, r, po, cu] = await Promise.all([
+      const [u, p, r, po, cu, ev] = await Promise.all([
         fetchUsers(),
         fetchAllPoints(),
         fetchSurveyResponses(),
         fetchPosts(),
         fetchCouponUses(),
+        fetchEvents(),
       ])
       setUsers(u)
       setPoints(p)
       setResponses(r)
       setPosts(po)
       setCouponUses(cu)
+      setEvents(ev)
       void loadShops()
       setState('ready')
     } catch (err) {
@@ -137,6 +143,16 @@ export default function AdminPage() {
     const all = { users, points, responses, posts }
     return includeAdmin ? all : excludeAdmins(all)
   }, [users, points, responses, posts, includeAdmin])
+
+  /*
+    계측 이벤트는 view(excludeAdmins)를 안 탄다 — 그 함수는 users·points류만
+    알아서, 여기서 같은 기준(adminUids)으로 거른다.
+  */
+  const eventRows = useMemo(() => {
+    const admins = adminUids(users)
+    const src = includeAdmin ? events : events.filter((e) => !admins.has(e.uid))
+    return eventBreakdown(src)
+  }, [events, users, includeAdmin])
 
   const stats = useMemo(() => periodStats(view.users), [view])
   const steps = useMemo(() => funnel(view.users), [view])
@@ -297,6 +313,50 @@ export default function AdminPage() {
             </div>
           )
         })}
+      </Section>
+
+      {/* ───── 계측 이벤트 (F-7) ───── */}
+      <Section
+        title="계측 이벤트"
+        hint="투어 순서대로 — 인원이 뚝 떨어지는 단계가 막힘 지점"
+      >
+        {eventRows.length === 0 ? (
+          <Empty>아직 수집된 이벤트가 없습니다.</Empty>
+        ) : (
+          <table className="w-full text-[11.5px]">
+            <thead>
+              <tr className="text-left text-ink-60">
+                <th className="py-1 font-normal">이벤트</th>
+                <th className="py-1 text-right font-normal">횟수</th>
+                <th className="py-1 text-right font-normal">인원</th>
+                <th className="py-1 text-right font-normal">마지막</th>
+              </tr>
+            </thead>
+            <tbody>
+              {eventRows.map((r) => (
+                <tr key={r.name} className="border-t border-line/60">
+                  <td className="py-1 font-mono-retro text-ink">{r.name}</td>
+                  <td className="py-1 text-right font-mono-retro text-ink">
+                    {r.count}
+                  </td>
+                  <td className="py-1 text-right font-mono-retro text-ink">
+                    {r.users}
+                  </td>
+                  <td className="py-1 text-right text-ink-60">
+                    {r.lastAt
+                      ? new Date(r.lastAt).toLocaleString('ko-KR', {
+                          month: 'numeric',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Section>
 
       {/* ───── 랭킹 ───── */}

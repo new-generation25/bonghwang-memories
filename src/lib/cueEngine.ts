@@ -685,6 +685,8 @@ export function dispatchAction(action: ActionId): boolean {
   // 미션 완료 계측 — 빙고 셀은 bingo_line으로 따로 집계한다(§11)
   if (!action.startsWith('bingo_cell_done:')) {
     logEvent('mission_done', { id: action })
+    // F-7 스키마 — 랭킹 부문1이 mission_enter→mission_correct 간격을 잰다
+    logEvent('mission_correct', { id: action })
   }
   const cue = findCueByAction(action)
   if (!cue) return false

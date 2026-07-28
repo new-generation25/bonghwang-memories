@@ -20,6 +20,7 @@ import {
   syncUserStats,
 } from '@/lib/tourSync'
 import { clearLocalPoints, flushPendingPoints } from '@/lib/points'
+import { flushTelemetry } from '@/lib/telemetry'
 import { markAdminAccount } from '@/lib/admin'
 import { resetTour } from '@/lib/tourState'
 
@@ -92,6 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           stopSyncRef.current = startTourSync(user.uid)
           // 로그인 전에 쌓인 적립을 올린다 — 투어 도중 로그인하는 경우가 있다
           await flushPendingPoints(user.uid)
+          // 로그인 전에 쌓인 계측도 같은 결로 올린다
+          await flushTelemetry(user.uid)
           await syncUserStats(user.uid)
           // 관리자 계정이면 문서에 표시를 남긴다. 랭킹처럼 남이 보는
           // 화면에서 관리자를 빼려면 토큰이 아니라 문서에 있어야 한다.

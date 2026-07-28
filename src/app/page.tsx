@@ -14,7 +14,7 @@ import NicknameEditor from '@/components/NicknameEditor'
 import Cassette from '@/components/Cassette'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
-import { mutateTour, restartTour } from '@/lib/tourState'
+import { getTourState, mutateTour, restartTour } from '@/lib/tourState'
 import { clearLocalPoints } from '@/lib/points'
 import { logEvent } from '@/lib/analytics'
 
@@ -32,6 +32,22 @@ export default function LandingPage() {
   useEffect(() => {
     const timer = setTimeout(() => setShowButton(true), 900)
     return () => clearTimeout(timer)
+  }, [])
+
+  /*
+    유입 경로 태그(F-7) — 홍보 채널별 QR이 `?via=커뮤니티데이` 꼴로 들어온다.
+    첫 값만 남긴다: 나중에 다른 링크로 다시 열어도 데려온 것은 첫 채널이다.
+    useSearchParams는 Suspense 경계를 요구하므로 주소를 직접 읽는다.
+  */
+  useEffect(() => {
+    try {
+      const via = new URLSearchParams(window.location.search).get('via')
+      if (via && !getTourState().entryVia) {
+        mutateTour({ entryVia: via.slice(0, 40) })
+      }
+    } catch {
+      /* 주소를 못 읽어도 랜딩은 떠야 한다 */
+    }
   }, [])
 
   /**

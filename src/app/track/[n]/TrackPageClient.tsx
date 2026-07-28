@@ -25,6 +25,7 @@ import RecorderBside from '@/components/mission/RecorderBside'
 import UnlockGate from '@/components/mission/UnlockGate'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
+import { logEvent } from '@/lib/analytics'
 import { CUES, CueId, FragmentId } from '@/lib/cues'
 import {
   dispatchQr,
@@ -193,6 +194,25 @@ export default function TrackPageClient({ n }: { n: number }) {
 
   const activeCue = endedCue ?? resumable
   const interaction = activeCue ? INTERACTIONS[activeCue] : undefined
+
+  /*
+    미션 화면 진입 계측(F-7) — 랭킹 부문1이 여기부터 mission_correct까지를
+    잰다(이동 시간 제외). 손 쓰는 미션만 센다: return/bingo는 미션이 아니고,
+    resume은 라디오 이어 듣기, unlock은 B면 관문이다.
+  */
+  const missionKind = interaction?.kind
+  useEffect(() => {
+    if (
+      !missionKind ||
+      missionKind === 'return' ||
+      missionKind === 'bingo' ||
+      missionKind === 'resume' ||
+      missionKind === 'unlock'
+    ) {
+      return
+    }
+    logEvent('mission_enter', { track: n, kind: missionKind })
+  }, [missionKind, n])
 
   // 2막 전환 — 소영의 대사가 끝나면 빙고 단독 화면으로 넘긴다.
   // 예전에는 트랙 5 화면 아래에 빙고 버튼만 덧붙어서, 끝난 트랙 내용과

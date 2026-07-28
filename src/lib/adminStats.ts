@@ -11,6 +11,7 @@ import type {
   AdminPointEntry,
   AdminSurveyResponse,
   AdminCouponUse,
+  AdminEvent,
 } from './admin'
 import { COUPONS } from './coupons'
 
@@ -202,4 +203,77 @@ export function shopSettlement(
 
   // Array.from을 쓰는 이유는 tsconfig target이 낮아 Map 순회 전개가 막혀서다
   return Array.from(rows.values())
+}
+
+// ---------------------------------------------------------------------------
+// 계측 이벤트 (F-7)
+// ---------------------------------------------------------------------------
+
+export interface EventBreakdownRow {
+  name: string
+  count: number
+  /** 이 이벤트를 한 번이라도 낸 사람 수 — 막힘은 단계 사이 인원 낙차로 읽는다 */
+  users: number
+  lastAt: number | null
+}
+
+/**
+ * 투어가 흐르는 순서. 이 순서로 줄 세워 보여주면 인원이 뚝 떨어지는
+ * 자리가 곧 막힘 지점이다. 표에 없는 이벤트는 뒤에 발생량순으로 붙는다.
+ */
+const EVENT_ORDER = [
+  'purchase',
+  'cache_done',
+  'qr_scan',
+  'track_arrived',
+  'mission_enter',
+  'mission_wrong',
+  'hint_used',
+  'mission_correct',
+  'mission_done',
+  'hidden_found',
+  'jcard_line_done',
+  'memo_type',
+  'bside_played',
+  'act2_entered',
+  'hidden_played',
+  'bingo_line',
+  'coupon_used',
+  'reward_offer_shown',
+  'reward_offer_choice',
+  'finale_saved',
+]
+
+export function eventBreakdown(events: AdminEvent[]): EventBreakdownRow[] {
+  const rows = new Map<string, EventBreakdownRow>()
+  const uidsByName = new Map<string, Set<string>>()
+
+  for (const e of events) {
+    if (!e.name) continue
+    const row = rows.get(e.name) ?? {
+      name: e.name,
+      count: 0,
+      users: 0,
+      lastAt: null,
+    }
+    row.count += 1
+    if (e.at && (!row.lastAt || e.at > row.lastAt)) row.lastAt = e.at
+    rows.set(e.name, row)
+
+    const uids = uidsByName.get(e.name) ?? new Set<string>()
+    if (e.uid) uids.add(e.uid)
+    uidsByName.set(e.name, uids)
+  }
+
+  const out = Array.from(rows.values())
+  for (const row of out) row.users = uidsByName.get(row.name)?.size ?? 0
+
+  return out.sort((a, b) => {
+    const ai = EVENT_ORDER.indexOf(a.name)
+    const bi = EVENT_ORDER.indexOf(b.name)
+    if (ai !== -1 && bi !== -1) return ai - bi
+    if (ai !== -1) return -1
+    if (bi !== -1) return 1
+    return b.count - a.count
+  })
 }
