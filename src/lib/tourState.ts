@@ -48,6 +48,14 @@ export interface TourState {
   photos: TourPhoto[]
   bingo: { unlocked: boolean; cellsDone: string[]; lines: number }
   coupons: string[]
+  /** F-3: 쓴 힌트 — 'M1:h1' 꼴 refId. 회차 총 3회 상한은 화면이 잰다 */
+  hintsUsed: string[]
+  /** F-2: 발견한 히든트랙 id. 해금 전에는 수집첩에 잠긴 채 쌓인다 */
+  hiddenFound: string[]
+  /** F-2: 1막 완주 후 소영의 수신 전화로 일괄 해금됐는가 */
+  hiddenUnlocked: boolean
+  /** F-7: 유입 경로 — 랜딩 ?via= 태그. 첫 값이 남는다(자연 유입은 null) */
+  entryVia: string | null
   audioCacheReady: boolean
   arFallbackUsed: boolean
   startTime: number | null
@@ -72,6 +80,10 @@ export const INITIAL_TOUR_STATE: TourState = {
   photos: [],
   bingo: { unlocked: false, cellsDone: [], lines: 0 },
   coupons: [],
+  hintsUsed: [],
+  hiddenFound: [],
+  hiddenUnlocked: false,
+  entryVia: null,
   audioCacheReady: false,
   arFallbackUsed: false,
   startTime: null,

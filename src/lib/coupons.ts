@@ -131,6 +131,40 @@ export function couponSerial(couponId: string, uid: string): number {
   return serialMap()[`${couponId}:${uid}`] ?? 0
 }
 
+/** 서버 사본용 — 진행도 동기화(tourSync)가 함께 올린다 */
+export function allCouponSerials(): Record<string, number> {
+  return serialMap()
+}
+
+/**
+ * 서버 사본을 받아 로컬과 합친다 — 기회 동기화.
+ *
+ * 원본은 여전히 이 기기다(가게 앞은 신호가 약해 재발급이 통신을 기다리면
+ * 안 된다). 다만 기기를 바꿔 로그인하면 순번이 0부터 시작해 이미 소진된
+ * 코드가 다시 나오므로, 큰 쪽으로만 올려 받는다. 순번이 겹쳐도 손해는
+ * 없다 — 겹친 코드는 사용 기록이 막는다.
+ */
+export function mergeCouponSerials(
+  remote: Record<string, number> | undefined | null
+): void {
+  if (!remote || typeof window === 'undefined') return
+  const map = serialMap()
+  let changed = false
+  for (const key of Object.keys(remote)) {
+    const v = Number(remote[key]) || 0
+    if (v > (map[key] ?? 0)) {
+      map[key] = v
+      changed = true
+    }
+  }
+  if (!changed) return
+  try {
+    window.localStorage.setItem(SERIAL_KEY, JSON.stringify(map))
+  } catch {
+    /* 저장 못 해도 다음 pull에서 다시 받는다 */
+  }
+}
+
 /**
  * 다음 번호로 넘긴다 — 새 코드가 나온다.
  *

@@ -20,6 +20,7 @@
 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, isFirebaseReady } from './firebase'
+import { allCouponSerials, mergeCouponSerials } from './coupons'
 import {
   TourState,
   getTourState,
@@ -34,6 +35,8 @@ type SyncedTour = Omit<TourState, 'photos' | 'bsideEntry'> & {
   photoSummary: { track: number; count: number }[]
   /** 메모는 종류만 (음성 blob은 기기에) */
   memoType: 'voice' | 'text' | 'heart_only' | null
+  /** 쿠폰 재발급 순번 — 원본은 기기, 서버는 기기 교체 대비 사본(coupons.ts) */
+  couponSerials: Record<string, number>
 }
 
 const PHASE_RANK: Record<TourState['phase'], number> = {
@@ -62,6 +65,7 @@ function toSynced(s: TourState): SyncedTour {
       count: counts[Number(k)],
     })),
     memoType: bsideEntry?.type ?? null,
+    couponSerials: allCouponSerials(),
   }
 }
 
@@ -108,6 +112,21 @@ export function mergeTour(local: TourState, remote: Partial<SyncedTour>): Partia
     epilogueLiveVoice: local.epilogueLiveVoice || Boolean(remote.epilogueLiveVoice),
     arFallbackUsed: local.arFallbackUsed || Boolean(remote.arFallbackUsed),
     lastCueCompleted: local.lastCueCompleted ?? remote.lastCueCompleted ?? null,
+    /*
+      예전에는 아래 값들이 병합에서 빠져 기기를 바꾸면 유실됐다.
+      speechConsent는 한 번 대답하면 바뀌지 않는 값이라 있는 쪽을 쓴다.
+    */
+    speechConsent: local.speechConsent ?? remote.speechConsent ?? null,
+    /*
+      오디오 캐시만은 일부러 복원하지 않는다 — 캐시는 이 기기의 것이라
+      서버가 true여도 새 기기에는 파일이 없다(D8). 복원하면 /download를
+      건너뛰어 신호 약한 골목에서 스트리밍하게 된다.
+    */
+    audioCacheReady: local.audioCacheReady,
+    hintsUsed: union(local.hintsUsed, remote.hintsUsed ?? []),
+    hiddenFound: union(local.hiddenFound, remote.hiddenFound ?? []),
+    hiddenUnlocked: local.hiddenUnlocked || Boolean(remote.hiddenUnlocked),
+    entryVia: local.entryVia ?? remote.entryVia ?? null,
   }
 }
 
@@ -142,7 +161,10 @@ export async function pullTour(uid: string): Promise<boolean> {
   try {
     const snap = await getDoc(tourDoc(uid))
     if (!snap.exists()) return false
-    mutateTour((prev) => mergeTour(prev, snap.data() as Partial<SyncedTour>))
+    const remote = snap.data() as Partial<SyncedTour>
+    mutateTour((prev) => mergeTour(prev, remote))
+    // 재발급 순번도 큰 쪽으로 받는다 — 기기를 바꿔도 소진된 코드가 다시 안 나온다
+    mergeCouponSerials(remote.couponSerials)
     return true
   } catch {
     // 복원 실패로 투어를 막지 않는다 — 로컬 기록으로 계속 걷는다
@@ -159,9 +181,20 @@ export async function pullTour(uid: string): Promise<boolean> {
 export async function pushTour(uid: string): Promise<boolean> {
   if (!isFirebaseReady() || !db) return false
   try {
+    /*
+      이 기기에 원본이 없는 요약은 보내지 않는다(merge:true라 서버 값이 남는다).
+      기기를 바꿔 로그인한 직후 빈 사진 요약·메모 종류가 지난 기록을
+      덮어 지우던 버그다 — 원본(사진·녹음)은 이전 기기에만 있어 되살릴 수 없다.
+    */
+    const synced: Partial<SyncedTour> = toSynced(getTourState())
+    if (synced.photoSummary && synced.photoSummary.length === 0) {
+      delete synced.photoSummary
+    }
+    if (synced.memoType === null) delete synced.memoType
+
     await setDoc(
       tourDoc(uid),
-      { ...toSynced(getTourState()), uid, updatedAt: serverTimestamp() },
+      { ...synced, uid, updatedAt: serverTimestamp() },
       { merge: true }
     )
     return true
@@ -245,6 +278,8 @@ export async function syncUserStats(uid: string): Promise<void> {
         couponCount: s.coupons.length,
         phase: s.phase,
         paid: s.paid,
+        // 유입 경로 — 관리자 대시보드가 채널별 참여를 나눠 본다(F-7)
+        entryVia: s.entryVia ?? null,
         startedAt: s.startTime ?? null,
         finishedAt: s.phase === 'done' ? (s.startTime ? Date.now() : null) : null,
         lastActiveAt: serverTimestamp(),
