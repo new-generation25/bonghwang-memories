@@ -17,13 +17,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { BINGO_CELLS } from '@/lib/bingoCells'
 import { REASON_LABEL, PointReason } from '@/lib/points'
 import { DEFAULT_SURVEY } from '@/lib/survey'
-import {
-  createShopAccount,
-  fetchAllShops,
-  seedShops,
-  setShopActive,
-  type Shop,
-} from '@/lib/shops'
+import { COUPONS, couponSpec } from '@/lib/coupons'
+import { addShop, fetchAllShops, setShopActive, type Shop } from '@/lib/shops'
 import {
   AdminCouponUse,
   AdminPointEntry,
@@ -61,12 +56,16 @@ export default function AdminPage() {
     가게 문서 심기. postToken이 들어 있어 코드에 박아둘 수 없고(번들은 누구나
     읽는다), 콘솔 붙여넣기는 크롬이 막는다. 그래서 여기서 받는다.
   */
-  const [seedText, setSeedText] = useState('')
-  const [seedBusy, setSeedBusy] = useState(false)
-  const [seedMsg, setSeedMsg] = useState<{ ok: string[]; fail: string[] } | string | null>(null)
   const [shops, setShops] = useState<Shop[]>([])
-  /** 가게 계정 만들기 — 아이디·비밀번호·가게 */
-  const [acc, setAcc] = useState({ loginId: '', password: '', shopId: '' })
+  /** 가게 추가 폼 — 쿠폰을 고르면 카탈로그 값이 미리 채워진다 */
+  const [acc, setAcc] = useState({
+    shopId: '',
+    loginId: '',
+    password: '',
+    name: '',
+    benefit: '',
+    unitWon: 0,
+  })
   const [accMsg, setAccMsg] = useState('')
   const [accBusy, setAccBusy] = useState(false)
   /*
@@ -411,35 +410,82 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 등록은 접어둔다 — 평소에 보는 것은 위의 목록이다 */}
-        <div className="mt-4 flex flex-wrap gap-2">
+        {/* 추가는 접어둔다 — 평소에 보는 것은 위의 목록이다 */}
+        <div className="mt-4">
           <button
             onClick={() => setPanel(panel === 'shop' ? 'none' : 'shop')}
             className="rounded-xl border border-line bg-paper px-3 py-2 text-[12px] font-bold text-ink"
           >
-            {panel === 'shop' ? '✕ 닫기' : '＋ 가게 등록'}
-          </button>
-          <button
-            onClick={() => setPanel(panel === 'account' ? 'none' : 'account')}
-            className="rounded-xl border border-line bg-paper px-3 py-2 text-[12px] font-bold text-ink"
-          >
-            {panel === 'account' ? '✕ 닫기' : '＋ 가게 계정 만들기'}
+            {panel === 'shop' ? '✕ 닫기' : '＋ 가게 추가'}
           </button>
         </div>
 
-        {/* 가게 계정 만들기 */}
+        {/*
+          가게와 계정을 한 폼으로 받는다. 나눠 놓으면 "가게는 있는데 계정이
+          없다"는 어정쩡한 상태를 관리자가 이해해야 한다. 이미 등록된 가게를
+          고르면 계정만 붙는다 — 토큰은 절대 갈리지 않는다(스티커가 죽는다).
+        */}
         <div
-          hidden={panel !== 'account'}
+          hidden={panel !== 'shop'}
           className="mt-3 rounded-xl border border-line bg-paper p-3"
         >
           <p className="font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
-            가게 계정 만들기
+            가게 추가
           </p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-4">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {/*
+              쿠폰은 이야기 큐가 지급하는 값이라 카탈로그(coupons.ts)에 산다.
+              여기서 새 쿠폰을 만들 수는 없고, 어느 쿠폰의 가게인지 고른다.
+            */}
+            <select
+              value={acc.shopId}
+              onChange={(e) => {
+                const id = e.target.value
+                const spec = couponSpec(id)
+                setAcc({
+                  shopId: id,
+                  loginId: id ? `shop${id}` : '',
+                  password: '',
+                  name: spec?.shop ?? '',
+                  benefit: spec?.benefit ?? '',
+                  unitWon: spec?.unitWon ?? 0,
+                })
+              }}
+              className="rounded-lg border border-line bg-cream px-2.5 py-2 text-[12px] text-ink"
+            >
+              <option value="">쿠폰 고르기</option>
+              {Object.values(COUPONS).map((c) => {
+                const done = shops.some((s) => s.shopId === c.shopId)
+                return (
+                  <option key={c.id} value={c.id}>
+                    {c.shop} ({c.id}){done ? ' — 등록됨, 계정만 추가' : ''}
+                  </option>
+                )
+              })}
+            </select>
+            <input
+              value={acc.name}
+              onChange={(e) => setAcc({ ...acc, name: e.target.value })}
+              placeholder="가게 이름"
+              className="rounded-lg border border-line bg-cream px-2.5 py-2 text-[12px] text-ink"
+            />
+            <input
+              value={acc.benefit}
+              onChange={(e) => setAcc({ ...acc, benefit: e.target.value })}
+              placeholder="혜택 문구"
+              className="rounded-lg border border-line bg-cream px-2.5 py-2 text-[12px] text-ink"
+            />
+            <input
+              type="number"
+              value={acc.unitWon || ''}
+              onChange={(e) => setAcc({ ...acc, unitWon: Number(e.target.value) })}
+              placeholder="정산 단가(원)"
+              className="rounded-lg border border-line bg-cream px-2.5 py-2 text-[12px] text-ink"
+            />
             <input
               value={acc.loginId}
               onChange={(e) => setAcc({ ...acc, loginId: e.target.value })}
-              placeholder="아이디 (shopcp1)"
+              placeholder="사장님 아이디"
               autoCapitalize="none"
               className="rounded-lg border border-line bg-cream px-2.5 py-2 text-[12px] text-ink"
             />
@@ -449,107 +495,45 @@ export default function AdminPage() {
               placeholder="비밀번호 (6자 이상)"
               className="rounded-lg border border-line bg-cream px-2.5 py-2 text-[12px] text-ink"
             />
-            <select
-              value={acc.shopId}
-              onChange={(e) => setAcc({ ...acc, shopId: e.target.value })}
-              className="rounded-lg border border-line bg-cream px-2.5 py-2 text-[12px] text-ink"
-            >
-              <option value="">가게 고르기</option>
-              {shops.map((s) => (
-                <option key={s.shopId} value={s.shopId}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <button
-              disabled={accBusy || !acc.loginId || !acc.password || !acc.shopId}
-              onClick={async () => {
-                setAccBusy(true)
-                setAccMsg('')
-                try {
-                  const shop = shops.find((s) => s.shopId === acc.shopId)
-                  await createShopAccount({
-                    loginId: acc.loginId,
-                    password: acc.password,
-                    nickname: shop?.name ?? acc.shopId,
-                    shopId: acc.shopId,
-                  })
-                  setAccMsg(`${shop?.name} 계정을 만들고 직원으로 등록했습니다.`)
-                  setAcc({ loginId: '', password: '', shopId: '' })
-                  void loadShops()
-                } catch (e) {
-                  setAccMsg(e instanceof Error ? e.message : '만들지 못했습니다.')
-                } finally {
-                  setAccBusy(false)
-                }
-              }}
-              className="btn-teal text-[12px] disabled:opacity-40"
-            >
-              {accBusy ? '만드는 중…' : '만들기'}
-            </button>
           </div>
-          {accMsg && <p className="mt-2 text-[11.5px] text-ink">{accMsg}</p>}
-          <p className="mt-2 text-[10.5px] leading-relaxed text-ink-60">
-            가게 이름이 닉네임이 됩니다. 만들면 그 가게 직원으로 바로 등록되고,
-            사장님은 <span className="font-mono-retro">/shop/verify</span>에서 이
-            아이디로 로그인합니다. 계정을 만들어도 <b>이 화면의 로그인은 그대로</b>
-            입니다.
-          </p>
-        </div>
-
-        {/* 가게 등록 — shops.json 붙여넣기 */}
-        <div
-          hidden={panel !== 'shop'}
-          className="mt-3 rounded-xl border border-line bg-paper p-3"
-        >
-          <p className="font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
-            가게 등록
-          </p>
-          <p className="mt-1 text-[10.5px] leading-relaxed text-ink-60">
-            <span className="font-mono-retro">node scripts/make-shop-qr.mjs</span> 가
-            만든 <span className="font-mono-retro">shop-qr/shops.json</span>을 통째로
-            붙여넣으세요. 스티커 토큰이 들어 있어 코드에 담아둘 수 없습니다.
-          </p>
-          <textarea
-            value={seedText}
-            onChange={(e) => setSeedText(e.target.value)}
-            rows={4}
-            placeholder='[ { "shopId": "cp1", ... } ]'
-            className="mt-2 w-full rounded-lg border border-line bg-cream px-2.5 py-2 font-mono-retro text-[11px] text-ink"
-          />
           <button
-            disabled={seedBusy || !seedText.trim()}
+            disabled={
+              accBusy || !acc.shopId || !acc.name || !acc.loginId || acc.password.length < 6
+            }
             onClick={async () => {
-              setSeedBusy(true)
-              setSeedMsg(null)
+              setAccBusy(true)
+              setAccMsg('')
               try {
-                setSeedMsg(await seedShops(seedText))
+                const r = await addShop({
+                  couponId: acc.shopId,
+                  name: acc.name,
+                  benefit: acc.benefit,
+                  unitWon: acc.unitWon,
+                  loginId: acc.loginId,
+                  password: acc.password,
+                })
+                setAccMsg(
+                  `${acc.name} 등록 완료 — 스티커 토큰 ${r.postToken}. ` +
+                    `사장님은 /shop/verify에서 ${acc.loginId}로 로그인합니다.`
+                )
+                setAcc({ shopId: '', loginId: '', password: '', name: '', benefit: '', unitWon: 0 })
                 void loadShops()
               } catch (e) {
-                setSeedMsg(e instanceof Error ? e.message : '심지 못했습니다.')
+                setAccMsg(e instanceof Error ? e.message : '추가하지 못했습니다.')
               } finally {
-                setSeedBusy(false)
+                setAccBusy(false)
               }
             }}
             className="btn-teal mt-2 text-[12px] disabled:opacity-40"
           >
-            {seedBusy ? '심는 중…' : '심기'}
+            {accBusy ? '추가하는 중…' : '가게 + 계정 만들기'}
           </button>
-          {typeof seedMsg === 'string' && (
-            <p className="mt-2 text-[11.5px] text-rec">{seedMsg}</p>
-          )}
-          {seedMsg && typeof seedMsg !== 'string' && (
-            <div className="mt-2 text-[11.5px]">
-              {seedMsg.ok.length > 0 && (
-                <p className="text-teal-dk">심었습니다 — {seedMsg.ok.join(' · ')}</p>
-              )}
-              {seedMsg.fail.map((f) => (
-                <p key={f} className="text-rec">
-                  {f}
-                </p>
-              ))}
-            </div>
-          )}
+          {accMsg && <p className="mt-2 text-[11.5px] text-ink">{accMsg}</p>}
+          <p className="mt-2 text-[10.5px] leading-relaxed text-ink-60">
+            비밀번호는 여기 저장되지 않습니다 — Firebase 인증이 해시로만 보관하고,
+            이 화면에서도 다시 볼 수 없으니 <b>종이에 적어 사장님께</b> 전하세요.
+            계정을 만들어도 이 화면의 로그인은 그대로입니다.
+          </p>
         </div>
       </Section>
 

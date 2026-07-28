@@ -43,21 +43,17 @@ const ID_DOMAIN = 'bonghwang.local'
   닉네임은 2~12자다. 가게 이름을 그대로 쓰되 공백은 뺀다 — 목록에서
   가게를 알아보는 것이 목적이고, 참여자에게 보일 일은 없다.
 
-  비밀번호는 가게 이름 앞 두 글자를 영문으로 적고 2026을 붙인다.
-  사장님이 외우지 않고도 칠 수 있어야 해서 이렇게 정했다.
-
-  대신 짐작하기 쉽다는 것을 알고 쓴다. 이 계정으로 할 수 있는 일은
-  '자기 가게 쿠폰을 사용 처리하는 것' 하나뿐이고, 그러려면 손님의 실제
-  쿠폰 코드가 있어야 한다. 다만 규칙이 코드의 체크값까지는 보지 못하므로
-  마음먹으면 기록을 부풀릴 수는 있다 — 그래서 관리자 정산에 직접/대리
-  비율을 띄운다. 새는 낌새가 보이면 여기 값만 바꾸면 된다.
+  비밀번호는 여기 적지 않는다. 이 파일은 저장소에 올라가므로 값을 두면
+  저장소를 볼 수 있는 누구나 가게 계정으로 로그인할 수 있다.
+  값은 gitignore된 shop-qr/accounts.json에서 읽는다 — 없으면 그 가게를
+  건너뛰고, 관리자 화면의 「＋ 가게 추가」로 만들라고 안내한다.
 */
 const SHOPS = [
-  { shopId: 'cp1', loginId: 'shopcp1', nickname: '봉황1935', password: '■■■■' },
-  { shopId: 'cp2', loginId: 'shopcp2', nickname: '미야상회', password: '■■■■' },
-  { shopId: 'cp3', loginId: 'shopcp3', nickname: '능소화고택', password: '■■■■' },
-  { shopId: 'cp4', loginId: 'shopcp4', nickname: '카페탱자', password: '■■■■' },
-  { shopId: 'cp5', loginId: 'shopcp5', nickname: '방하림', password: '■■■■' },
+  { shopId: 'cp1', loginId: 'shopcp1', nickname: '봉황1935' },
+  { shopId: 'cp2', loginId: 'shopcp2', nickname: '미야상회' },
+  { shopId: 'cp3', loginId: 'shopcp3', nickname: '능소화고택' },
+  { shopId: 'cp4', loginId: 'shopcp4', nickname: '카페탱자' },
+  { shopId: 'cp5', loginId: 'shopcp5', nickname: '방하림' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -106,7 +102,14 @@ let kept = fs.existsSync(STORE) ? JSON.parse(fs.readFileSync(STORE, 'utf8')) : {
 const rows = []
 for (const shop of SHOPS) {
   const email = `${shop.loginId}@${ID_DOMAIN}`
-  const password = shop.password
+  const password = kept[shop.loginId]?.password
+  if (!password) {
+    console.warn(
+      `${shop.loginId}: accounts.json에 비밀번호가 없다 — 건너뛴다.\n` +
+        `  새 계정은 관리자 화면(/admin)의 「＋ 가게 추가」로 만든다.`
+    )
+    continue
+  }
   let uid = ''
   let made = false
 

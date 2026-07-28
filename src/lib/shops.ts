@@ -323,6 +323,72 @@ export async function removeShopStaff(shopId: string, uid: string): Promise<void
 /** auth.ts의 ID_DOMAIN과 같아야 한다 — 앱이 아이디를 이 꼴로 바꿔 저장한다 */
 const ID_DOMAIN = 'bonghwang.local'
 
+/** 스티커 토큰용 32진수 — 쿠폰 코드와 같은 표. 헷갈리는 글자(O/0, I/1)가 없다 */
+const TOKEN_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+
+function newPostToken(): string {
+  const bytes = new Uint8Array(8)
+  crypto.getRandomValues(bytes)
+  let out = ''
+  for (let i = 0; i < 8; i++) out += TOKEN_ALPHABET[bytes[i] % TOKEN_ALPHABET.length]
+  return out
+}
+
+/**
+ * 가게와 계정을 한 번에 — 관리자 화면의 「＋ 가게 추가」.
+ *
+ * 등록과 계정이 따로 놀 이유가 없다. 가게 하나에 사장님 하나가 보통이고,
+ * 나눠 놓으면 "가게는 있는데 계정이 없다"는 어정쩡한 상태를 관리자가
+ * 이해해야 한다.
+ *
+ * 가게 문서가 이미 있으면 그대로 두고 계정만 붙인다 — 토큰이 바뀌면
+ * 이미 카운터에 붙은 스티커가 죽기 때문에, 있는 가게를 다시 추가해도
+ * 토큰은 절대 갈리지 않는다.
+ *
+ * 나중에 서버(Route Handler + Admin SDK)로 옮길 때는 이 함수 몸통을
+ * fetch('/api/admin/shops', ...)로 갈아끼우면 된다 — 화면은 이 함수만 안다.
+ */
+export async function addShop(opts: {
+  couponId: string
+  name: string
+  benefit: string
+  unitWon: number
+  loginId: string
+  password: string
+}): Promise<{ shopId: string; postToken: string; uid: string }> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+  const shopId = opts.couponId
+
+  const ref = doc(db, 'shops', shopId)
+  const existing = await getDoc(ref)
+
+  let postToken: string
+  if (existing.exists()) {
+    postToken = (existing.data() as Shop).postToken ?? newPostToken()
+  } else {
+    postToken = newPostToken()
+    await setDoc(ref, {
+      shopId,
+      name: opts.name.trim(),
+      couponId: opts.couponId,
+      benefit: opts.benefit.trim(),
+      unitWon: Number(opts.unitWon) || 0,
+      postToken,
+      staffUids: [],
+      active: true,
+    })
+  }
+
+  const uid = await createShopAccount({
+    loginId: opts.loginId,
+    password: opts.password,
+    nickname: opts.name.trim().replace(/\s+/g, '').slice(0, 12),
+    shopId,
+  })
+
+  return { shopId, postToken, uid }
+}
+
 /**
  * 가게 계정을 만들고 그 가게 직원으로 등록한다.
  *
