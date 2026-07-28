@@ -1,0 +1,14 @@
+{
+  "indexes": [
+    {
+      "//": "가게 사용 내역 — /shop/history가 where(shopId) + orderBy(usedAt desc)로 부른다. 관리자 정산은 usedAt 한 축이라 자동 색인으로 되고, 색인이 드는 것은 이 질의 하나뿐이다.",
+      "collectionGroup": "couponUses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shopId", "order": "ASCENDING" },
+        { "fieldPath": "usedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
