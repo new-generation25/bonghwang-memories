@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
+import CouponRedeemSheet from '@/components/CouponRedeemSheet'
 import {
   CouponSpec,
   couponQrPayload,
@@ -19,18 +20,33 @@ import {
   makeCouponCode,
   reissueCoupon,
 } from '@/lib/coupons'
+import { isCouponUsed } from '@/lib/shops'
 import { useSuperAdmin } from '@/lib/superAdmin'
 
 interface CouponCardProps {
   spec: CouponSpec
   uid: string
-  /** 이미 사용한 쿠폰이면 QR을 열지 않는다 */
+  /** 로그인 계정이 있는가 — 없으면 스스로 사용 처리를 할 수 없다 */
+  signedIn?: boolean
+  /** 바깥에서 이미 사용한 것을 아는 경우 */
   used?: boolean
 }
 
-export default function CouponCard({ spec, uid, used = false }: CouponCardProps) {
+export default function CouponCard({
+  spec,
+  uid,
+  signedIn = false,
+  used = false,
+}: CouponCardProps) {
   const [open, setOpen] = useState(false)
   const [qr, setQr] = useState<string | null>(null)
+  const [sheet, setSheet] = useState(false)
+  /*
+    사용 여부는 기기에 캐시하지 않고 서버에서 확인한다.
+    다른 기기에서 쓴 쿠폰도 맞게 보여야 하고, 캐시를 두면 어긋났을 때
+    참여자는 '사용함'인데 가게에서는 안 쓴 것으로 나오는 일이 생긴다.
+  */
+  const [serverUsed, setServerUsed] = useState(false)
   // 슈퍼관리자가 건너뛰며 받은 쿠폰은 시험용 코드로 낸다 — 가게 확인
   // 화면이 알아보고 사용 기록을 남기지 않아 코드가 소진되지 않는다
   const superAdmin = useSuperAdmin()
@@ -51,6 +67,18 @@ export default function CouponCard({ spec, uid, used = false }: CouponCardProps)
     setQr(null)
   }, [code])
 
+  // 코드가 바뀌면(다시 받기·모드 전환) 사용 여부도 다시 본다
+  useEffect(() => {
+    let alive = true
+    setServerUsed(false)
+    void isCouponUsed(code).then((v) => {
+      if (alive) setServerUsed(v)
+    })
+    return () => {
+      alive = false
+    }
+  }, [code])
+
   useEffect(() => {
     if (!open || qr) return
     QRCode.toDataURL(couponQrPayload(code, window.location.origin), {
@@ -64,15 +92,17 @@ export default function CouponCard({ spec, uid, used = false }: CouponCardProps)
       .catch(() => setQr(null))
   }, [open, qr, code])
 
+  const spent = used || serverUsed
+
   return (
     <div
       className={`mt-2 overflow-hidden rounded-xl border ${
-        used ? 'border-line bg-paper/60 opacity-60' : 'border-sunset-yellow bg-paper'
+        spent ? 'border-line bg-paper/60 opacity-60' : 'border-sunset-yellow bg-paper'
       }`}
     >
       <button
-        onClick={() => !used && setOpen((v) => !v)}
-        disabled={used}
+        onClick={() => !spent && setOpen((v) => !v)}
+        disabled={spent}
         className="flex w-full items-center gap-3 px-4 py-3 text-left"
       >
         <span className="text-[20px]" aria-hidden>
@@ -87,12 +117,33 @@ export default function CouponCard({ spec, uid, used = false }: CouponCardProps)
           </span>
         </span>
         <span className="shrink-0 font-mono-retro text-[10.5px] text-teal-dk">
-          {used ? '사용함' : open ? '접기' : 'QR 보기'}
+          {spent ? '사용함' : open ? '접기' : '열기'}
         </span>
       </button>
 
-      {open && !used && (
+      {open && !spent && (
         <div className="border-t border-line px-4 py-4 text-center">
+          {/*
+            주 경로. 가게 카운터의 스티커를 찍어야 사용 처리가 된다 —
+            아래 QR은 사장님이 대신 처리해 주실 때 쓰는 보조 수단이라
+            이 버튼을 위에 크게 둔다.
+          */}
+          {signedIn ? (
+            <button
+              type="button"
+              onClick={() => setSheet(true)}
+              className="btn-teal mb-4 w-full text-center"
+            >
+              🎟 가게에서 사용하기
+            </button>
+          ) : (
+            <p className="mb-4 rounded-xl border border-line bg-cream-dp px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-60">
+              쿠폰을 직접 쓰려면 로그인이 필요해요.
+              <br />
+              로그인 없이 쓰시려면 사장님께 아래 코드를 보여주세요.
+            </p>
+          )}
+
           {qr ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -114,7 +165,9 @@ export default function CouponCard({ spec, uid, used = false }: CouponCardProps)
             {code}
           </p>
           <p className="mt-1 text-[10.5px] leading-snug text-ink-60">
-            가게에서 이 QR을 찍어 주세요. 한 번만 사용할 수 있습니다.
+            사장님이 대신 처리하실 때 보여주는 코드입니다.
+            <br />
+            한 번만 사용할 수 있습니다.
           </p>
 
           {/*
@@ -138,6 +191,16 @@ export default function CouponCard({ spec, uid, used = false }: CouponCardProps)
             </p>
           )}
         </div>
+      )}
+
+      {sheet && (
+        <CouponRedeemSheet
+          spec={spec}
+          code={code}
+          uid={uid}
+          onClose={() => setSheet(false)}
+          onRedeemed={() => setServerUsed(true)}
+        />
       )}
     </div>
   )

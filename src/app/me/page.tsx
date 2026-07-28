@@ -170,7 +170,14 @@ export default function MyRecordPage() {
               {tour.coupons.map((c) => {
                 const spec = couponSpec(c)
                 if (!spec) return null
-                return <CouponCard key={c} spec={spec} uid={couponUid} />
+                return (
+                  <CouponCard
+                    key={c}
+                    spec={spec}
+                    uid={couponUid}
+                    signedIn={Boolean(profile?.uid)}
+                  />
+                )
               })}
             </div>
           )}

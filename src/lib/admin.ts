@@ -247,6 +247,43 @@ export async function fetchAllPoints(): Promise<AdminPointEntry[]> {
   }
 }
 
+export interface AdminCouponUse {
+  code: string
+  couponId: string
+  /** 어느 가게에서 썼나. 옛 기록에는 없다 — 정산에서 빠진다 */
+  shopId: string
+  /** guest = 손님이 가게 스티커를 직접 찍음 / staff = 사장님이 대신 처리 */
+  via: 'guest' | 'staff'
+  usedAt: number | null
+}
+
+/**
+ * 쿠폰 사용 기록 전량.
+ *
+ * usedAt 한 축으로만 정렬하므로 복합 색인이 필요 없다(가게 화면은
+ * shopId로 걸러오느라 색인이 하나 든다). 관리자만 목록을 열 수 있다.
+ */
+export async function fetchCouponUses(max = 1000): Promise<AdminCouponUse[]> {
+  if (!isFirebaseReady() || !db) return []
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'couponUses'), orderBy('usedAt', 'desc'), fsLimit(max))
+    )
+    return snap.docs.map((d) => {
+      const v = d.data()
+      return {
+        code: v.code ?? d.id,
+        couponId: v.couponId ?? '',
+        shopId: v.shopId ?? '',
+        via: v.via === 'guest' ? 'guest' : 'staff',
+        usedAt: ms(v.usedAt),
+      }
+    })
+  } catch {
+    return []
+  }
+}
+
 // 집계는 adminStats.ts에 있다 — Firebase 의존이 없어 따로 검증할 수 있다
 export {
   TICKET_PRICE,
@@ -257,5 +294,6 @@ export {
   hourlyStarts,
   averageDurationMin,
   surveySummary,
+  shopSettlement,
 } from './adminStats'
-export type { PeriodStats } from './adminStats'
+export type { PeriodStats, ShopSettlementRow } from './adminStats'

@@ -145,23 +145,103 @@ service cloud.firestore {
       }
     }
 
+    // ───────── 골목 가게 ─────────
+    //
+    // postToken은 가게 앞에 붙는 인쇄 QR에 박힌 값이다.
+    // 이 문서를 아무도 못 읽게 막아도 규칙 안의 get()은 동작한다 —
+    // 그래서 '읽을 수는 없지만 대조는 되는' 비밀이 된다. 서버가 없는
+    // 이 앱에서 "가게에 실제로 다녀왔다"를 증명하는 방법이 이것뿐이다.
+    function shopExists(shopId) {
+      return exists(/databases/$(database)/documents/shops/$(shopId));
+    }
+    function shopData(shopId) {
+      return get(/databases/$(database)/documents/shops/$(shopId)).data;
+    }
+
+    match /shops/{shopId} {
+      // 사장님 기기가 '내 가게가 어디인지' 스스로 찾아야 해서 staffUids로
+      // 거르는 질의만 연다. 참여자에게는 닫혀 있다 — 여기를 읽을 수 있으면
+      // postToken이 새고, 가게에 가지 않고도 쿠폰을 태울 수 있다.
+      allow get, list: if isAdmin()
+                       || (isSignedIn()
+                           && request.auth.uid in resource.data.staffUids);
+      allow write: if isAdmin();
+    }
+
     // ───────── 골목 가게 쿠폰 사용 기록 ─────────
     //
     // 문서 id가 쿠폰 코드다. 있으면 이미 쓴 것, 없으면 아직 안 쓴 것.
-    // 이 컬렉션이 '한 번만 사용'을 실제로 보장하는 곳이다 — 코드 안의
-    // 체크값은 오타를 잡을 뿐 위조를 막지 못한다(클라이언트에서 만든다).
-    //
-    // 가게 사장님에게 계정을 만들게 하면 현장에서 쓰이지 않으므로
-    // 로그인을 요구하지 않는다. 대신 할 수 있는 일을 좁힌다:
-    //  · 만들기만 되고 고치거나 지우지 못한다 → 쓴 것을 되돌릴 수 없다
-    //  · 지우는 것은 관리자만 → 잘못 찍었을 때 되돌릴 길은 남긴다
+    // create만 열고 update를 막으므로 두 기기가 같은 코드를 동시에 찍어도
+    // 두 번째는 update가 되어 여기서 떨어진다 — 트랜잭션이 필요 없는 이유다.
     match /couponUses/{code} {
-      allow read: if true;
-      allow create: if request.resource.data.keys().hasOnly(
-                         ['couponId', 'shop', 'userTag', 'usedAt'])
-                    && request.resource.data.usedAt == request.time;
-      allow update: if false;
-      allow delete: if isAdmin();
+
+      function p() { return request.resource.data; }
+
+      // 코드 조각과 필드가 어긋난 채로 쌓이면 정산에서 어느 쪽이 참인지
+      // 알 수 없다. BH1T(시험용)는 이 정규식에 걸리지 않아 애초에 기록이
+      // 남지 않는다 — 확인 흐름을 시험하며 쿠폰을 태우지 않으려는 것이다.
+      function matchesCode() {
+        return p().code == code
+               && code.matches('BH1-[A-Z0-9]{2,8}-[2-9A-Z]{6}-[2-9A-Z]{4}')
+               && p().couponId == code.split('-')[1].lower()
+               && p().userTag == code.split('-')[2];
+      }
+
+      // cp1 코드를 cp3 가게에서 태울 수 없다. 문 닫은 가게도 막는다.
+      function servesShop() {
+        return shopExists(p().shopId)
+               && shopData(p().shopId).couponId == p().couponId
+               && shopData(p().shopId).active == true;
+      }
+
+      // 주 경로 — 참여자가 가게 스티커를 찍었다.
+      // 토큰은 가게 문서에만 있고 아무도 읽을 수 없으므로,
+      // 그 스티커 앞에 서 본 사람만 이 요청을 만들 수 있다.
+      function guestRedeem() {
+        return p().via == 'guest'
+               && p().uid == request.auth.uid
+               && p().token == shopData(p().shopId).postToken;
+      }
+
+      // 보조 경로 — 가게 계정으로 로그인한 기기만.
+      // 참여자 카메라가 안 되거나 계정이 없을 때의 유일한 길이다.
+      function staffRedeem() {
+        return p().via == 'staff'
+               && request.auth.uid in shopData(p().shopId).staffUids
+               && p().token == ''
+               && p().uid == '';
+      }
+
+      // 코드를 알아야 문서 id를 만들 수 있다 — 참여자가 자기 쿠폰이
+      // 쓰였는지 확인하는 통로다. 목록은 열지 않는다.
+      allow get: if isSignedIn();
+
+      // 가게 내역·관리자 정산. 남의 가게 매출은 보이지 않는다.
+      //
+      // 목록은 문서마다 규칙을 재지만, 이 질의는 shopId 하나로 걸러오므로
+      // get()이 늘 같은 경로를 본다 — 규칙 엔진이 한 요청 안에서 캐시한다.
+      // staffUids를 문서에 복사해 두는 방법도 있었으나, 그러면 참여자가
+      // 주 경로로 쓸 때 그 값을 알 길이 없다(shops를 못 읽는다).
+      allow list: if isAdmin()
+                  || (isSignedIn()
+                      && request.auth.uid in shopData(resource.data.shopId).staffUids);
+
+      allow create: if isSignedIn()
+                    && p().keys().hasOnly(
+                         ['code', 'couponId', 'shopId', 'userTag', 'uid',
+                          'via', 'byUid', 'token', 'usedAt'])
+                    && p().keys().hasAll(
+                         ['code', 'couponId', 'shopId', 'userTag', 'uid',
+                          'via', 'byUid', 'token', 'usedAt'])
+                    && p().byUid == request.auth.uid
+                    && p().usedAt == request.time
+                    && matchesCode()
+                    && servesShop()
+                    && (guestRedeem() || staffRedeem());
+
+      // 잘못 찍힌 기록을 되돌리는 길은 관리자에게만 남긴다.
+      // 정정·백필에 필요해 update도 관리자에게만 연다.
+      allow update, delete: if isAdmin();
     }
   }
 }

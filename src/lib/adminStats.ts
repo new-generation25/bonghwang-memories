@@ -6,7 +6,13 @@
  * 서버(Cloud Functions)로 옮길 때도 이 파일만 재사용하면 된다.
  */
 
-import type { AdminUser, AdminPointEntry, AdminSurveyResponse } from './admin'
+import type {
+  AdminUser,
+  AdminPointEntry,
+  AdminSurveyResponse,
+  AdminCouponUse,
+} from './admin'
+import { COUPONS } from './coupons'
 
 /**
  * 가격 체계 (브랜드 v2.1 §5).
@@ -131,4 +137,69 @@ export function surveySummary(
     }
   }
   return out
+}
+
+// ---------------------------------------------------------------------------
+// 골목 가게 정산
+// ---------------------------------------------------------------------------
+
+export interface ShopSettlementRow {
+  shopId: string
+  name: string
+  unitWon: number
+  /** 전체 사용 장수 */
+  total: number
+  /** 손님이 가게 스티커를 직접 찍은 것 */
+  guest: number
+  /** 사장님이 대신 처리한 것 */
+  staff: number
+  /** 돌려드릴 금액 */
+  won: number
+}
+
+/**
+ * 가게별 정산.
+ *
+ * 금액을 참여자 수에서 추정하지 않고 **실제 사용 기록에서 센다.**
+ * REWARD_COUPON_VALUE(4,000원)는 쿠폰 다섯 장을 다 썼을 때의 상한이지
+ * 실제로 나간 돈이 아니다 — 정산은 찍힌 장수로만 한다.
+ *
+ * guest/staff를 갈라 두는 이유가 있다. 대리 처리는 손님이 오지 않아도
+ * 사장님 기기만으로 기록을 만들 수 있는 경로다. 한 가게의 기록이 거의
+ * 전부 '대리'로 쌓이면 들여다볼 신호다 — 그래서 금액 옆에 비율을 같이 둔다.
+ *
+ * shopId가 없는 옛 기록은 빠진다. 가게를 신뢰할 수 있게 기록하기
+ * 시작한 것이 이번 개편부터라, 그 전 것은 어느 가게 몫인지 알 수 없다.
+ */
+export function shopSettlement(
+  uses: AdminCouponUse[],
+  since = 0
+): ShopSettlementRow[] {
+  const rows = new Map<string, ShopSettlementRow>()
+
+  for (const spec of Object.values(COUPONS)) {
+    rows.set(spec.shopId, {
+      shopId: spec.shopId,
+      name: spec.shop,
+      unitWon: spec.unitWon,
+      total: 0,
+      guest: 0,
+      staff: 0,
+      won: 0,
+    })
+  }
+
+  for (const u of uses) {
+    if (!u.shopId) continue
+    if (since && (u.usedAt ?? 0) < since) continue
+    const row = rows.get(u.shopId)
+    if (!row) continue
+    row.total += 1
+    if (u.via === 'guest') row.guest += 1
+    else row.staff += 1
+    row.won += row.unitWon
+  }
+
+  // Array.from을 쓰는 이유는 tsconfig target이 낮아 Map 순회 전개가 막혀서다
+  return Array.from(rows.values())
 }

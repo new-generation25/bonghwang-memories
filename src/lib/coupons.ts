@@ -27,24 +27,35 @@ import { TRACK_MISSIONS } from './tracks'
 
 export interface CouponSpec {
   id: string
+  /**
+   * 가게 문서 id — Firestore `shops/{shopId}`.
+   *
+   * 지금은 쿠폰 id와 같다(가게 하나에 쿠폰 하나). 그래도 따로 두는 이유는,
+   * 사용 기록이 가리켜야 하는 것이 '쿠폰'이 아니라 '어느 가게에서 썼나'라서다.
+   * 한 가게가 쿠폰을 둘 받게 되면 여기만 갈라주면 된다.
+   */
+  shopId: string
   /** 가게 이름 — 쿠폰을 쓸 수 있는 곳 */
   shop: string
   /** 참여자에게 보이는 혜택 문구 */
   benefit: string
+  /** 정산 단가(원) — 가게에 돌려줄 금액을 세는 값이다 */
+  unitWon: number
   /** 어느 거점에서 받는지 */
   track: number
 }
 
 /**
  * 쿠폰 카탈로그.
- * 혜택 문구는 가게와 협의해 정하는 값이라 여기 한 곳에서만 고친다.
+ * 혜택 문구와 단가는 가게와 협의해 정하는 값이라 여기 한 곳에서만 고친다.
+ * `scripts/make-shop-qr.mjs`가 이 표를 읽어 가게 문서와 스티커를 만든다.
  */
 export const COUPONS: Record<string, CouponSpec> = {
-  cp1: { id: 'cp1', shop: '봉황1935', benefit: '음료 1,000원 할인', track: 1 },
-  cp2: { id: 'cp2', shop: '미야상회', benefit: '바나나우유 500원 할인', track: 2 },
-  cp3: { id: 'cp3', shop: '능소화 고택', benefit: '엽서 1장 증정', track: 3 },
-  cp4: { id: 'cp4', shop: '카페 탱자', benefit: '아메리카노 1,000원 할인', track: 4 },
-  cp5: { id: 'cp5', shop: '방하림', benefit: '도자기 1,000원 할인', track: 5 },
+  cp1: { id: 'cp1', shopId: 'cp1', shop: '봉황1935', benefit: '음료 1,000원 할인', unitWon: 1000, track: 1 },
+  cp2: { id: 'cp2', shopId: 'cp2', shop: '미야상회', benefit: '바나나우유 500원 할인', unitWon: 500, track: 2 },
+  cp3: { id: 'cp3', shopId: 'cp3', shop: '능소화 고택', benefit: '엽서 1장 증정', unitWon: 1000, track: 3 },
+  cp4: { id: 'cp4', shopId: 'cp4', shop: '카페 탱자', benefit: '아메리카노 1,000원 할인', unitWon: 1000, track: 4 },
+  cp5: { id: 'cp5', shopId: 'cp5', shop: '방하림', benefit: '도자기 1,000원 할인', unitWon: 1000, track: 5 },
 }
 
 export function couponSpec(id: string): CouponSpec | null {

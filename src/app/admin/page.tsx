@@ -18,6 +18,7 @@ import { BINGO_CELLS } from '@/lib/bingoCells'
 import { REASON_LABEL, PointReason } from '@/lib/points'
 import { DEFAULT_SURVEY } from '@/lib/survey'
 import {
+  AdminCouponUse,
   AdminPointEntry,
   AdminPost,
   AdminSurveyResponse,
@@ -28,6 +29,7 @@ import {
   cellPopularity,
   excludeAdmins,
   fetchAllPoints,
+  fetchCouponUses,
   fetchPosts,
   fetchSurveyResponses,
   fetchUsers,
@@ -35,6 +37,7 @@ import {
   hourlyStarts,
   isAdminUser,
   periodStats,
+  shopSettlement,
   surveySummary,
 } from '@/lib/admin'
 
@@ -46,6 +49,7 @@ export default function AdminPage() {
   const [points, setPoints] = useState<AdminPointEntry[]>([])
   const [responses, setResponses] = useState<AdminSurveyResponse[]>([])
   const [posts, setPosts] = useState<AdminPost[]>([])
+  const [couponUses, setCouponUses] = useState<AdminCouponUse[]>([])
   const [state, setState] = useState<
     'idle' | 'loading' | 'ready' | 'denied' | 'error'
   >('idle')
@@ -58,16 +62,18 @@ export default function AdminPage() {
   const load = useCallback(async () => {
     setState('loading')
     try {
-      const [u, p, r, po] = await Promise.all([
+      const [u, p, r, po, cu] = await Promise.all([
         fetchUsers(),
         fetchAllPoints(),
         fetchSurveyResponses(),
         fetchPosts(),
+        fetchCouponUses(),
       ])
       setUsers(u)
       setPoints(p)
       setResponses(r)
       setPosts(po)
+      setCouponUses(cu)
       setState('ready')
     } catch (err) {
       // 규칙을 아직 게시하지 않았으면 users 읽기가 권한 거부로 떨어진다.
@@ -113,6 +119,17 @@ export default function AdminPage() {
         .sort((a, b) => b.totalPoints - a.totalPoints),
     [view]
   )
+  /*
+    가게 정산은 관리자 기록을 거르지 않는다. 슈퍼관리자 코드(BH1T)는
+    애초에 사용 기록이 남지 않고, 남은 것은 실제로 가게에서 찍힌 것뿐이라
+    빼면 오히려 돌려드릴 금액이 줄어든다.
+  */
+  const settlement = useMemo(() => shopSettlement(couponUses), [couponUses])
+  const settlementTotal = useMemo(
+    () => settlement.reduce((n, r) => n + r.won, 0),
+    [settlement]
+  )
+
   const pointsByReason = useMemo(() => {
     const out: Record<string, { count: number; sum: number }> = {}
     for (const p of view.points) {
@@ -299,6 +316,63 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
+        )}
+      </Section>
+
+      {/* ───── 골목 가게 정산 ───── */}
+      <Section
+        title="골목 가게 정산"
+        hint={`실제 사용 ${couponUses.length}장 · 합계 ${settlementTotal.toLocaleString()}원`}
+      >
+        {couponUses.length === 0 ? (
+          <Empty>아직 사용된 쿠폰이 없습니다.</Empty>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[380px] text-[12px]">
+                <thead>
+                  <tr className="border-b border-line text-left font-mono-retro text-[10px] tracking-[0.1em] text-ink-60">
+                    <th className="py-1.5">가게</th>
+                    <th className="py-1.5 text-right">장수</th>
+                    <th className="py-1.5 text-right">직접</th>
+                    <th className="py-1.5 text-right">대리</th>
+                    <th className="py-1.5 text-right">정산액</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {settlement.map((r) => (
+                    <tr key={r.shopId} className="border-b border-line/60">
+                      <td className="py-1.5 text-ink">{r.name}</td>
+                      <td className="py-1.5 text-right text-ink">{r.total}</td>
+                      <td className="py-1.5 text-right text-teal-dk">{r.guest}</td>
+                      {/*
+                        대리가 유난히 많은 가게는 들여다볼 신호다. 손님이 오지
+                        않아도 사장님 기기만으로 기록을 만들 수 있는 경로라서다.
+                      */}
+                      <td
+                        className={`py-1.5 text-right ${
+                          r.total > 0 && r.staff / r.total > 0.7
+                            ? 'font-bold text-rec'
+                            : 'text-ink-60'
+                        }`}
+                      >
+                        {r.staff}
+                      </td>
+                      <td className="py-1.5 text-right font-bold text-ink">
+                        {r.won.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-ink-60">
+              참여자 수로 추정하지 않고 <b className="text-ink">실제 찍힌 장수</b>로
+              셉니다. &lsquo;직접&rsquo;은 손님이 가게 스티커를 앱으로 찍은 것,
+              &lsquo;대리&rsquo;는 사장님이 대신 처리한 것입니다. 개편 전의 옛
+              기록은 어느 가게 몫인지 알 수 없어 빠집니다.
+            </p>
+          </>
         )}
       </Section>
 
