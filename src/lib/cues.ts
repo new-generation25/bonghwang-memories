@@ -347,7 +347,7 @@ export const CUES: Record<CueId, Cue> = {
     ],
     next: null,
     // 말투는 아직 바꾸지 않는다 — 대답을 듣기 전이다
-    ui: ['reel_advance', 'track_check:1', 'coupon:cp1'],
+    ui: ['reel_advance', 'track_check:1'],
   },
 
   // 승낙 — 존댓말→반말 전환은 여기서 일어난다 (D7)
@@ -437,7 +437,7 @@ export const CUES: Record<CueId, Cue> = {
       { text: '담장이 긴 집인데… 여름마다 담장이 주황색이 됐어.<br>그건 기억나.' },
     ],
     next: null,
-    ui: ['reel_advance', 'track_check:2', 'coupon:cp2'],
+    ui: ['reel_advance', 'track_check:2'],
   },
 
   // ============================== TRACK 3 — 능소화 고택 ==============================
@@ -481,7 +481,7 @@ export const CUES: Record<CueId, Cue> = {
       { text: '옛날에 음악다방이었던 자리야.<br>거기 앉아서 틀어보자.' },
     ],
     next: null,
-    ui: ['reel_advance', 'track_check:3', 'coupon:cp3'],
+    ui: ['reel_advance', 'track_check:3'],
   },
 
   // ============================== TRACK 4 — 카페 탱자 ==============================
@@ -560,7 +560,7 @@ export const CUES: Record<CueId, Cue> = {
       { text: '마지막 소원이 왜 가족오락관인지는 나도 몰라.<br>아빠가 그 프로를 좋아하긴 했는데.' },
     ],
     next: null,
-    ui: ['reel_advance', 'track_check:4', 'coupon:cp4'],
+    ui: ['reel_advance', 'track_check:4'],
   },
 
   // ============================== TRACK 5 — 방하림 ==============================
@@ -677,15 +677,14 @@ export const CUES: Record<CueId, Cue> = {
     /*
       4+1: 5번째 소원은 '다음 주' 리본으로 유보.
 
-      소원은 유보돼도 방하림에는 실제로 다녀왔다. 쿠폰은 소원의 보상이
-      아니라 가게를 찾아간 값이라 여기서 준다 — 전에는 cp5만 빠져 있어서
-      다섯 곳을 다 걸은 사람이 쿠폰은 넉 장만 받았다.
+      쿠폰은 여기서 주지 않는다. 다섯 장은 골목 빙고의 첫 줄이 완성될 때
+      한꺼번에 나온다(treasure) — 거점마다 한 장씩 흘리면 '가게 다섯 곳을
+      다 걸었다'는 사실이 다섯 번으로 나뉘어 옅어진다.
     */
     ui: [
       'track_check:5',
       'last_wish_reserved',
       'album_build',
-      'coupon:cp5',
       'phase:act2',
     ],
   },

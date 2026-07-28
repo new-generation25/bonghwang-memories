@@ -138,10 +138,3 @@ export function bingoOpen(): boolean {
   return BINGO_ALWAYS_OPEN || isSuperAdmin()
 }
 
-/**
- * 15초를 기다리지 않고 큐를 건너뛸 수 있는지(D9).
- * 뒤쪽 큐를 고칠 때 앞의 대사를 매번 15초씩 기다릴 수 없다.
- */
-export function canSkipCueNow(): boolean {
-  return isSuperAdmin()
-}

@@ -62,7 +62,14 @@ export function couponSpec(id: string): CouponSpec | null {
   return COUPONS[id] ?? null
 }
 
-/** 이 거점에서 주는 쿠폰 id */
+/**
+ * 이 거점과 짝지어진 쿠폰 id.
+ *
+ * 거점을 통과할 때 쿠폰이 나오던 시절의 함수다. 지금은 쿠폰이 골목 빙고
+ * 첫 줄에서 다섯 장 한꺼번에 나오므로 지급에는 쓰이지 않는다. 그래도
+ * 남겨두는 것은 '이 가게가 어느 거점에 있는가'를 이 표가 유일하게
+ * 말해주기 때문이다 — 인쇄물·정산 화면이 그 짝을 물어볼 수 있다.
+ */
 export function couponForTrack(track: number): string | null {
   const m = Object.values(TRACK_MISSIONS).find(
     (x) => x.track === track && x.reward?.coupon

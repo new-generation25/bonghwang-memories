@@ -25,14 +25,12 @@ import {
 } from '@/lib/superAdmin'
 import { STATIONS } from '@/lib/tracks'
 import {
-  addCoupon,
   completeTrack,
   getTourState,
   mutateTour,
   restartTour,
   setCurrentTrack,
 } from '@/lib/tourState'
-import { couponForTrack } from '@/lib/coupons'
 import { award } from '@/lib/points'
 
 /** 거점 다섯 — 넘버링은 카세트 라벨과 같은 A면 표기를 쓴다 */
@@ -81,13 +79,12 @@ export default function SuperAdminBar() {
   /**
    * 그 거점까지 걸어온 것으로 친다.
    *
-   * 실제 완주가 주는 것을 빠짐없이 넣는다 — 완료 표시 · 쿠폰 · 포인트.
-   * 절반만 찬 상태로 시험하면 "인증서에 쿠폰이 왜 없지" 같은 헛다리를
-   * 짚는다. J-카드 줄은 트랙 완료에서 파생되므로 따로 채울 것이 없다.
+   * 실제 완주가 주는 것을 빠짐없이 넣는다 — 완료 표시 · 포인트.
+   * J-카드 줄은 트랙 완료에서 파생되므로 따로 채울 것이 없다.
    *
-   * 주는 것들은 cueEngine의 runDirective가 큐 종료 때 하는 일과 같다
-   * (coupon · track_check). 값을 여기 다시 적지 않고 같은 출처
-   * (couponForTrack)를 쓴다 — 쿠폰이 바뀌면 함께 바뀐다.
+   * 쿠폰은 여기서 주지 않는다. 이제 거점이 아니라 골목 빙고의 첫 줄이
+   * 완성될 때 다섯 장이 한꺼번에 나오고(treasure), 그 줄은 다섯 소원을
+   * 다 이루면 저절로 채워진다 — 빙고를 한 번 열어보면 받는다.
    */
   const completeUpTo = (track: number) => {
     for (let t = 1; t <= track; t++) {
@@ -96,8 +93,6 @@ export default function SuperAdminBar() {
         void award(`main-${t}`, 'mainMission')
       }
       completeTrack(t)
-      const coupon = couponForTrack(t)
-      if (coupon) addCoupon(coupon)
     }
     setCurrentTrack(track as 1 | 2 | 3 | 4 | 5)
     setOpen(false)

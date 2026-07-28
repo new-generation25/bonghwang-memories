@@ -52,6 +52,12 @@ export interface TourState {
   photos: TourPhoto[]
   bingo: { unlocked: boolean; cellsDone: string[]; lines: number }
   coupons: string[]
+  /**
+   * 골목 뽑기에서 연 칸 번호(0~49). 상품은 칸에서 파생한다(gacha.ts) —
+   * 판 배치가 고정이라 칸 번호만 있으면 무엇이 나왔는지 되짚을 수 있다.
+   * 빙고 두 번째 줄부터 한 줄에 한 번씩 뽑는다.
+   */
+  gachaDrawn: number[]
   /** F-3: 쓴 힌트 — 'M1:h1' 꼴 refId. 회차 총 3회 상한은 화면이 잰다 */
   hintsUsed: string[]
   /** F-2: 발견한 히든트랙 id. 해금 전에는 수집첩에 잠긴 채 쌓인다 */
@@ -83,6 +89,7 @@ export const INITIAL_TOUR_STATE: TourState = {
   photos: [],
   bingo: { unlocked: false, cellsDone: [], lines: 0 },
   coupons: [],
+  gachaDrawn: [],
   hintsUsed: [],
   hiddenFound: [],
   hiddenUnlocked: false,
@@ -182,6 +189,15 @@ export function restartTour(): TourState {
 export function addCoupon(coupon: string) {
   mutateTour((prev) =>
     prev.coupons.includes(coupon) ? {} : { coupons: [...prev.coupons, coupon] }
+  )
+}
+
+/** 뽑기에서 연 칸을 기록한다 — 같은 칸은 두 번 열리지 않는다 */
+export function markGachaDrawn(slot: number) {
+  mutateTour((prev) =>
+    prev.gachaDrawn.includes(slot)
+      ? {}
+      : { gachaDrawn: [...prev.gachaDrawn, slot] }
   )
 }
 

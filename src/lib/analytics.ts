@@ -47,6 +47,9 @@ export type AnalyticsEventName =
   | 'hidden_played'
   | 'reward_offer_shown'
   | 'reward_offer_choice'
+  // 보상 — 쿠폰은 빙고 첫 줄에 다섯 장, 그 뒤로는 줄마다 뽑기 한 번
+  | 'coupon_granted'
+  | 'gacha_drawn'
 
 export interface AnalyticsEvent {
   name: AnalyticsEventName

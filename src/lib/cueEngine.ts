@@ -32,14 +32,20 @@ import {
   setCurrentTrack,
 } from './tourState'
 import { timingsFor } from './audioTimings'
-import { canSkipCueNow } from './superAdmin'
 import { STATIONS } from './tracks'
 import { award } from './points'
 import { playCassetteFlip } from './sfx'
 import { logEvent } from './analytics'
 
-/** D9 — 스킵 허용 시점(초) */
-export const SKIP_AFTER_SEC = 15
+/*
+  건너뛰기에 시간 제한을 두지 않는다.
+
+  예전에는 재생 15초가 지나야 번들을 건너뛸 수 있었다(옛 D9). 그런데
+  실제로는 화면의 어떤 키도 그 값을 보지 않아서, 참여자에게는 없는
+  규칙이면서 코드에만 남아 있었다. 기다리게 만드는 빈 시간이 이야기에
+  보태는 것이 없다면 두지 않는다 — 뜸이 필요한 자리는 그때 대사와
+  무음으로 만든다.
+*/
 
 /** 소원을 이룬 순간 — 첫 번째와 마지막에만 쏜다(PointToast가 듣는다) */
 export const WISH_EVENT = 'bh:wish'
@@ -317,9 +323,7 @@ function tick(cue: Cue, elapsed: number, duration: number) {
     elapsed,
     duration,
     subtitleIndex: subtitleIndexAt(cue, elapsed, duration),
-    // 슈퍼관리자는 기다리지 않는다 — 뒤쪽 큐를 고칠 때마다 앞 대사를
-    // 15초씩 앉아서 들을 수는 없다
-    skippable: elapsed >= SKIP_AFTER_SEC || canSkipCueNow(),
+    skippable: true,
   })
   if (elapsed >= duration) finishCue(cue)
 }
@@ -473,9 +477,9 @@ export function replayCue() {
   void playCue(state.cueId)
 }
 
-/** 스킵 — 15초 경과 후에만(D9) */
+/** 번들 통째로 건너뛰기 — 기다리는 시간 없이 언제든 */
 export function skipCue() {
-  if (!state.cueId || !state.skippable || state.ended) return
+  if (!state.cueId || state.ended) return
   const cue = CUES[state.cueId]
   logEvent('bundle_skipped', { id: cue.id, atSec: Math.round(state.elapsed) })
   clearResources()
@@ -487,8 +491,6 @@ export function skipCue() {
  *
  * 재생 중에도 누를 수 있고, 다음 문장 시작 지점으로 건너뛴다.
  * 마지막 줄에서 누르면 번들을 끝내 다음 단계로 넘어간다.
- * (번들 통째로 건너뛰는 skipCue와 달리 D9의 15초 제한을 받지 않는다 —
- *  한 줄씩 넘기는 건 '빨리감기'지 콘텐츠 스킵이 아니다.)
  */
 export function skipLine() {
   if (!state.cueId || state.ended) return
@@ -522,17 +524,15 @@ export function skipLine() {
   emit({
     elapsed: target,
     subtitleIndex: next,
-    skippable: target >= SKIP_AFTER_SEC || canSkipCueNow(),
+    skippable: true,
   })
 }
 
 /**
  * STOP — 지금 큐를 끝내고 다음 단계로 넘긴다.
  *
- * skipCue와 달리 15초(D9) 조건을 보지 않는다. 그 조건은 인트로의 '통화
- * 끊기'가 지킨다 — 처음 듣는 사람이 이야기를 통째로 건너뛰지 않게 막는
- * 장치다. 데크의 STOP은 성격이 다르다. 실물 데크에서 STOP은 늘 눌리는
- * 키이고, 눌리지 않는 STOP은 고장 난 기계로 읽힌다.
+ * 실물 데크에서 STOP은 늘 눌리는 키이고, 눌리지 않는 STOP은 고장 난
+ * 기계로 읽힌다. 기다렸다가 눌리게 하지 않는다.
  *
  * 끝내는 방식은 끝까지 들은 것과 같다 — ui 지시자를 실행하고, 완료를
  * 기록하고, 이어지는 큐가 있으면 연결한다. 여기서 대충 멈추면 미션이

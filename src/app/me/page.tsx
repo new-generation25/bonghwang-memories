@@ -20,6 +20,7 @@ import CouponCard from '@/components/CouponCard'
 import JCard from '@/components/JCard'
 import SettingsSheet from '@/components/SettingsSheet'
 import { couponSpec } from '@/lib/coupons'
+import { prizesOf } from '@/lib/gacha'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import {
@@ -54,6 +55,8 @@ export default function MyRecordPage() {
   }, [])
 
   const recent = [...history].reverse().slice(0, 12)
+  // 뽑은 칸 번호에서 상품을 되짚는다 — 판 배치가 고정이라 칸만 있으면 된다
+  const prizes = prizesOf(tour.gachaDrawn)
 
   return (
     <div className="min-h-screen bg-cream-base pb-32">
@@ -111,6 +114,44 @@ export default function MyRecordPage() {
         <div className="mb-5">
           <JCard />
         </div>
+
+        {/*
+          뽑기로 받은 상품. 쿠폰과 나란히 두지 않고 위에 둔다 — 가게에서
+          내미는 쿠폰과 달리 이쪽은 안내소에서 받거나 이미 받은 것이라,
+          섞어두면 가게 카운터에서 무엇을 보여줄지 헷갈린다.
+        */}
+        {prizes.length > 0 && (
+          <div className="card-paper mb-5 p-4 shadow-lg">
+            <h2 className="font-vintage text-sm font-black text-teal-dk">
+              🎁 뽑기로 받은 것
+            </h2>
+            <ul className="mt-2 space-y-1.5">
+              {prizes.map((prize, i) => (
+                <li
+                  key={`${prize.id}-${i}`}
+                  className="flex items-center gap-2.5"
+                >
+                  <span className="text-[18px]" aria-hidden>
+                    {prize.emoji}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12.5px] text-ink">
+                      {prize.name}
+                    </span>
+                    <span className="block truncate font-mono-retro text-[10px] text-ink-60">
+                      {prize.note}
+                    </span>
+                  </span>
+                  {prize.tier === 'legend' && (
+                    <span className="shrink-0 rounded bg-rec/10 px-1.5 py-0.5 font-mono-retro text-[9.5px] text-rec">
+                      RARE
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* 쿠폰 */}
         <div className="card-paper mb-5 p-4 shadow-lg">

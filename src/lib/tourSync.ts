@@ -98,6 +98,8 @@ export function mergeTour(local: TourState, remote: Partial<SyncedTour>): Partia
       remote.currentTrack ?? 0
     ) as TourState['currentTrack'],
     coupons: union(local.coupons, remote.coupons ?? []),
+    // 뽑기로 연 칸 — 합집합이면 기기를 바꿔도 받은 상품이 사라지지 않는다
+    gachaDrawn: union(local.gachaDrawn, remote.gachaDrawn ?? []),
     // 반말 전환은 한 번 넘어가면 되돌리지 않는다(D7)
     speechMode:
       local.speechMode === 'casual' || remote.speechMode === 'casual'

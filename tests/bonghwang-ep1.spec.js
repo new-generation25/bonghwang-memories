@@ -337,16 +337,13 @@ test.describe('슈퍼관리자 모드 — 순서 무시 조작', () => {
     await page.goto('/play?e2e=1')
 
     await openSuperPanel(page)
-    // 트랙 5까지 완료 처리 — 쿠폰·포인트까지 실제 완주와 같게 채운다
+    // 트랙 5까지 완료 처리 — 쿠폰은 여기서 나오지 않는다(빙고 첫 줄에서 준다)
     await page.getByRole('button', { name: '~A5' }).click()
 
     const state = await page.evaluate(() =>
       JSON.parse(window.localStorage.getItem('bh_tour_v2'))
     )
     expect(state.tracksCompleted).toEqual([1, 2, 3, 4, 5])
-    expect(state.coupons).toEqual(
-      expect.arrayContaining(['cp1', 'cp2', 'cp3', 'cp4', 'cp5'])
-    )
     // J-카드가 트랙 완료에서 파생된다 — 별도 상태 없이 네 줄이 다 찬다
     await expect(page.getByText('4 / 4 + 1')).toBeVisible({ timeout: 10000 })
 
@@ -389,7 +386,9 @@ test.describe('슈퍼관리자 모드 — 순서 무시 조작', () => {
 })
 
 test.describe('S30 빙고 — 대각선은 다섯 소원이 채운다', () => {
-  test('대각선만으로 1줄', async ({ page }) => {
+  test('대각선만으로 1줄 · 그 줄에서 가게 쿠폰 다섯 장이 나온다', async ({
+    page,
+  }) => {
     await seedTour(page, {
       ...BASE_STATE,
       phase: 'act2',
@@ -399,6 +398,97 @@ test.describe('S30 빙고 — 대각선은 다섯 소원이 채운다', () => {
     })
     await page.goto('/treasure?e2e=1')
     await expect(page.getByText(/1줄/).first()).toBeVisible({ timeout: 15000 })
+
+    // 거점을 지날 때가 아니라 여기서 한꺼번에 받는다
+    await expect
+      .poll(
+        async () =>
+          (
+            await page.evaluate(() =>
+              JSON.parse(window.localStorage.getItem('bh_tour_v2'))
+            )
+          ).coupons,
+        { timeout: 15000 }
+      )
+      .toEqual(expect.arrayContaining(['cp1', 'cp2', 'cp3', 'cp4', 'cp5']))
+
+    // 첫 줄은 뽑기가 아니다
+    await expect(page.getByText(/골목 뽑기/)).toHaveCount(0)
+  })
+})
+
+test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
+  /** 대각선 + 첫 행(0~4) = 2줄. 1·2·3번 칸이 act2 셀이다 */
+  const TWO_LINES = {
+    unlocked: true,
+    cellsDone: ['bunsik', 'b02', 'byeokhwa', 'b04'],
+    lines: 0,
+  }
+
+  test('두 번째 줄이면 뽑기 1회 — 뽑으면 상품이 남는다', async ({ page }) => {
+    await seedTour(page, {
+      ...BASE_STATE,
+      phase: 'act2',
+      tracksCompleted: [1, 2, 3, 4, 5],
+      speechMode: 'casual',
+      bingo: TWO_LINES,
+    })
+    await page.goto('/treasure?e2e=1')
+
+    const open = page.getByRole('button', { name: /골목 뽑기 1회 남았어요/ })
+    await expect(open).toBeVisible({ timeout: 15000 })
+    await open.click()
+
+    await page.getByRole('button', { name: /한 칸 열기/ }).click()
+    // 굴리는 연출 뒤에 결과가 선다
+    await expect(page.getByRole('button', { name: '받기' })).toBeVisible({
+      timeout: 15000,
+    })
+
+    const drawn = await page.evaluate(
+      () => JSON.parse(window.localStorage.getItem('bh_tour_v2')).gachaDrawn
+    )
+    expect(drawn).toHaveLength(1)
+    expect(drawn[0]).toBeGreaterThanOrEqual(0)
+    expect(drawn[0]).toBeLessThan(50)
+
+    // 다 쓰면 안내가 사라진다
+    await page.getByRole('button', { name: '받기' }).click()
+    await expect(page.getByText(/골목 뽑기 .*남았어요/)).toHaveCount(0)
+  })
+
+  test('뽑은 상품은 나의 기록에 남는다', async ({ page }) => {
+    await seedTour(page, {
+      ...BASE_STATE,
+      phase: 'act2',
+      tracksCompleted: [1, 2, 3, 4, 5],
+      speechMode: 'casual',
+      bingo: { ...TWO_LINES, lines: 2 },
+      // 0번 칸 — 판 배치가 고정이라 어떤 상품인지 정해져 있다
+      gachaDrawn: [0],
+    })
+    await page.goto('/me?e2e=1')
+    await expect(page.getByText('🎁 뽑기로 받은 것')).toBeVisible({
+      timeout: 15000,
+    })
+  })
+
+  test('판은 50칸 — 상품 slots 합이 모자라면 여기서 드러난다', async ({
+    page,
+  }) => {
+    await seedTour(page, {
+      ...BASE_STATE,
+      phase: 'act2',
+      tracksCompleted: [1, 2, 3, 4, 5],
+      speechMode: 'casual',
+      bingo: TWO_LINES,
+    })
+    await page.goto('/treasure?e2e=1')
+    await page.getByRole('button', { name: /골목 뽑기 1회 남았어요/ }).click()
+
+    await expect(page.getByText(/닫힌 칸/)).toContainText('50', {
+      timeout: 10000,
+    })
   })
 })
 

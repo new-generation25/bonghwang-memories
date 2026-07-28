@@ -18,13 +18,22 @@ import { useTourState } from '@/hooks/useTourState'
 import { BoardCell, buildBoard, countLines } from '@/lib/bingoCells'
 import { bingoOpen, useSuperAdmin } from '@/lib/superAdmin'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
+import { COUPONS } from '@/lib/coupons'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { playBingoLine } from '@/lib/sfx'
-import { markBingoCell, mutateTour } from '@/lib/tourState'
+import {
+  addCoupon,
+  markBingoCell,
+  markGachaDrawn,
+  mutateTour,
+} from '@/lib/tourState'
+import GachaSheet from '@/components/GachaSheet'
+import type { GachaPrize } from '@/lib/gacha'
 import {
   POINT_TABLE,
   POINTS_EVENT,
   award,
+  awardCampaign,
   localPointTotal,
 } from '@/lib/points'
 import { logEvent } from '@/lib/analytics'
@@ -39,6 +48,7 @@ export default function BingoPage() {
   const [confirmFinish, setConfirmFinish] = useState(false)
   /** 2막 여는 대사가 끝난 직후 한 번 띄우는 안내 */
   const [welcome, setWelcome] = useState(false)
+  const [gachaOpen, setGachaOpen] = useState(false)
 
   const board = useMemo(() => buildBoard(), [])
 
@@ -71,19 +81,25 @@ export default function BingoPage() {
   /*
     줄 수가 늘면 저장 + 새 줄마다 포인트.
 
-    전에는 `addCoupon('bingo-line-N')`도 함께 불렀다. 그런데 그 id는 쿠폰
-    카탈로그(lib/coupons.ts)에 없어서 '나의 기록'이 조용히 걸러냈다 —
-    받는 순간 사라지는 보상이었다. 덤으로 관리자 통계의 쿠폰 수만 줄 수만큼
-    부풀렸다.
+    보상은 줄의 성격에 따라 갈린다.
+     · 첫 줄 — 대각선이다. 다섯 소원을 다 이뤄야 채워지므로 2막이 열리는
+       순간 이미 완성돼 있다. 여기서 가게 쿠폰 다섯 장이 한꺼번에 나온다.
+     · 두 번째 줄부터 — 보너스 미션으로 칸을 채워야 완성되는 줄이라,
+       한 줄에 뽑기 한 번씩 준다(아래 남은 뽑기 계산).
 
-    진짜 아이템을 주려면 어느 가게가 무엇을 내주는지부터 정해야 한다.
-    그때 카탈로그에 넣고 여기서 다시 부르면 된다.
+    전에는 `addCoupon('bingo-line-N')`을 불렀는데 그 id가 쿠폰 카탈로그에
+    없어서 '나의 기록'이 조용히 걸러냈다 — 받는 순간 사라지는 보상이었다.
   */
   useEffect(() => {
     if (lines > tour.bingo.lines) {
       for (let i = tour.bingo.lines + 1; i <= lines; i++) {
         void award(`bingo-line-${i}`, 'treasureLine')
         logEvent('bingo_line', { n: i })
+      }
+      // 첫 줄에 다섯 장. addCoupon이 중복을 막으므로 여러 번 불려도 안전하다
+      if (lines >= 1 && tour.bingo.lines < 1) {
+        for (const id of Object.keys(COUPONS)) addCoupon(id)
+        logEvent('coupon_granted', { by: 'bingo_first_line', n: 5 })
       }
       mutateTour((prev) => ({ bingo: { ...prev.bingo, lines } }))
       /*
@@ -93,6 +109,29 @@ export default function BingoPage() {
       playBingoLine()
     }
   }, [lines, tour.bingo.lines])
+
+  /*
+    남은 뽑기 — 두 번째 줄부터 한 줄에 한 번.
+
+    상태로 따로 저장하지 않고 '완성한 줄 수'와 '연 칸 수'의 차이로 센다.
+    저장하면 그 값이 줄 수와 어긋나는 순간 어느 쪽이 참인지 알 수 없다.
+  */
+  const drawsLeft = Math.max(0, lines - 1 - tour.gachaDrawn.length)
+
+  /**
+   * 한 칸이 열렸다 — 기록하고, 상품이 포인트면 그 자리에서 적립한다.
+   *
+   * 굿즈·디지털 상품은 목록에만 남는다(나의 기록). 실물은 안내소에서
+   * 사람이 건네는 것이라 앱이 할 일이 여기까지다.
+   */
+  const handleDrawn = (slot: number, prize: GachaPrize) => {
+    markGachaDrawn(slot)
+    logEvent('gacha_drawn', { id: prize.id, tier: prize.tier, slot })
+    if (prize.kind === 'points' && prize.points) {
+      // refId에 칸 번호를 넣는다 — 같은 상품을 두 번 뽑아도 각각 적립된다
+      void awardCampaign(`gacha-${slot}`, prize.points)
+    }
+  }
 
   /*
     2막 여는 대사(B6_0)가 끝나면 안내를 한 번 띄운다.
@@ -257,6 +296,35 @@ export default function BingoPage() {
           </div>
         )}
 
+        {/*
+          뽑기 안내 — 남았을 때만 뜬다.
+
+          보드 위에 둔다. 줄을 채운 직후에 눈이 가는 곳이 보드 상단이고,
+          아래에 두면 스크롤을 내리지 않은 사람은 뽑기가 있는 줄도 모른다.
+        */}
+        {drawsLeft > 0 && (
+          <button
+            onClick={() => setGachaOpen(true)}
+            className="mb-4 flex w-full items-center gap-3 rounded-xl border-2 border-sunset-yellow bg-paper px-4 py-3 text-left active:scale-[0.99]"
+            style={{ animation: 'slideUp 0.4s ease-out' }}
+          >
+            <span className="text-[26px]" aria-hidden>
+              🎁
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13.5px] font-bold text-ink">
+                골목 뽑기 {drawsLeft}회 남았어요
+              </span>
+              <span className="block font-mono-retro text-[10.5px] text-ink-60">
+                빙고 한 줄에 한 번 — 50칸 중 하나가 열립니다
+              </span>
+            </span>
+            <span className="shrink-0 font-mono-retro text-[11px] text-teal-dk">
+              열기 ▶
+            </span>
+          </button>
+        )}
+
         {/* 보드 */}
         <div className="card-paper mb-5 p-3 shadow-lg">
           <div className="grid grid-cols-5 gap-1.5">
@@ -346,6 +414,15 @@ export default function BingoPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* 뽑기 — 다른 창보다 위에 뜬다. 지금 하는 일이 이것이다 */}
+      {gachaOpen && (
+        <GachaSheet
+          drawn={tour.gachaDrawn}
+          onDrawn={handleDrawn}
+          onClose={() => setGachaOpen(false)}
+        />
       )}
 
       {pendingCell && (
