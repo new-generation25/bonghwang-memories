@@ -211,6 +211,36 @@ const ORIGIN = process.argv.includes('--origin')
   ? process.argv[process.argv.indexOf('--origin') + 1]
   : 'https://bonghwang-memories.vercel.app'
 
+/**
+ * 시드 스니펫에 넣을 Firebase 설정.
+ *
+ * 콘솔에서 gstatic으로 불러오는 SDK는 페이지 번들의 SDK와 다른 모듈
+ * 인스턴스라 앱 등록부를 공유하지 않는다 — getFirestore()가 "앱이 없다"고
+ * 한다. 그래서 스니펫이 자기 앱을 따로 세워야 하고, 그러려면 설정이 있어야
+ * 한다. 값은 NEXT_PUBLIC_*이라 이미 클라이언트 번들에 들어 있는 공개값이다.
+ *
+ * 앱 이름이 같으면(기본값) Auth가 IndexedDB에 남은 세션을 그대로 복원하므로
+ * 관리자로 로그인한 상태가 이어진다.
+ */
+function firebaseConfig() {
+  const p = path.join(ROOT, '.env.local')
+  if (!fs.existsSync(p)) return null
+  const env = {}
+  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line)
+    if (m) env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '')
+  }
+  const cfg = {
+    apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  }
+  return cfg.apiKey && cfg.projectId ? cfg : null
+}
+
 const catalog = readCatalog()
 fs.mkdirSync(OUT, { recursive: true })
 
@@ -244,15 +274,27 @@ fs.writeFileSync(TOKENS, JSON.stringify(kept, null, 2))
   않으려고 서버에서 심지 않고, 관리자로 로그인한 브라우저 콘솔에 붙여넣는
   방식을 쓴다 — seed-demo.mjs와 같은 결이다.
 
-  staffUids는 비워 둔다. 가게 계정을 앱 회원가입으로 만든 뒤 콘솔에서
-  uid를 복사해 채운다 — 그때까지 그 가게는 보조 경로를 쓸 수 없다.
+  staffUids는 make-shop-accounts.mjs가 남긴 accounts.json에서 가져온다.
+  계정을 아직 안 만들었으면 빈칸으로 나오고, 그 가게는 보조 경로를 못 쓴다.
 */
+const accountsPath = path.join(OUT, 'accounts.json')
+const accounts = fs.existsSync(accountsPath)
+  ? JSON.parse(fs.readFileSync(accountsPath, 'utf8'))
+  : {}
+const staffOf = (shopId) => accounts[`shop${shopId}`]?.uid ?? ''
+
+const cfg = firebaseConfig()
 const seed = `// 봉황 메모리즈 — 가게 문서 심기
-// 관리자(socialceos@gmail.com)로 로그인한 탭의 콘솔에 붙여넣는다.
-// ★ STAFF의 빈칸을 가게 계정 uid로 채운 뒤 실행할 것.
+//
+// 관리자(socialceos@gmail.com)로 로그인한 "앱" 탭의 콘솔에 붙여넣는다.
+// (Firebase 콘솔 화면이 아니라 bonghwang-memories.vercel.app 또는 localhost:3000)
+//
+// 크롬이 붙여넣기를 막으면 콘솔에 allow pasting 을 직접 타이핑하고 Enter.
+
+const CFG = ${JSON.stringify(cfg ?? { apiKey: '★ .env.local을 찾지 못했다' }, null, 2)}
 
 const STAFF = {
-${shops.map((s) => `  ${s.shopId}: [''],   // ${s.name} — shop${s.shopId} 계정 uid`).join('\n')}
+${shops.map((s) => `  ${s.shopId}: ['${staffOf(s.shopId)}'],   // ${s.name}`).join('\n')}
 }
 
 const SHOPS = ${JSON.stringify(
@@ -269,16 +311,30 @@ const SHOPS = ${JSON.stringify(
   2
 )}
 
-const { getFirestore, doc, setDoc } = await import(
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js'
-)
-const db = getFirestore()
+// 여기서 불러오는 SDK는 페이지 번들의 것과 다른 모듈 인스턴스라 앱 등록부를
+// 공유하지 않는다 — getFirestore()가 "앱이 없다"고 한다. 그래서 앱을 따로
+// 세운다. 이름이 같아 Auth는 남아 있는 로그인 세션을 그대로 복원한다.
+const V = 'https://www.gstatic.com/firebasejs/10.12.0'
+const { initializeApp, getApps } = await import(V + '/firebase-app.js')
+const { getAuth, onAuthStateChanged } = await import(V + '/firebase-auth.js')
+const { getFirestore, doc, setDoc } = await import(V + '/firebase-firestore.js')
+
+const app = getApps()[0] || initializeApp(CFG)
+const auth = getAuth(app)
+const user = auth.currentUser || await new Promise((res) => {
+  const off = onAuthStateChanged(auth, (u) => { off(); res(u) })
+})
+if (!user) throw new Error('로그인이 확인되지 않는다. 앱에서 관리자로 로그인한 뒤 다시 실행할 것.')
+console.log('로그인:', user.email)
+
+const db = getFirestore(app)
 for (const s of SHOPS) {
-  const staffUids = STAFF[s.shopId].filter(Boolean)
+  const staffUids = (STAFF[s.shopId] || []).filter(Boolean)
   if (!staffUids.length) console.warn(s.shopId + ': staffUids가 비었다 — 보조 경로를 못 쓴다')
   await setDoc(doc(db, 'shops', s.shopId), { ...s, staffUids })
   console.log('OK', s.shopId, s.name)
 }
+console.log('끝 — 가게 ' + SHOPS.length + '곳')
 `
 fs.writeFileSync(path.join(OUT, 'seed.txt'), seed)
 
