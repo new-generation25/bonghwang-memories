@@ -26,7 +26,6 @@ import {
 } from './cues'
 import {
   addCoupon,
-  awardFragment,
   completeTrack,
   getTourState,
   mutateTour,
@@ -599,9 +598,7 @@ function finishCue(cue: Cue) {
 
 /** 상태를 바꾸는 지시자는 여기서 처리하고, 연출 지시자는 이벤트로 흘린다 */
 function runDirective(directive: UiDirective, cueId: CueId) {
-  if (directive.startsWith('fragment_award:')) {
-    awardFragment(directive.slice('fragment_award:'.length) as never)
-  } else if (directive.startsWith('coupon:')) {
+  if (directive.startsWith('coupon:')) {
     addCoupon(directive.slice('coupon:'.length))
   } else if (directive.startsWith('track_check:')) {
     const track = parseInt(directive.slice('track_check:'.length), 10)
@@ -700,7 +697,10 @@ export function dispatchTap(tap: TapId): boolean {
   if (tap === 'CALL') {
     logEvent('call_started')
   } else if (tap === 'BSIDE') {
-    logEvent('bside_played', { frag_count: getTourState().fragments.length })
+    // 소원 몇 개를 이루고 B면을 열었나 — 조각이 사라져 트랙 완료로 센다(1~4)
+    logEvent('bside_played', {
+      wish_count: getTourState().tracksCompleted.filter((t) => t <= 4).length,
+    })
   }
   const cue = findCueByTap(tap, getTourState().currentTrack)
   if (!cue) return false

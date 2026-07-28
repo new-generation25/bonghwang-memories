@@ -9,7 +9,7 @@
  * 읽고, 새 코드는 절대 쓰지 않는다.
  */
 
-import type { CueId, FragmentId } from './cues'
+import type { CueId } from './cues'
 
 export type TourPhase = 'landing' | 'intro' | 'act1' | 'act2' | 'done'
 
@@ -32,7 +32,11 @@ export interface TourPhoto {
 export interface TourState {
   phase: TourPhase
   currentTrack: 0 | 1 | 2 | 3 | 4 | 5
-  fragments: FragmentId[]
+  /*
+    '기억의 조각'은 없어졌다 — 조각은 트랙 완료와 같은 큐에서 지급돼
+    tracksCompleted ∩ [1..4]와 늘 같았다. J-카드(F-1)가 트랙 완료에서
+    직접 파생하므로 상태를 따로 두지 않는다.
+  */
   tracksCompleted: number[]
   /** D7: Track 1 종료(C1_5) 후 casual 고정 */
   speechMode: 'formal' | 'casual'
@@ -72,7 +76,6 @@ const STORAGE_KEY = 'bh_tour_v2'
 export const INITIAL_TOUR_STATE: TourState = {
   phase: 'landing',
   currentTrack: 0,
-  fragments: [],
   tracksCompleted: [],
   speechMode: 'formal',
   speechConsent: null,
@@ -175,13 +178,6 @@ export function restartTour(): TourState {
 // 자주 쓰는 파생·조작 헬퍼
 // ---------------------------------------------------------------------------
 
-export function awardFragment(fragment: FragmentId) {
-  mutateTour((prev) =>
-    prev.fragments.includes(fragment)
-      ? {}
-      : { fragments: [...prev.fragments, fragment] }
-  )
-}
 
 export function addCoupon(coupon: string) {
   mutateTour((prev) =>

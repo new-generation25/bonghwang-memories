@@ -97,7 +97,6 @@ export function mergeTour(local: TourState, remote: Partial<SyncedTour>): Partia
       local.currentTrack,
       remote.currentTrack ?? 0
     ) as TourState['currentTrack'],
-    fragments: union(local.fragments, remote.fragments ?? []),
     coupons: union(local.coupons, remote.coupons ?? []),
     // 반말 전환은 한 번 넘어가면 되돌리지 않는다(D7)
     speechMode:

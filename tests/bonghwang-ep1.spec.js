@@ -17,7 +17,6 @@ async function seedTour(page, state) {
 const BASE_STATE = {
   phase: 'act1',
   currentTrack: 0,
-  fragments: [],
   tracksCompleted: [],
   speechMode: 'formal',
   bsideEntry: null,
@@ -79,7 +78,7 @@ test.describe('D9 — 스킵 게이트', () => {
 })
 
 test.describe('Track 1 — QR 수동 코드 → M1 → 말투 전환(D7)', () => {
-  test('수동 코드 1935 입장 → 개수 7 → 사진 → 조각 1 → NEXT → casual', async ({ page }) => {
+  test('수동 코드 1935 입장 → 개수 7 → 사진 → 소원 1 → NEXT → casual', async ({ page }) => {
     await seedTour(page, { ...BASE_STATE })
     await page.goto('/play?e2e=1')
 
@@ -103,14 +102,13 @@ test.describe('Track 1 — QR 수동 코드 → M1 → 말투 전환(D7)', () =>
     await page.getByRole('button', { name: /모의 사진 촬영하기/ }).click()
     await page.getByRole('button', { name: /소영에게 보내기/ }).click()
 
-    // C1_4 종료 → 출발 버튼, 조각 지급 확인
+    // C1_4 종료 → 출발 버튼, 트랙 완료(=J-카드 줄) 확인
     await expect(page.getByRole('button', { name: /다음으로 출발/ })).toBeVisible({
       timeout: 25000,
     })
     const afterC14 = await page.evaluate(() =>
       JSON.parse(window.localStorage.getItem('bh_tour_v2'))
     )
-    expect(afterC14.fragments).toContain('frag_1')
     expect(afterC14.tracksCompleted).toContain(1)
 
     // NEXT → C1_5 종료 → 반말 전환(D7)
@@ -126,10 +124,9 @@ test.describe('Track 1 — QR 수동 코드 → M1 → 말투 전환(D7)', () =>
 })
 
 test.describe('D10 — 최종 잠금 해제 임계값', () => {
-  test('조각 3개면 해제 가능', async ({ page }) => {
+  test('소원 3개면 해제 가능', async ({ page }) => {
     await seedTour(page, {
       ...BASE_STATE,
-      fragments: ['frag_1', 'frag_2', 'frag_3'],
       tracksCompleted: [1, 2, 3],
       currentTrack: 5,
       lastCueCompleted: 'C5_2',
@@ -137,24 +134,23 @@ test.describe('D10 — 최종 잠금 해제 임계값', () => {
     await page.goto('/track/5?e2e=1')
     // §10 재개 → C5_2 다시 듣기 → 잠금 게이트
     await page.getByRole('button', { name: /마지막 안내 다시 듣기/ }).click()
-    await expect(page.getByRole('button', { name: /조각을 끼워 넣기/ })).toBeVisible({
+    await expect(page.getByRole('button', { name: /이룬 소원 세어보기/ })).toBeVisible({
       timeout: 25000,
     })
   })
 
-  test('조각 2개면 해제 불가', async ({ page }) => {
+  test('소원 2개면 해제 불가', async ({ page }) => {
     await seedTour(page, {
       ...BASE_STATE,
-      fragments: ['frag_1', 'frag_2'],
       tracksCompleted: [1, 2],
       currentTrack: 5,
       lastCueCompleted: 'C5_2',
     })
     await page.goto('/track/5?e2e=1')
     await page.getByRole('button', { name: /마지막 안내 다시 듣기/ }).click()
-    await expect(page.getByText(/조각이 1개 더 필요해요/)).toBeVisible({ timeout: 25000 })
+    await expect(page.getByText(/소원이 1개 더 필요해요/)).toBeVisible({ timeout: 25000 })
     await expect(
-      page.getByRole('button', { name: /조각을 끼워 넣기/ })
+      page.getByRole('button', { name: /이룬 소원 세어보기/ })
     ).toHaveCount(0)
   })
 })
@@ -184,7 +180,6 @@ test.describe('S40 피날레', () => {
       ...BASE_STATE,
       phase: 'done',
       tracksCompleted: [1, 2, 3, 4, 5],
-      fragments: ['frag_1', 'frag_2', 'frag_3', 'frag_4'],
       bingo: { unlocked: true, cellsDone: ['bunsik', 'b02'], lines: 1 },
       bsideEntry: { type: 'text', text: '고마웠어요', uploaded: false },
     })

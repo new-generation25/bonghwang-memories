@@ -8,7 +8,7 @@
  * 이벤트 명세(§11):
  *  purchase, cache_done, call_started, track_arrived{n}, mission_done{id},
  *  bundle_skipped{id}, memo_type{voice|text|skip}, upload_consent,
- *  bside_played{frag_count}, act2_entered, bingo_line{n}, coupon_used{id},
+ *  bside_played{wish_count}, act2_entered, bingo_line{n}, coupon_used{id},
  *  finale_saved, ep2_reserved, review_written
  *
  * 게임 요소 보강(F-7) 추가분:

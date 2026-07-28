@@ -107,7 +107,8 @@ export default function CueDebugPage() {
         </div>
         <p className="mt-1">
           phase={tour.phase} · track={tour.currentTrack} · 말투=
-          {tour.speechMode} · 조각={tour.fragments.length}/4 · 완료=[
+          {tour.speechMode} · 소원=
+          {tour.tracksCompleted.filter((t) => t <= 4).length}/4 · 완료=[
           {tour.tracksCompleted.join(',')}] · 쿠폰={tour.coupons.length} · 빙고=
           {tour.bingo.unlocked ? '개방' : '잠김'}
         </p>

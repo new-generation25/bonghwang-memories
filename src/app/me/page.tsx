@@ -17,6 +17,7 @@ import Navigation from '@/components/Navigation'
 import MyPoints from '@/components/MyPoints'
 import AuthModal from '@/components/AuthModal'
 import CouponCard from '@/components/CouponCard'
+import JCard from '@/components/JCard'
 import SettingsSheet from '@/components/SettingsSheet'
 import { couponSpec } from '@/lib/coupons'
 import { useAuth } from '@/contexts/AuthContext'
@@ -149,6 +150,12 @@ export default function MyRecordPage() {
               </p>
             )}
           </div>
+        </div>
+
+        {/* J-카드 — 케이스 속지의 다섯 소원(F-1). 진행도가 '어디까지'라면
+            이 카드는 '무엇을 위해'다 — 아버지의 손글씨 그대로 상시 노출 */}
+        <div className="mb-5">
+          <JCard />
         </div>
 
         {/* 쿠폰 */}

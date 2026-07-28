@@ -17,7 +17,6 @@
  */
 
 export type StationId = 'intro' | 't1' | 't2' | 't3' | 't4' | 't5'
-export type FragmentId = 'frag_1' | 'frag_2' | 'frag_3' | 'frag_4'
 export type TapId = 'PLAY' | 'CALL' | 'LISTEN' | 'RESUME' | 'ASK' | 'BSIDE' | 'FINISH'
 
 export type ActionId =
@@ -65,7 +64,6 @@ export type UiDirective =
   | 'phase:act2'
   | 'speech_mode:casual'
   | `show_mission:${string}`
-  | `fragment_award:${FragmentId}`
   | `coupon:${string}`
   | `track_check:${1 | 2 | 3 | 4 | 5}`
 
@@ -146,10 +144,6 @@ export const NOTE_PHONE_LABEL = '소영에게 전화 걸기'
 
 /** S22 — 잠금 해제 문구 */
 export const UNLOCK_MESSAGE = 'B면의 마지막 트랙이 발견되었습니다.'
-
-/** S22 — 조각 부족 안내 (D10) */
-export const UNLOCK_SHORT_MESSAGE =
-  '기억의 조각이 부족합니다 — 지나온 소원을 완료해 주세요'
 
 /** S10 — 잠긴 빙고 배지 문구 */
 export const BINGO_LOCKED_MESSAGE = '다섯 소원 후 열립니다'
@@ -345,7 +339,6 @@ export const CUES: Record<CueId, Cue> = {
     ui: [
       'reel_advance',
       'track_check:1',
-      'fragment_award:frag_1',
       'coupon:cp1',
       'speech_mode:casual',
     ],
@@ -391,7 +384,7 @@ export const CUES: Record<CueId, Cue> = {
       { text: '담장이 긴 집인데… 여름마다 담장이 주황색이 됐어.<br>그건 기억나.' },
     ],
     next: null,
-    ui: ['reel_advance', 'track_check:2', 'fragment_award:frag_2', 'coupon:cp2'],
+    ui: ['reel_advance', 'track_check:2', 'coupon:cp2'],
   },
 
   // ============================== TRACK 3 — 능소화 고택 ==============================
@@ -435,7 +428,7 @@ export const CUES: Record<CueId, Cue> = {
       { text: '옛날에 음악다방이었던 자리야.<br>거기 앉아서 틀어보자.' },
     ],
     next: null,
-    ui: ['reel_advance', 'track_check:3', 'fragment_award:frag_3', 'coupon:cp3'],
+    ui: ['reel_advance', 'track_check:3', 'coupon:cp3'],
   },
 
   // ============================== TRACK 4 — 카페 탱자 ==============================
@@ -514,7 +507,7 @@ export const CUES: Record<CueId, Cue> = {
       { text: '마지막 소원이 왜 가족오락관인지는 나도 몰라.<br>아빠가 그 프로를 좋아하긴 했는데.' },
     ],
     next: null,
-    ui: ['reel_advance', 'track_check:4', 'fragment_award:frag_4', 'coupon:cp4'],
+    ui: ['reel_advance', 'track_check:4', 'coupon:cp4'],
   },
 
   // ============================== TRACK 5 — 방하림 ==============================

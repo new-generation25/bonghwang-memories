@@ -1023,32 +1023,6 @@ video::-webkit-media-controls-start-playback-button {
   padding: 0.5rem 0.25rem calc(0.2rem + env(safe-area-inset-bottom));
 }
 
-/* 기억의 조각 슬롯 (S22 잠금 화면) */
-.frag-slot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 0.6rem;
-  border: 2px dashed rgb(var(--ink60) / 0.5);
-  background: rgb(var(--paper) / 0.6);
-  font-size: 1.2rem;
-}
-
-.frag-slot.filled {
-  border-style: solid;
-  border-color: rgb(var(--sunset-yellow));
-  background: rgb(var(--sunset-yellow) / 0.18);
-  animation: frag-pop 0.45s ease;
-}
-
-@keyframes frag-pop {
-  0% { transform: scale(0.6); opacity: 0; }
-  70% { transform: scale(1.12); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
 /* ───────── 카세트 플레이어 (S02 인트로) ─────────
    실물 휴대용 데크를 모사한다: 은색 몸체, 좌측 스피커 그릴,
    상단 우측 창으로 테이프가 '일부만' 보이고, 하단에 피아노 키 열이 붙는다.

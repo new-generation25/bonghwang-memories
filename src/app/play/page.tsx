@@ -11,6 +11,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
+import JCard from '@/components/JCard'
 import Navigation from '@/components/Navigation'
 import QRGate from '@/components/QRGate'
 import { useProximityNotice } from '@/hooks/useProximityNotice'
@@ -191,6 +192,12 @@ export default function PlayerHomePage() {
 
           QR 버튼도 여기 있던 것을 지웠다 — 지금 차례인 소원 옆으로 옮겼다.
         */}
+
+        {/* J-카드 — 케이스 속지의 다섯 소원. 진행 화면에 상시 노출(F-1) */}
+        <div className="mt-5">
+          <JCard />
+        </div>
+
         <button
           onClick={() => router.push('/exploration')}
           className="mt-5 w-full rounded-xl border border-line bg-paper py-3 text-[13px] text-ink"

@@ -22,11 +22,11 @@ import PhotoStep from '@/components/mission/PhotoStep'
 import SpeechAsk from '@/components/cue/SpeechAsk'
 import QuizInput from '@/components/mission/QuizInput'
 import RecorderBside from '@/components/mission/RecorderBside'
-import UnlockGate from '@/components/mission/UnlockGate'
+import JCardGate from '@/components/mission/JCardGate'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { logEvent } from '@/lib/analytics'
-import { CUES, CueId, FragmentId } from '@/lib/cues'
+import { CUES, CueId } from '@/lib/cues'
 import {
   dispatchQr,
   dispatchTap,
@@ -122,15 +122,11 @@ export default function TrackPageClient({ n }: { n: number }) {
    */
   const devEnter = () => {
     const prevTracks = Array.from({ length: n - 1 }, (_, i) => i + 1)
-    const prevFrags = prevTracks
-      .filter((t) => t <= 4)
-      .map((t) => `frag_${t}` as FragmentId)
     mutateTour((prev) => ({
       paid: true,
       audioCacheReady: true,
       phase: 'act1',
       tracksCompleted: prevTracks,
-      fragments: prevFrags,
       speechMode: n >= 2 ? 'casual' : prev.speechMode,
       startTime: prev.startTime ?? Date.now(),
     }))
@@ -307,7 +303,7 @@ export default function TrackPageClient({ n }: { n: number }) {
       case 'record':
         return <RecorderBside />
       case 'unlock':
-        return <UnlockGate />
+        return <JCardGate />
       case 'resume':
         /*
           Track 4 — 정지해둔 자리에서 라디오를 이어 재생 (D9 사용자 탭).

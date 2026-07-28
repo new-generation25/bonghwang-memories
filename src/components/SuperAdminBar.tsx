@@ -26,7 +26,6 @@ import {
 import { STATIONS } from '@/lib/tracks'
 import {
   addCoupon,
-  awardFragment,
   completeTrack,
   getTourState,
   mutateTour,
@@ -35,7 +34,6 @@ import {
 } from '@/lib/tourState'
 import { couponForTrack } from '@/lib/coupons'
 import { award } from '@/lib/points'
-import type { FragmentId } from '@/lib/cues'
 
 /** 거점 다섯 — 넘버링은 카세트 라벨과 같은 A면 표기를 쓴다 */
 const TRACKS = [1, 2, 3, 4, 5] as const
@@ -83,18 +81,13 @@ export default function SuperAdminBar() {
   /**
    * 그 거점까지 걸어온 것으로 친다.
    *
-   * 실제 완주가 주는 것을 빠짐없이 넣는다 — 완료 표시 · 조각 · 쿠폰 ·
-   * 포인트. 처음에는 완료 표시와 조각만 넣었는데, 그러면 쿠폰함이 비고
-   * 포인트가 0이라 인증서와 랭킹이 실제와 다른 숫자를 보여줬다. 절반만
-   * 찬 상태로 시험하면 "인증서에 쿠폰이 왜 없지" 같은 헛다리를 짚는다.
+   * 실제 완주가 주는 것을 빠짐없이 넣는다 — 완료 표시 · 쿠폰 · 포인트.
+   * 절반만 찬 상태로 시험하면 "인증서에 쿠폰이 왜 없지" 같은 헛다리를
+   * 짚는다. J-카드 줄은 트랙 완료에서 파생되므로 따로 채울 것이 없다.
    *
    * 주는 것들은 cueEngine의 runDirective가 큐 종료 때 하는 일과 같다
-   * (fragment_award · coupon · track_check). 값을 여기 다시 적지 않고
-   * 같은 출처(couponForTrack)를 쓴다 — 쿠폰이 바뀌면 함께 바뀐다.
-   *
-   * 조각은 트랙 1~4에서만 나온다(FragmentId가 넷). 트랙 5는 B면 편지로
-   * 이어지는 자리라 조각을 주지 않는다 — 없는 조각을 만들어 넣으면
-   * 피날레에서 개수가 맞지 않는다.
+   * (coupon · track_check). 값을 여기 다시 적지 않고 같은 출처
+   * (couponForTrack)를 쓴다 — 쿠폰이 바뀌면 함께 바뀐다.
    */
   const completeUpTo = (track: number) => {
     for (let t = 1; t <= track; t++) {
@@ -103,7 +96,6 @@ export default function SuperAdminBar() {
         void award(`main-${t}`, 'mainMission')
       }
       completeTrack(t)
-      if (t <= 4) awardFragment(`frag_${t}` as FragmentId)
       const coupon = couponForTrack(t)
       if (coupon) addCoupon(coupon)
     }

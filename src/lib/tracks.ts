@@ -6,7 +6,7 @@
  * 실물이 이미 인쇄되어 있다면 여기 값을 실물에 맞출 것.
  */
 
-import type { ActionId, CueId, FragmentId, StationId } from './cues'
+import type { ActionId, CueId, StationId } from './cues'
 
 export interface Station {
   id: StationId
@@ -48,7 +48,7 @@ export interface TrackMission {
   type: TrackMissionType
   title: string
   /**
-   * count_input: 정답 숫자 / unlock: 필요한 조각 수
+   * count_input: 정답 숫자 / unlock: 필요한 소원(트랙 완료) 수
    * quiz: 정답 글자와, 정답으로 함께 인정할 표기들
    */
   validation?: {
@@ -59,7 +59,7 @@ export interface TrackMission {
     /** 같은 답으로 받아줄 다른 표기 — 비교는 공백·문장부호를 지우고 한다 */
     accept?: string[]
   }
-  reward?: { fragment?: FragmentId; coupon?: string }
+  reward?: { coupon?: string }
   /** 완료 시 큐 엔진에 발화하는 액션 */
   onCompleteAction: ActionId
 }
@@ -207,15 +207,14 @@ export function stationByManualCode(code: string): Station | null {
 // 트랙 미션 (§8)
 // ---------------------------------------------------------------------------
 
-/** 최종 잠금 해제에 필요한 기억의 조각 수 (D10 — 1미션 실패 허용) */
+/**
+ * B면 해제에 필요한 소원 수 — J-카드 줄(트랙 1~4 완료) 기준
+ * (D10 — 1미션 실패 허용)
+ */
 export const UNLOCK_THRESHOLD = 3
 
-export const ALL_FRAGMENTS: FragmentId[] = [
-  'frag_1',
-  'frag_2',
-  'frag_3',
-  'frag_4',
-]
+/** J-카드에서 참여자가 채울 수 있는 줄 — 다섯째 소원은 아버지의 몫이다 */
+export const JCARD_FILLABLE_TRACKS = [1, 2, 3, 4]
 
 export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
   M1: {
@@ -232,7 +231,7 @@ export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
     track: 1,
     type: 'photo',
     title: '풍선초 앞 인증샷',
-    reward: { fragment: 'frag_1', coupon: 'cp1' },
+    reward: { coupon: 'cp1' },
     onCompleteAction: 'M1_photo_done',
   },
   M2: {
@@ -240,7 +239,7 @@ export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
     track: 2,
     type: 'photo',
     title: '바나나우유 인증샷',
-    reward: { fragment: 'frag_2', coupon: 'cp2' },
+    reward: { coupon: 'cp2' },
     onCompleteAction: 'M2_photo_done',
   },
   M3: {
@@ -248,7 +247,7 @@ export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
     track: 3,
     type: 'ar_photo',
     title: '능소화 다시 피우기',
-    reward: { fragment: 'frag_3', coupon: 'cp3' },
+    reward: { coupon: 'cp3' },
     onCompleteAction: 'M3_photo_done',
   },
   /*
@@ -275,7 +274,7 @@ export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
     track: 4,
     type: 'record',
     title: '나의 육십 초 — 음성 메모',
-    reward: { fragment: 'frag_4', coupon: 'cp4' },
+    reward: { coupon: 'cp4' },
     onCompleteAction: 'M4_done',
   },
   M5a: {
@@ -292,9 +291,8 @@ export const TRACK_MISSIONS: Record<TrackMission['id'], TrackMission> = {
     title: 'B면의 마지막 트랙',
     validation: { threshold: UNLOCK_THRESHOLD },
     /*
-      조각은 주지 않는다 — FragmentId가 넷이고 트랙 5는 그 조각들을
-      끼워 넣는 자리다. 쿠폰은 준다. 방하림에 실제로 다녀왔기 때문이고,
-      이 값이 있어야 슈퍼관리자의 '여기까지 완료 처리'도 cp5를 찾는다.
+      쿠폰은 준다. 방하림에 실제로 다녀왔기 때문이고, 이 값이 있어야
+      슈퍼관리자의 '여기까지 완료 처리'도 cp5를 찾는다.
     */
     reward: { coupon: 'cp5' },
     onCompleteAction: 'unlock_done',
