@@ -96,18 +96,6 @@ export default function BingoPage() {
         void award(`bingo-line-${i}`, 'treasureLine')
         logEvent('bingo_line', { n: i })
       }
-      /*
-        첫 줄에 다섯 장.
-
-        '줄이 0에서 1이 된 순간'이 아니라 '한 줄이라도 있으면'으로 본다.
-        전자로 두면 이미 줄을 채운 채 이 판이 배포된 사람은 영영 못 받는다 —
-        실제로 검수 계정이 그 상태였다. addCoupon이 중복을 막으므로 매번
-        불려도 목록은 다섯 장 그대로다.
-      */
-      if (lines >= 1) {
-        for (const id of Object.keys(COUPONS)) addCoupon(id)
-        logEvent('coupon_granted', { by: 'bingo_first_line', n: 5 })
-      }
       mutateTour((prev) => ({ bingo: { ...prev.bingo, lines } }))
       /*
         여러 줄이 한꺼번에 완성돼도 한 번만 낸다 — 같은 소리를 겹쳐 내면
@@ -116,6 +104,24 @@ export default function BingoPage() {
       playBingoLine()
     }
   }, [lines, tour.bingo.lines])
+
+  /*
+    첫 줄에 가게 쿠폰 다섯 장.
+
+    줄 수가 '늘어난 순간'을 보지 않는다. 그 안에 두면 이미 줄을 채운 채
+    이 판을 받은 사람은 영영 못 받는다 — 검수 계정이 빙고 8줄에 쿠폰
+    넉 장인 상태로 걸렸다. 지금은 '한 줄이라도 있는데 빠진 장이 있으면
+    채운다'로 본다. 다 가지고 있으면 아무 일도 하지 않는다.
+  */
+  useEffect(() => {
+    if (lines < 1) return
+    const missing = Object.keys(COUPONS).filter(
+      (id) => !tour.coupons.includes(id)
+    )
+    if (missing.length === 0) return
+    for (const id of missing) addCoupon(id)
+    logEvent('coupon_granted', { by: 'bingo_first_line', n: missing.length })
+  }, [lines, tour.coupons])
 
   /*
     남은 뽑기 — 두 번째 줄부터 한 줄에 한 번.

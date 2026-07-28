@@ -415,6 +415,65 @@ test.describe('S30 빙고 — 대각선은 다섯 소원이 채운다', () => {
     // 첫 줄은 뽑기가 아니다
     await expect(page.getByText(/골목 뽑기/)).toHaveCount(0)
   })
+
+  /*
+    이 판이 배포되기 전에 이미 줄을 채워둔 사람.
+
+    '줄 수가 늘어난 순간'에만 쿠폰을 주면 이 사람은 영영 못 받는다 —
+    실제로 검수 계정이 빙고 8줄에 쿠폰 넉 장인 채로 걸렸다. 두 번 놓친
+    자리라 못박아 둔다.
+  */
+  test('이미 줄을 채운 채 들어와도 빠진 쿠폰을 채운다', async ({ page }) => {
+    await seedTour(page, {
+      ...BASE_STATE,
+      phase: 'act2',
+      tracksCompleted: [1, 2, 3, 4, 5],
+      speechMode: 'casual',
+      bingo: {
+        unlocked: true,
+        cellsDone: ['bunsik', 'b02', 'byeokhwa', 'b04'],
+        lines: 2,
+      },
+      coupons: ['cp1', 'cp2'],
+    })
+    await page.goto('/treasure?e2e=1')
+
+    await expect
+      .poll(
+        async () =>
+          (
+            await page.evaluate(() =>
+              JSON.parse(window.localStorage.getItem('bh_tour_v2'))
+            )
+          ).coupons,
+        { timeout: 15000 }
+      )
+      .toEqual(expect.arrayContaining(['cp1', 'cp2', 'cp3', 'cp4', 'cp5']))
+  })
+
+  test("카탈로그에 없는 옛 'bingo-line-N'은 걸러진다", async ({ page }) => {
+    await seedTour(page, {
+      ...BASE_STATE,
+      phase: 'act2',
+      tracksCompleted: [1, 2, 3, 4, 5],
+      speechMode: 'casual',
+      bingo: { unlocked: true, cellsDone: [], lines: 1 },
+      coupons: ['cp1', 'bingo-line-1', 'bingo-line-2'],
+    })
+    await page.goto('/treasure?e2e=1')
+
+    await expect
+      .poll(
+        async () =>
+          (
+            await page.evaluate(() =>
+              JSON.parse(window.localStorage.getItem('bh_tour_v2'))
+            )
+          ).coupons.filter((c) => c.startsWith('bingo-line')),
+        { timeout: 15000 }
+      )
+      .toEqual([])
+  })
 })
 
 test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
