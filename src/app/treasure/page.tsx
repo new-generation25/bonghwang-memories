@@ -96,8 +96,15 @@ export default function BingoPage() {
         void award(`bingo-line-${i}`, 'treasureLine')
         logEvent('bingo_line', { n: i })
       }
-      // 첫 줄에 다섯 장. addCoupon이 중복을 막으므로 여러 번 불려도 안전하다
-      if (lines >= 1 && tour.bingo.lines < 1) {
+      /*
+        첫 줄에 다섯 장.
+
+        '줄이 0에서 1이 된 순간'이 아니라 '한 줄이라도 있으면'으로 본다.
+        전자로 두면 이미 줄을 채운 채 이 판이 배포된 사람은 영영 못 받는다 —
+        실제로 검수 계정이 그 상태였다. addCoupon이 중복을 막으므로 매번
+        불려도 목록은 다섯 장 그대로다.
+      */
+      if (lines >= 1) {
         for (const id of Object.keys(COUPONS)) addCoupon(id)
         logEvent('coupon_granted', { by: 'bingo_first_line', n: 5 })
       }

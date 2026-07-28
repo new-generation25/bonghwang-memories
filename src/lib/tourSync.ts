@@ -20,7 +20,7 @@
 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, isFirebaseReady } from './firebase'
-import { allCouponSerials, mergeCouponSerials } from './coupons'
+import { COUPONS, allCouponSerials, mergeCouponSerials } from './coupons'
 import {
   TourState,
   getTourState,
@@ -97,7 +97,14 @@ export function mergeTour(local: TourState, remote: Partial<SyncedTour>): Partia
       local.currentTrack,
       remote.currentTrack ?? 0
     ) as TourState['currentTrack'],
-    coupons: union(local.coupons, remote.coupons ?? []),
+    /*
+      카탈로그에 없는 id는 여기서도 턴다. 로컬을 털어도 서버 사본에 남아
+      있으면 합치는 순간 되살아난다 — 빙고 줄을 쿠폰이라고 넣던 시절의
+      `bingo-line-N`이 그렇게 돌아왔다.
+    */
+    coupons: union(local.coupons, remote.coupons ?? []).filter((id) =>
+      Boolean(COUPONS[id])
+    ),
     // 뽑기로 연 칸 — 합집합이면 기기를 바꿔도 받은 상품이 사라지지 않는다
     gachaDrawn: union(local.gachaDrawn, remote.gachaDrawn ?? []),
     // 반말 전환은 한 번 넘어가면 되돌리지 않는다(D7)

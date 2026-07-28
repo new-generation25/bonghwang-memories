@@ -9,6 +9,7 @@
  * 읽고, 새 코드는 절대 쓰지 않는다.
  */
 
+import { COUPONS } from './coupons'
 import type { CueId } from './cues'
 
 export type TourPhase = 'landing' | 'intro' | 'act1' | 'act2' | 'done'
@@ -113,7 +114,17 @@ function load(): TourState {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<TourState>
-      return { ...INITIAL_TOUR_STATE, ...parsed }
+      const merged = { ...INITIAL_TOUR_STATE, ...parsed }
+      /*
+        카탈로그에 없는 쿠폰 id를 걸러낸다.
+
+        빙고 줄마다 `bingo-line-N`을 쿠폰이라고 넣던 시절이 있었다. 화면은
+        couponSpec()이 null이면 그리지 않아 눈에 띄지 않았지만, 그 값들이
+        기기에 그대로 남아 관리자 통계의 '쿠폰 수'를 줄 수만큼 부풀렸다.
+        읽을 때 한 번 털어내면 다음 저장부터 사라진다.
+      */
+      merged.coupons = merged.coupons.filter((id) => Boolean(COUPONS[id]))
+      return merged
     }
   } catch {
     // 손상된 저장값은 무시하고 초기화
