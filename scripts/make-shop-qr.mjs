@@ -283,6 +283,32 @@ const accounts = fs.existsSync(accountsPath)
   : {}
 const staffOf = (shopId) => accounts[`shop${shopId}`]?.uid ?? ''
 
+/*
+  관리자 화면(/admin)의 '가게 문서 심기' 칸에 붙여넣을 값.
+
+  개발자도구 콘솔은 크롬이 붙여넣기를 막고(자기 계정을 넘기는 수법이
+  흔해서다), 거기서 불러오는 SDK는 페이지의 것과 달라 앱을 또 세워야 한다.
+  일반 입력창에 붙여넣으면 둘 다 없다 — 페이지가 이미 관리자로 로그인해
+  있으므로 그 세션으로 그대로 쓴다.
+*/
+fs.writeFileSync(
+  path.join(OUT, 'shops.json'),
+  JSON.stringify(
+    shops.map((s) => ({
+      shopId: s.shopId,
+      name: s.name,
+      couponId: s.couponId,
+      benefit: s.benefit,
+      unitWon: s.unitWon,
+      postToken: s.postToken,
+      staffUids: [staffOf(s.shopId)].filter(Boolean),
+      active: true,
+    })),
+    null,
+    2
+  )
+)
+
 const cfg = firebaseConfig()
 const seed = `// 봉황 메모리즈 — 가게 문서 심기
 //
@@ -349,4 +375,5 @@ console.log('\n다음 —')
 console.log('  1. shop-qr/{가게}.html 을 A5로 인쇄해 카운터에 붙인다')
 console.log('  2. shop-qr/{가게}-guide.html 을 A4로 인쇄해 사장님께 드린다')
 console.log('     (아이디·비밀번호 빈칸은 손으로 적어 건넨다)')
-console.log('  3. shop-qr/seed.txt 의 STAFF를 가게 계정 uid로 채워 콘솔에 붙여넣는다')
+console.log('  3. shop-qr/shops.json 을 /admin 의 「가게 문서 심기」 칸에 붙여넣는다')
+console.log('     (seed.txt는 콘솔로 하던 옛 방식 — 크롬이 붙여넣기를 막아 잘 안 된다)')

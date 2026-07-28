@@ -19,17 +19,23 @@
  * 아래의 선조회(getDoc)는 '이미 사용됨'을 예쁘게 보여주기 위한 것일 뿐이다.
  */
 
+import { deleteApp, getApp, initializeApp } from 'firebase/app'
+import { createUserWithEmailAndPassword, getAuth, updateProfile } from 'firebase/auth'
 import {
+  arrayRemove,
+  arrayUnion,
   collection,
   doc,
   getDoc,
   getDocs,
+  getFirestore,
   limit as fsLimit,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
   Timestamp,
+  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
@@ -46,6 +52,12 @@ export interface Shop {
   unitWon: number
   staffUids: string[]
   active: boolean
+  /**
+   * 카운터 스티커에 박힌 값. 참여자에게는 절대 닿지 않는다 — 규칙이
+   * shops 읽기를 관리자와 그 가게 직원에게만 연다.
+   * 관리자 화면이 스티커를 다시 뽑을 때 보려고 담아둔다.
+   */
+  postToken?: string
 }
 
 export interface ShopUse {
@@ -234,4 +246,147 @@ export async function isCouponUsed(code: string): Promise<boolean> {
 /** 가게 이름 — 사용 기록에는 표시 문자열을 남기지 않으므로 여기서 만든다 */
 export function shopName(shopId: string): string {
   return COUPONS[shopId]?.shop ?? shopId
+}
+
+/**
+ * 가게 문서 심기 — 관리자만.
+ *
+ * postToken이 들어 있어 코드에 박아둘 수 없다(클라이언트 번들은 누구나 읽는다).
+ * 그렇다고 콘솔에 붙여넣게 하면 크롬이 막고, 거기서 불러오는 SDK는 페이지의
+ * 것과 달라 앱을 또 세워야 한다. 관리자 화면의 입력칸으로 받으면 둘 다 없다 —
+ * 이미 관리자로 로그인한 세션이 그대로 쓴다.
+ *
+ * 값은 scripts/make-shop-qr.mjs가 shop-qr/shops.json으로 뽑는다.
+ */
+export async function seedShops(raw: string): Promise<{ ok: string[]; fail: string[] }> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+
+  let list: unknown
+  try {
+    list = JSON.parse(raw)
+  } catch {
+    throw new Error('JSON 형식이 아닙니다. shops.json을 통째로 붙여넣었는지 보세요.')
+  }
+  if (!Array.isArray(list)) throw new Error('배열이어야 합니다. shops.json 전체를 붙여넣으세요.')
+
+  const ok: string[] = []
+  const fail: string[] = []
+
+  for (const item of list as Shop[]) {
+    // 규칙이 대조하는 값들이라 하나만 비어도 나중에 사용 처리가 통째로 막힌다
+    if (!item?.shopId || !item?.couponId || !item?.postToken) {
+      fail.push(`${item?.shopId ?? '?'} — shopId·couponId·postToken 중 빠진 값`)
+      continue
+    }
+    try {
+      await setDoc(doc(db, 'shops', item.shopId), {
+        shopId: item.shopId,
+        name: item.name ?? item.shopId,
+        couponId: item.couponId,
+        benefit: item.benefit ?? '',
+        unitWon: Number(item.unitWon ?? 0),
+        postToken: item.postToken,
+        staffUids: Array.isArray(item.staffUids) ? item.staffUids.filter(Boolean) : [],
+        active: item.active !== false,
+      })
+      ok.push(`${item.shopId} ${item.name ?? ''}`)
+    } catch (err) {
+      const code = (err as { code?: string })?.code ?? ''
+      fail.push(`${item.shopId} — ${code || '쓰지 못했습니다'}`)
+    }
+  }
+  return { ok, fail }
+}
+
+// ---------------------------------------------------------------------------
+// 관리자 — 가게 관리
+// ---------------------------------------------------------------------------
+
+/** 가게 전부. 규칙상 관리자만 목록을 볼 수 있다 */
+export async function fetchAllShops(): Promise<Shop[]> {
+  if (!db) return []
+  const snap = await getDocs(query(collection(db, 'shops'), orderBy('shopId')))
+  return snap.docs.map((d) => d.data() as Shop)
+}
+
+/** 문 닫은 가게는 사용 처리를 막는다 — 규칙이 active를 본다 */
+export async function setShopActive(shopId: string, active: boolean): Promise<void> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+  await updateDoc(doc(db, 'shops', shopId), { active })
+}
+
+export async function removeShopStaff(shopId: string, uid: string): Promise<void> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+  await updateDoc(doc(db, 'shops', shopId), { staffUids: arrayRemove(uid) })
+}
+
+/** auth.ts의 ID_DOMAIN과 같아야 한다 — 앱이 아이디를 이 꼴로 바꿔 저장한다 */
+const ID_DOMAIN = 'bonghwang.local'
+
+/**
+ * 가게 계정을 만들고 그 가게 직원으로 등록한다.
+ *
+ * 보조 앱 인스턴스를 따로 세우는 이유가 있다. 기본 인스턴스로 계정을 만들면
+ * Firebase Auth가 **새 사용자로 로그인을 갈아치운다** — 관리자가 자기 화면에서
+ * 로그아웃되는 셈이다. 보조 인스턴스는 세션이 따로라 본 화면이 흔들리지 않는다.
+ *
+ * 프로필 문서는 규칙이 isOwner를 요구하므로 그 보조 세션으로 써야 한다.
+ * staffUids에 넣는 것은 관리자만 할 수 있으니 본 세션으로 쓴다.
+ */
+export async function createShopAccount(opts: {
+  loginId: string
+  password: string
+  nickname: string
+  shopId: string
+}): Promise<string> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+
+  const loginId = opts.loginId.trim().toLowerCase()
+  if (!/^[a-zA-Z0-9_]{4,20}$/.test(loginId)) {
+    throw new Error('아이디는 영문·숫자·밑줄 4~20자입니다.')
+  }
+  if (opts.password.length < 6) throw new Error('비밀번호는 6자 이상이어야 합니다.')
+  const nickname = opts.nickname.trim()
+  if (nickname.length < 2 || nickname.length > 12) {
+    throw new Error('가게 이름(닉네임)은 2~12자입니다.')
+  }
+
+  const secondary = initializeApp(getApp().options, `shop-${Date.now()}`)
+  try {
+    const cred = await createUserWithEmailAndPassword(
+      getAuth(secondary),
+      `${loginId}@${ID_DOMAIN}`,
+      opts.password
+    )
+    const uid = cred.user.uid
+    await updateProfile(cred.user, { displayName: nickname })
+
+    await setDoc(doc(getFirestore(secondary), 'users', uid), {
+      uid,
+      loginId,
+      nickname,
+      nicknameKey: nickname.toLowerCase(),
+      provider: 'password',
+      totalScore: 0,
+      completedMissions: [],
+      createdAt: serverTimestamp(),
+      lastUpdated: serverTimestamp(),
+    })
+
+    // 관리자 세션으로 — 가게 문서는 관리자만 고칠 수 있다
+    await updateDoc(doc(db, 'shops', opts.shopId), { staffUids: arrayUnion(uid) })
+    return uid
+  } catch (err) {
+    const code = (err as { code?: string })?.code ?? ''
+    if (code === 'auth/email-already-in-use') {
+      throw new Error('이미 있는 아이디입니다. 다른 아이디를 쓰거나, 아래 목록에서 확인하세요.')
+    }
+    if (code === 'not-found') {
+      throw new Error('그 가게 문서가 아직 없습니다. 먼저 「가게 문서 심기」를 하세요.')
+    }
+    throw new Error(code || (err instanceof Error ? err.message : '계정을 만들지 못했습니다.'))
+  } finally {
+    // 보조 세션을 남겨두면 다음 작업에서 누구로 쓰는지 헷갈린다
+    await deleteApp(secondary).catch(() => {})
+  }
 }
