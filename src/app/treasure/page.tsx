@@ -26,28 +26,17 @@ import { bingoOpen, useSuperAdmin } from '@/lib/superAdmin'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { playBingoLine } from '@/lib/sfx'
-import {
-  markBingoCell,
-  markGachaDrawn,
-  mutateTour,
-} from '@/lib/tourState'
-import GachaSheet from '@/components/GachaSheet'
-import { gachaSeed, type GachaPrize } from '@/lib/gacha'
-import { useAuth } from '@/contexts/AuthContext'
+import { markBingoCell, mutateTour } from '@/lib/tourState'
 import {
   POINT_TABLE,
   POINTS_EVENT,
   award,
-  awardCampaign,
   localPointTotal,
 } from '@/lib/points'
 import { logEvent } from '@/lib/analytics'
 
 export default function BingoPage() {
   const tour = useTourState()
-  const { profile } = useAuth()
-  /** 판 배치를 정하는 시드 — 계정마다 판이 다르게 섞인다 */
-  const seed = gachaSeed(profile?.uid, tour.startTime)
   // 모드를 켜면 잠금 화면이 그 자리에서 열려야 한다
   useSuperAdmin()
   const cueState = useCue()
@@ -56,7 +45,6 @@ export default function BingoPage() {
   const [confirmFinish, setConfirmFinish] = useState(false)
   /** 2막 여는 대사가 끝난 직후 한 번 띄우는 안내 */
   const [welcome, setWelcome] = useState(false)
-  const [gachaOpen, setGachaOpen] = useState(false)
   /** 방금 받은 이용권 장수 — 줄을 채운 순간에만 잠깐 뜬다 */
   const [ticketToast, setTicketToast] = useState<number | null>(null)
 
@@ -131,31 +119,13 @@ export default function BingoPage() {
     상태로 따로 저장하지 않고 '완성한 줄 수'와 '연 칸 수'의 차이로 센다.
     저장하면 그 값이 줄 수와 어긋나는 순간 어느 쪽이 참인지 알 수 없다 —
     첫 줄 쿠폰에서 그 어긋남으로 두 번 틀렸다.
+
+    **판을 여는 것은 여기가 아니다.** 빙고판은 골목을 걷는 동안 보는
+    화면이고, 뽑기판은 받은 것을 여는 화면이다. 받은 것은 쿠폰·포인트와
+    한자리에 있어야 찾을 수 있어서 「나의 기록」으로 옮겼다. 여기서는
+    **받았다는 사실만** 알리고 그리로 보낸다.
   */
   const drawsLeft = Math.max(0, lines - tour.gachaDrawn.length)
-
-  /**
-   * 한 칸이 열렸다 — 기록하고 상품을 건넨다.
-   *
-   * 쿠폰이면 지갑에 들어간다. 같은 쿠폰이 두 번 나와도 칸 번호가 발급
-   * 순번이 되어 코드가 갈리므로, 지갑에는 칸 번호째로 담는다.
-   * 포인트면 그 자리에서 적립한다 — 쓸 곳이 앱 안이라 지갑에 넣지 않는다.
-   */
-  const handleDrawn = (slot: number, prize: GachaPrize) => {
-    markGachaDrawn(slot)
-    logEvent('gacha_drawn', { id: prize.id, tier: prize.tier, slot })
-    if (prize.kind === 'points' && prize.points) {
-      // refId에 칸 번호를 넣는다 — 같은 상품을 두 번 뽑아도 각각 적립된다
-      void awardCampaign(`gacha-${slot}`, prize.points)
-    } else if (prize.kind === 'coupon' && prize.couponId) {
-      /*
-        지갑에는 따로 담지 않는다 — gachaDrawn(칸 번호)에서 파생시킨다.
-        tour.coupons는 id 집합이라 같은 쿠폰을 두 번 담지 못하는데,
-        칸 번호는 겹치지 않아 두 장을 각각 셀 수 있다.
-      */
-      logEvent('coupon_granted', { by: 'gacha', id: prize.couponId, slot })
-    }
-  }
 
   /*
     2막 여는 대사(B6_0)가 끝나면 안내를 한 번 띄운다.
@@ -322,14 +292,14 @@ export default function BingoPage() {
         )}
 
         {/*
-          뽑기 안내 — 남았을 때만 뜬다.
+          받은 이용권 — 여기서는 알리기만 하고 쓰는 곳으로 보낸다.
 
           보드 위에 둔다. 줄을 채운 직후에 눈이 가는 곳이 보드 상단이고,
-          아래에 두면 스크롤을 내리지 않은 사람은 뽑기가 있는 줄도 모른다.
+          아래에 두면 스크롤을 내리지 않은 사람은 받은 줄도 모른다.
         */}
         {drawsLeft > 0 && (
           <button
-            onClick={() => setGachaOpen(true)}
+            onClick={() => router.push('/me')}
             className="mb-4 flex w-full items-center gap-3 rounded-xl border-2 border-sunset-yellow bg-paper px-4 py-3 text-left active:scale-[0.99]"
             style={{ animation: 'slideUp 0.4s ease-out' }}
           >
@@ -347,11 +317,11 @@ export default function BingoPage() {
                 뽑기 한판 {drawsLeft}장 있어요
               </span>
               <span className="block font-mono-retro text-[10.5px] text-ink-60">
-                한 장을 내면 「추억의 뽑기왕」 판이 열려요
+                「나의 기록」에서 판을 열 수 있어요
               </span>
             </span>
             <span className="shrink-0 font-mono-retro text-[11px] text-teal-dk">
-              쓰기 ▶
+              가기 ▶
             </span>
           </button>
         )}
@@ -464,12 +434,11 @@ export default function BingoPage() {
         </div>
       )}
 
-      {/* 뽑기 — 다른 창보다 위에 뜬다. 지금 하는 일이 이것이다 */}
       {/*
         이용권을 받았다는 알림. 줄을 채운 그 순간에만 뜬다 —
         보상이 조용히 늘어나면 받은 줄도 모른 채 지나간다.
       */}
-      {ticketToast !== null && !gachaOpen && (
+      {ticketToast !== null && (
         <div
           className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center"
           role="status"
@@ -498,23 +467,13 @@ export default function BingoPage() {
                 뽑기 한판을 받았어요
               </p>
               <p className="mt-1 font-mono-retro text-[10.5px] text-ink-60">
-                빙고 {ticketToast}줄 · 「추억의 뽑기왕」에서 쓸 수 있어요
+                빙고 {ticketToast}줄 · 「나의 기록」에서 판을 열어요
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {gachaOpen && (
-        <GachaSheet
-          key={seed}
-          seed={seed}
-          drawn={tour.gachaDrawn}
-          ticketsLeft={drawsLeft}
-          onDrawn={handleDrawn}
-          onClose={() => setGachaOpen(false)}
-        />
-      )}
 
       {pendingCell && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-shell/80 px-6">

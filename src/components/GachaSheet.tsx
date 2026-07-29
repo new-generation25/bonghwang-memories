@@ -304,7 +304,7 @@ export default function GachaSheet({
                   onClick={onClose}
                   className="mt-2 w-full py-2 text-[12.5px] font-bold text-ink-60"
                 >
-                  그만하고 빙고판으로
+                  나중에 뽑을게요
                 </button>
               </>
             ) : (

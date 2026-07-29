@@ -15,6 +15,12 @@
  * 순번이 되어** 코드가 갈리므로(makeCouponCode의 serial), 예전에 가게
  * 쿠폰을 판에서 뺐던 이유(중복 저장 불가)는 사라졌다.
  *
+ * **'협력 카페 공용' 할인권은 판에서 뺐다.** 참여자에게 "어느 카페에서
+ * 쓸 수 있는지"를 카드 한 장으로 설명할 방법이 없고, 협력 가게가 바뀌면
+ * 이미 나간 쿠폰의 뜻이 함께 바뀐다. 그 자리는 봉황 포인트로 바꿨다 —
+ * 값은 확실하고 쓸 곳이 앱 안이라 설명이 필요 없다.
+ * 쿠폰 카탈로그의 `gcCafe`·`gcCafe2`는 남겨 둔다(보너스 미션 보상 후보).
+ *
  * 첫 줄도 이용권이다. 다섯 소원을 다 이루면 대각선이 저절로 채워지므로
  * 2막이 열리는 순간 한 장이 들어온다.
  *
@@ -63,13 +69,13 @@ export const GACHA_PRIZES: GachaPrize[] = [
   },
   {
     id: 'point300',
-    name: '포인트 300P',
+    name: '봉황 포인트 300P',
     emoji: '✨',
     kind: 'points',
     points: 300,
     slots: 8,
     tier: 'common',
-    note: '방금 적립됐어요.',
+    note: '방금 적립됐어요. 빙고로 모으는 그 포인트예요.',
   },
   {
     id: 'gcPostcard',
@@ -82,24 +88,14 @@ export const GACHA_PRIZES: GachaPrize[] = [
     note: '안내소에서 교환하세요.',
   },
   {
-    id: 'gcCafe',
-    name: '카페 공용 1,000원 할인권',
-    emoji: '☕',
-    kind: 'coupon',
-    couponId: 'gcCafe',
-    slots: 6,
-    tier: 'common',
-    note: '협력 카페 어디서나 쓸 수 있어요.',
-  },
-  {
     id: 'point500',
-    name: '포인트 500P',
+    name: '봉황 포인트 500P',
     emoji: '🎧',
     kind: 'points',
     points: 500,
-    slots: 6,
+    slots: 12,
     tier: 'common',
-    note: '방금 적립됐어요.',
+    note: '방금 적립됐어요. 빙고로 모으는 그 포인트예요.',
   },
   {
     id: 'gcBonghwang',
@@ -112,14 +108,14 @@ export const GACHA_PRIZES: GachaPrize[] = [
     note: '봉황1935에서만 쓸 수 있어요.',
   },
   {
-    id: 'gcCafe2',
-    name: '카페 공용 2,000원 할인권',
+    id: 'point1000',
+    name: '봉황 포인트 1,000P',
     emoji: '🧋',
-    kind: 'coupon',
-    couponId: 'gcCafe2',
+    kind: 'points',
+    points: 1000,
     slots: 4,
     tier: 'rare',
-    note: '협력 카페 어디서나 쓸 수 있어요.',
+    note: '방금 적립됐어요. 빙고로 모으는 그 포인트예요.',
   },
   {
     id: 'gcSnack',

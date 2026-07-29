@@ -455,7 +455,15 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
       speechMode: 'casual',
       bingo: TWO_LINES,
     })
+    /*
+      빙고판은 받은 것을 알리기만 하고 「나의 기록」으로 보낸다 —
+      판을 여는 곳은 쿠폰·포인트가 있는 자리여야 한 번에 끝난다.
+    */
     await page.goto('/treasure?e2e=1')
+    const notice = page.getByRole('button', { name: /뽑기 한판 2장 있어요/ })
+    await expect(notice).toBeVisible({ timeout: 15000 })
+    await notice.click()
+    await expect(page).toHaveURL(/\/me/, { timeout: 10000 })
 
     const open = page.getByRole('button', { name: /뽑기 한판 2장 있어요/ })
     await expect(open).toBeVisible({ timeout: 15000 })
@@ -509,11 +517,15 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
     await page.goto('/me?e2e=1')
     await expect(page.getByText('🎟 받은 쿠폰')).toBeVisible({ timeout: 15000 })
 
-    // 지갑에 카드가 하나라도 서야 한다 — 포인트가 뽑혔다면 적립 쪽에 뜬다
-    const walletOrPoints = page
-      .getByText(/쓸 수 있어요|안내소에서 교환|뽑기로 받은 포인트/)
-      .first()
-    await expect(walletOrPoints).toBeVisible({ timeout: 15000 })
+    /*
+      뽑은 것이 어느 한쪽에는 서야 한다 — 쿠폰이면 지갑 카드로, 포인트면
+      적립 쪽으로. 어느 상품이 나오는지는 판 배치(시드)에 달렸으므로
+      상품 이름으로 걸지 않는다. 상품표가 바뀔 때마다 깨지기 때문이다.
+    */
+    const landed = page.locator(
+      'button:has-text("열기"), h2:has-text("뽑기로 받은 포인트")'
+    )
+    await expect(landed.first()).toBeVisible({ timeout: 15000 })
   })
 
   test('판은 50칸 — 상품 slots 합이 모자라면 여기서 드러난다', async ({
@@ -524,9 +536,10 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
       phase: 'act2',
       tracksCompleted: [1, 2, 3, 4, 5],
       speechMode: 'casual',
-      bingo: TWO_LINES,
+      // /me는 줄 판정을 다시 하지 않고 빙고판이 저장해둔 줄 수를 읽는다
+      bingo: { ...TWO_LINES, lines: 2 },
     })
-    await page.goto('/treasure?e2e=1')
+    await page.goto('/me?e2e=1')
     await page.getByRole('button', { name: /뽑기 한판 2장 있어요/ }).click()
 
     await expect(page.getByText(/닫힌 칸/)).toContainText('50', {
