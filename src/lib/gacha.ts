@@ -1,22 +1,25 @@
 /**
- * 골목 뽑기 — 추가 빙고 한 줄마다 한 번.
+ * 추억의 뽑기왕 — 보상의 한가운데.
  *
- * 첫 줄(대각선 = 다섯 소원)은 뽑기가 아니라 가게 쿠폰 다섯 장이 한 번에
- * 나온다. 거점 다섯 곳을 실제로 다녀왔으니 받는 것이고, 어느 가게가
- * 무엇을 내주는지 이미 협의된 값이라 확률에 맡길 것이 아니다.
+ * 흐름이 하나다:
  *
- * 두 번째 줄부터가 뽑기다. 보너스 미션으로 칸을 채워야 완성되는 줄이라,
- * 더 걸은 사람에게 돌아가는 몫이다.
+ *   빙고 한 줄  →  뽑기 한판(이용권)  →  판에서 한 칸  →  쿠폰
  *
- * **가게 쿠폰은 뽑기판에 넣지 않는다.** 두 가지 이유다.
- *  · 이미 다섯 장을 다 가진 사람에게 같은 쿠폰이 또 나오면 꽝이 된다
- *    (tourState.coupons는 id 집합이라 같은 것을 두 번 담지 못한다).
- *  · 가게 정산은 '완주자 수 × 5장'으로 예측할 수 있어야 한다. 확률로
- *    쿠폰이 더 나가면 사장님께 드릴 금액이 매번 달라진다.
- * 뽑기 상품에 가게 혜택을 넣으려면 쿠폰 카탈로그(coupons.ts)와 가게
- * 문서(shops)를 먼저 만들어야 한다 — 그때 여기 slots만 갈아끼우면 된다.
+ * **뽑기에서 나오는 것은 쿠폰이다.** 예전에는 포인트·굿즈·디지털로 갈려
+ * 있었고 쿠폰은 따로 놀았는데, 참여자에게는 '받은 것'이 한 종류로 보이는
+ * 편이 낫다 — 지갑을 열면 다 거기 있고, 쓰는 곳만 쿠폰마다 다르다.
+ * 포인트만 예외로 남긴다. 쓸 곳이 앱 안이라 지갑에 넣을 물건이 아니다.
  *
- * 아래 열 가지는 **예시**다. 실제 상품과 수량은 사업자가 정한다.
+ * 쓰는 곳은 세 갈래다(coupons.ts의 `CouponScope`) — 특정 가게 / 협력
+ * 가게 공용 / 안내소 교환. 같은 쿠폰이 두 번 나와도 **칸 번호가 발급
+ * 순번이 되어** 코드가 갈리므로(makeCouponCode의 serial), 예전에 가게
+ * 쿠폰을 판에서 뺐던 이유(중복 저장 불가)는 사라졌다.
+ *
+ * 첫 줄도 이용권이다. 다섯 소원을 다 이루면 대각선이 저절로 채워지므로
+ * 2막이 열리는 순간 한 장이 들어온다.
+ *
+ * 아래 열 가지는 **예시**다. 실제 상품과 수량은 사업자가 정한다 —
+ * `slots` 합이 GACHA_SLOTS와 같기만 하면 된다(E2E가 검사한다).
  */
 
 /** 뽑기판 칸 수 — 상품별 slots의 합이 정확히 이 값이어야 한다 */
@@ -28,8 +31,16 @@ export interface GachaPrize {
   id: string
   name: string
   emoji: string
-  /** 참여자에게 어떻게 건네는지 — 화면이 안내 문구를 고를 때 쓴다 */
-  kind: 'points' | 'digital' | 'onsite'
+  /**
+   * 무엇을 받는가.
+   *
+   *  · `coupon` — 쿠폰 한 장. `couponId`가 카탈로그(coupons.ts)를 가리킨다.
+   *    지갑에 들어가고 가게나 안내소에서 실제로 쓴다
+   *  · `points` — 그 자리에서 적립되는 점수. 쓸 곳이 앱 안이라 쿠폰이 아니다
+   */
+  kind: 'coupon' | 'points'
+  /** coupon이면 어느 쿠폰인지 — COUPONS의 키 */
+  couponId?: string
   /** points 상품이면 즉시 적립할 점수 */
   points?: number
   /** 50칸 중 몇 칸을 차지하는가 — 이것이 곧 확률이다 */
@@ -41,13 +52,14 @@ export interface GachaPrize {
 
 export const GACHA_PRIZES: GachaPrize[] = [
   {
-    id: 'sticker',
+    id: 'gcSticker',
     name: '봉황동 스티커 팩',
     emoji: '🎫',
-    kind: 'onsite',
+    kind: 'coupon',
+    couponId: 'gcSticker',
     slots: 8,
     tier: 'common',
-    note: '완주 후 안내소에서 받아 가세요.',
+    note: '안내소에서 교환하세요.',
   },
   {
     id: 'point300',
@@ -60,22 +72,24 @@ export const GACHA_PRIZES: GachaPrize[] = [
     note: '방금 적립됐어요.',
   },
   {
-    id: 'postcard',
-    name: '능소화 엽서 한 장',
+    id: 'gcPostcard',
+    name: '능소화 엽서 교환권',
     emoji: '📮',
-    kind: 'onsite',
+    kind: 'coupon',
+    couponId: 'gcPostcard',
     slots: 7,
     tier: 'common',
-    note: '완주 후 안내소에서 받아 가세요.',
+    note: '안내소에서 교환하세요.',
   },
   {
-    id: 'frame88',
-    name: '1988 필름 프레임',
-    emoji: '📷',
-    kind: 'digital',
+    id: 'gcCafe',
+    name: '카페 공용 1,000원 할인권',
+    emoji: '☕',
+    kind: 'coupon',
+    couponId: 'gcCafe',
     slots: 6,
     tier: 'common',
-    note: '사진에 씌워 쓰는 프레임이에요.',
+    note: '협력 카페 어디서나 쓸 수 있어요.',
   },
   {
     id: 'point500',
@@ -88,46 +102,51 @@ export const GACHA_PRIZES: GachaPrize[] = [
     note: '방금 적립됐어요.',
   },
   {
-    id: 'badge',
-    name: '골목 탐험가 뱃지',
-    emoji: '🏅',
-    kind: 'digital',
+    id: 'gcBonghwang',
+    name: '봉황1935 음료 2,000원 할인권',
+    emoji: '🥤',
+    kind: 'coupon',
+    couponId: 'gcBonghwang',
     slots: 5,
     tier: 'rare',
-    note: '나의 기록에 남습니다.',
+    note: '봉황1935에서만 쓸 수 있어요.',
   },
   {
-    id: 'ep2',
-    name: 'EP.2 예약 3,000원 할인권',
-    emoji: '🎟',
-    kind: 'digital',
+    id: 'gcCafe2',
+    name: '카페 공용 2,000원 할인권',
+    emoji: '🧋',
+    kind: 'coupon',
+    couponId: 'gcCafe2',
     slots: 4,
     tier: 'rare',
-    note: '8월 예약 때 자동으로 적용돼요.',
+    note: '협력 카페 어디서나 쓸 수 있어요.',
   },
   {
-    id: 'snack',
+    id: 'gcSnack',
     name: '골목 간식 교환권',
     emoji: '🍢',
-    kind: 'onsite',
+    kind: 'coupon',
+    couponId: 'gcSnack',
     slots: 3,
     tier: 'rare',
-    note: '완주 후 안내소에서 받아 가세요.',
+    note: '안내소에서 교환하세요.',
   },
   {
-    id: 'polaroid',
-    name: '즉석 필름 사진 한 컷',
-    emoji: '📸',
-    kind: 'onsite',
+    id: 'gcTangja',
+    name: '카페 탱자 아메리카노 무료',
+    emoji: '☕',
+    kind: 'coupon',
+    couponId: 'gcTangja',
     slots: 2,
     tier: 'rare',
-    note: '안내소에서 그 자리에서 찍어 드려요.',
+    note: '카페 탱자에서만 쓸 수 있어요.',
   },
   {
-    id: 'mixtape',
+    id: 'gcMixtape',
     name: '아버지의 믹스테이프 — 실물 카세트',
     emoji: '📼',
-    kind: 'onsite',
+    kind: 'coupon',
+    couponId: 'gcMixtape',
     slots: 1,
     tier: 'legend',
     note: '오늘 단 한 분. 안내소에서 받아 가세요.',

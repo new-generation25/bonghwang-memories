@@ -121,9 +121,21 @@ function load(): TourState {
         빙고 줄마다 `bingo-line-N`을 쿠폰이라고 넣던 시절이 있었다. 화면은
         couponSpec()이 null이면 그리지 않아 눈에 띄지 않았지만, 그 값들이
         기기에 그대로 남아 관리자 통계의 '쿠폰 수'를 줄 수만큼 부풀렸다.
-        읽을 때 한 번 털어내면 다음 저장부터 사라진다.
+
+        걸러낸 값을 **그 자리에서 되쓴다.** 예전에는 메모리에서만 털고
+        다음 저장을 기다렸는데, 그 '다음 저장'이 첫 줄 쿠폰 지급 효과였다 —
+        보상 구조가 바뀌어 그 효과가 사라지자 저장소에 잔재가 그대로 남았다.
+        고치는 곳과 남는 곳이 다르면 언젠가 다시 어긋난다.
       */
-      merged.coupons = merged.coupons.filter((id) => Boolean(COUPONS[id]))
+      const clean = merged.coupons.filter((id) => Boolean(COUPONS[id]))
+      if (clean.length !== merged.coupons.length) {
+        merged.coupons = clean
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
+        } catch {
+          // 되쓰기에 실패해도 이번 화면은 깨끗한 값으로 돈다
+        }
+      }
       return merged
     }
   } catch {

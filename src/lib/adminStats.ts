@@ -178,7 +178,16 @@ export function shopSettlement(
 ): ShopSettlementRow[] {
   const rows = new Map<string, ShopSettlementRow>()
 
+  /*
+    가게 칸은 '특정 가게 쿠폰'에서만 세운다.
+
+    공용 할인권은 쿠폰에 가게가 적혀 있지 않고 **실제로 쓴 가게**의 몫이라,
+    사용 기록의 shopId를 보고 아래에서 그 가게 줄에 얹는다.
+    안내소 교환권은 가게에 돌려줄 돈이 아니라 여기 오지 않는다.
+  */
   for (const spec of Object.values(COUPONS)) {
+    if (spec.scope !== 'shop' || !spec.shopId) continue
+    if (rows.has(spec.shopId)) continue
     rows.set(spec.shopId, {
       shopId: spec.shopId,
       name: spec.shop,
@@ -198,7 +207,12 @@ export function shopSettlement(
     row.total += 1
     if (u.via === 'guest') row.guest += 1
     else row.staff += 1
-    row.won += row.unitWon
+    /*
+      금액은 그 가게의 기본 단가가 아니라 **쓴 쿠폰의 단가**로 센다.
+      공용 할인권과 뽑기 쿠폰은 값이 저마다 달라서, 가게 단가로 세면
+      실제로 나간 금액과 어긋난다.
+    */
+    row.won += COUPONS[u.couponId]?.unitWon ?? row.unitWon
   }
 
   // Array.from을 쓰는 이유는 tsconfig target이 낮아 Map 순회 전개가 막혀서다

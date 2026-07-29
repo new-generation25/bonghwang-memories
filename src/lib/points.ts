@@ -42,7 +42,7 @@ export const POINT_TABLE = {
   /** 커뮤니티에 기록 공유 */
   shareRecord: 100,
   /** 빙고 한 줄 완성 */
-  treasureLine: 50,
+  treasureLine: 500,
   /** 완주 설문 응답 */
   survey: 200,
   /**

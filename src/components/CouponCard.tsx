@@ -30,6 +30,15 @@ interface CouponCardProps {
   signedIn?: boolean
   /** 바깥에서 이미 사용한 것을 아는 경우 */
   used?: boolean
+  /**
+   * 발급 순번을 바깥에서 정한다 — 뽑기 쿠폰이 쓴다.
+   *
+   * 같은 쿠폰이 두 칸에서 나올 수 있는데, 순번이 같으면 코드도 같아져
+   * 한 장을 쓰는 순간 나머지가 함께 죽는다. 칸 번호를 순번으로 주면
+   * 장마다 코드가 갈린다. 이 경우 '새 번호로 받기'는 감춘다 — 순번이
+   * 칸을 가리키므로 마음대로 올릴 값이 아니다.
+   */
+  fixedSerial?: number
 }
 
 export default function CouponCard({
@@ -37,6 +46,7 @@ export default function CouponCard({
   uid,
   signedIn = false,
   used = false,
+  fixedSerial,
 }: CouponCardProps) {
   const [open, setOpen] = useState(false)
   const [qr, setQr] = useState<string | null>(null)
@@ -55,10 +65,11 @@ export default function CouponCard({
     앞 번호를 되돌리는 것이 아니라 다음 장을 뜯는 것이라, 지난 사용
     기록은 그대로 남는다.
   */
-  const [serial, setSerial] = useState(0)
+  const [serial, setSerial] = useState(fixedSerial ?? 0)
   useEffect(() => {
+    if (fixedSerial !== undefined) return
     setSerial(couponSerial(spec.id, uid))
-  }, [spec.id, uid])
+  }, [spec.id, uid, fixedSerial])
   const code = makeCouponCode(spec.id, uid, superAdmin, serial)
 
   // 코드가 바뀌면 그려둔 QR을 버린다. 모드를 켜고 끄면 시험용/실제 코드가
@@ -128,7 +139,16 @@ export default function CouponCard({
             아래 QR은 사장님이 대신 처리해 주실 때 쓰는 보조 수단이라
             이 버튼을 위에 크게 둔다.
           */}
-          {signedIn ? (
+          {spec.scope === 'info' ? (
+            /* 안내소 교환권 — 가게 카운터에서 찍을 것이 아니다 */
+            <p className="mb-4 rounded-xl border border-sunset-yellow bg-sunset-yellow/10 px-3 py-2.5 text-[11.5px] leading-relaxed text-ink">
+              <b>안내소에서 교환</b>하는 쿠폰이에요.
+              <br />
+              <span className="text-ink-60">
+                이 화면을 안내소에 보여주세요.
+              </span>
+            </p>
+          ) : signedIn ? (
             <button
               type="button"
               onClick={() => setSheet(true)}
@@ -178,17 +198,21 @@ export default function CouponCard({
             평소에는 눈에 띌 이유가 없어 작은 글자로 둔다 — 잘못 누르면
             멀쩡한 코드가 새 번호로 바뀌어 헷갈린다.
           */}
-          <button
-            type="button"
-            onClick={() => setSerial(reissueCoupon(spec.id, uid))}
-            className="mt-3 text-[11px] text-ink-60 underline underline-offset-2"
-          >
-            이미 사용됨으로 나오나요? 새 번호로 받기
-          </button>
-          {serial > 0 && (
-            <p className="mt-1 font-mono-retro text-[10px] text-ink-60">
-              {serial + 1}번째 발급
-            </p>
+          {fixedSerial === undefined && (
+            <>
+              <button
+                type="button"
+                onClick={() => setSerial(reissueCoupon(spec.id, uid))}
+                className="mt-3 text-[11px] text-ink-60 underline underline-offset-2"
+              >
+                이미 사용됨으로 나오나요? 새 번호로 받기
+              </button>
+              {serial > 0 && (
+                <p className="mt-1 font-mono-retro text-[10px] text-ink-60">
+                  {serial + 1}번째 발급
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

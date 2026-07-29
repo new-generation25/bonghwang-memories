@@ -18,11 +18,9 @@ import { useTourState } from '@/hooks/useTourState'
 import { BoardCell, buildBoard, countLines } from '@/lib/bingoCells'
 import { bingoOpen, useSuperAdmin } from '@/lib/superAdmin'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
-import { COUPONS } from '@/lib/coupons'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
 import { playBingoLine } from '@/lib/sfx'
 import {
-  addCoupon,
   markBingoCell,
   markGachaDrawn,
   mutateTour,
@@ -85,16 +83,14 @@ export default function BingoPage() {
   }, [])
 
   /*
-    줄 수가 늘면 저장 + 새 줄마다 포인트.
+    줄 수가 늘면 저장 + 새 줄마다 포인트와 이용권.
 
-    보상은 줄의 성격에 따라 갈린다.
-     · 첫 줄 — 대각선이다. 다섯 소원을 다 이뤄야 채워지므로 2막이 열리는
-       순간 이미 완성돼 있다. 여기서 가게 쿠폰 다섯 장이 한꺼번에 나온다.
-     · 두 번째 줄부터 — 보너스 미션으로 칸을 채워야 완성되는 줄이라,
-       한 줄에 뽑기 한 번씩 준다(아래 남은 뽑기 계산).
+    보상 흐름이 하나다 — 빙고 한 줄 → 뽑기 한판 → 판에서 한 칸 → 쿠폰.
+    첫 줄(대각선)도 같다. 다섯 소원을 다 이루면 저절로 채워지므로 2막이
+    열리는 순간 한 장이 들어온다.
 
-    전에는 `addCoupon('bingo-line-N')`을 불렀는데 그 id가 쿠폰 카탈로그에
-    없어서 '나의 기록'이 조용히 걸러냈다 — 받는 순간 사라지는 보상이었다.
+    전에는 여기서 가게 쿠폰 다섯 장을 한꺼번에 냈는데, 보상 자리가 둘로
+    갈려 있으면 '무엇을 하면 무엇을 받는지'가 흐려진다.
   */
   useEffect(() => {
     if (lines > tour.bingo.lines) {
@@ -108,12 +104,8 @@ export default function BingoPage() {
         줄 수가 아니라 잡음으로 들린다. 몇 줄인지는 화면 숫자가 말한다.
       */
       playBingoLine()
-      /*
-        첫 줄(대각선)은 가게 쿠폰이 나오는 자리라 이용권을 세지 않는다.
-        두 번째 줄부터 '뽑기 한판'이 한 장씩 — 받은 것이 화면에 뜨지 않으면
-        쌓이는 줄도 모른 채 지나간다.
-      */
-      if (lines > 1) setTicketToast(lines - 1)
+      // 받은 것이 화면에 뜨지 않으면 쌓이는 줄도 모른 채 지나간다
+      setTicketToast(lines)
     }
   }, [lines, tour.bingo.lines])
 
@@ -125,36 +117,23 @@ export default function BingoPage() {
   }, [ticketToast])
 
   /*
-    첫 줄에 가게 쿠폰 다섯 장.
+    남은 이용권 — 빙고 한 줄에 '뽑기 한판' 한 장.
 
-    줄 수가 '늘어난 순간'을 보지 않는다. 그 안에 두면 이미 줄을 채운 채
-    이 판을 받은 사람은 영영 못 받는다 — 검수 계정이 빙고 8줄에 쿠폰
-    넉 장인 상태로 걸렸다. 지금은 '한 줄이라도 있는데 빠진 장이 있으면
-    채운다'로 본다. 다 가지고 있으면 아무 일도 하지 않는다.
-  */
-  useEffect(() => {
-    if (lines < 1) return
-    const missing = Object.keys(COUPONS).filter(
-      (id) => !tour.coupons.includes(id)
-    )
-    if (missing.length === 0) return
-    for (const id of missing) addCoupon(id)
-    logEvent('coupon_granted', { by: 'bingo_first_line', n: missing.length })
-  }, [lines, tour.coupons])
-
-  /*
-    남은 뽑기 — 두 번째 줄부터 한 줄에 한 번.
+    첫 줄도 센다. 대각선은 다섯 소원을 다 이루면 저절로 채워지므로
+    2막이 열리는 순간 한 장이 들어온다.
 
     상태로 따로 저장하지 않고 '완성한 줄 수'와 '연 칸 수'의 차이로 센다.
-    저장하면 그 값이 줄 수와 어긋나는 순간 어느 쪽이 참인지 알 수 없다.
+    저장하면 그 값이 줄 수와 어긋나는 순간 어느 쪽이 참인지 알 수 없다 —
+    첫 줄 쿠폰에서 그 어긋남으로 두 번 틀렸다.
   */
-  const drawsLeft = Math.max(0, lines - 1 - tour.gachaDrawn.length)
+  const drawsLeft = Math.max(0, lines - tour.gachaDrawn.length)
 
   /**
-   * 한 칸이 열렸다 — 기록하고, 상품이 포인트면 그 자리에서 적립한다.
+   * 한 칸이 열렸다 — 기록하고 상품을 건넨다.
    *
-   * 굿즈·디지털 상품은 목록에만 남는다(나의 기록). 실물은 안내소에서
-   * 사람이 건네는 것이라 앱이 할 일이 여기까지다.
+   * 쿠폰이면 지갑에 들어간다. 같은 쿠폰이 두 번 나와도 칸 번호가 발급
+   * 순번이 되어 코드가 갈리므로, 지갑에는 칸 번호째로 담는다.
+   * 포인트면 그 자리에서 적립한다 — 쓸 곳이 앱 안이라 지갑에 넣지 않는다.
    */
   const handleDrawn = (slot: number, prize: GachaPrize) => {
     markGachaDrawn(slot)
@@ -162,6 +141,13 @@ export default function BingoPage() {
     if (prize.kind === 'points' && prize.points) {
       // refId에 칸 번호를 넣는다 — 같은 상품을 두 번 뽑아도 각각 적립된다
       void awardCampaign(`gacha-${slot}`, prize.points)
+    } else if (prize.kind === 'coupon' && prize.couponId) {
+      /*
+        지갑에는 따로 담지 않는다 — gachaDrawn(칸 번호)에서 파생시킨다.
+        tour.coupons는 id 집합이라 같은 쿠폰을 두 번 담지 못하는데,
+        칸 번호는 겹치지 않아 두 장을 각각 셀 수 있다.
+      */
+      logEvent('coupon_granted', { by: 'gacha', id: prize.couponId, slot })
     }
   }
 
@@ -376,23 +362,27 @@ export default function BingoPage() {
                     done ? 'completed' : ''
                   }`}
                 >
+                  {/*
+                    글씨를 키웠다 — 8px는 폰에서 읽히지 않는다. 칸 이름이
+                    안 보이면 어디를 찾아가라는 판인지 알 수 없다.
+                  */}
                   {done ? (
                     <>
-                      <span className="text-base font-black">✓</span>
-                      <span className="mt-0.5 font-mono-retro text-[7px] opacity-90">
+                      <span className="text-xl font-black">✓</span>
+                      <span className="mt-0.5 font-mono-retro text-[8.5px] opacity-90">
                         {cell.kind === 'main' ? 'SIDE A' : 'REC'}
                       </span>
                     </>
                   ) : (
                     <>
-                      <span className="text-lg">{cell.emoji}</span>
-                      <span className="mt-0.5 text-center text-[8px] font-bold leading-tight">
+                      <span className="text-[22px] leading-none">{cell.emoji}</span>
+                      <span className="mt-1 text-center text-[10px] font-bold leading-[1.15]">
                         {cell.title}
                       </span>
                     </>
                   )}
                   <span
-                    className={`absolute left-0.5 top-0.5 font-mono-retro text-[6px] ${
+                    className={`absolute left-0.5 top-0.5 font-mono-retro text-[7.5px] ${
                       done ? 'text-cream/70' : 'text-ink-60/70'
                     }`}
                   >
@@ -408,11 +398,11 @@ export default function BingoPage() {
         <div className="card-paper mb-5 p-4 shadow-lg">
           <p className="text-[12px] leading-relaxed text-ink-60">
             골목을 걷다가 마음에 드는 곳을 발견하면 칸을 눌러 기록하세요.
-            가로·세로·대각선 5칸을 이으면 빙고 — 한 줄마다 포인트를 드려요.
+            가로·세로·대각선 5칸을 이으면 빙고.
           </p>
           <p className="mt-2 font-mono-retro text-[11px] text-teal">
             칸 하나 +{POINT_TABLE.bonusMission}P · 빙고 한 줄 +
-            {POINT_TABLE.treasureLine}P
+            {POINT_TABLE.treasureLine}P · 뽑기 한판
           </p>
         </div>
 
@@ -461,16 +451,37 @@ export default function BingoPage() {
       */}
       {ticketToast !== null && !gachaOpen && (
         <div
-          className="fixed left-1/2 top-20 z-50 w-[min(340px,88vw)] -translate-x-1/2 rounded-xl border-2 border-sunset-yellow bg-paper px-4 py-3 text-center shadow-lg"
-          style={{ animation: 'slideUp 0.4s ease-out' }}
+          className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center"
           role="status"
         >
-          <p className="text-[13.5px] font-bold text-ink">
-            🎟 뽑기 한판을 받았어요
-          </p>
-          <p className="mt-0.5 font-mono-retro text-[10.5px] text-ink-60">
-            지금 {ticketToast}장 · 「추억의 뽑기왕」에서 쓸 수 있어요
-          </p>
+          {/* 폭죽 — 가운데에서 사방으로 */}
+          <div className="relative" aria-hidden>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <span
+                key={i}
+                className="absolute left-1/2 top-1/2 text-[20px]"
+                style={{
+                  ['--a' as string]: `${i * 30}deg`,
+                  animation: `firework-fly ${0.9 + (i % 3) * 0.15}s ease-out forwards`,
+                  animationDelay: `${(i % 4) * 0.06}s`,
+                }}
+              >
+                {['✨', '🎉', '⭐', '🎊'][i % 4]}
+              </span>
+            ))}
+            <div
+              className="rounded-2xl border-2 border-sunset-yellow bg-paper px-6 py-5 text-center shadow-xl"
+              style={{ animation: 'firework-pop 0.5s ease-out' }}
+            >
+              <p className="text-[34px] leading-none">🎟</p>
+              <p className="mt-2 font-display text-[17px] text-ink">
+                뽑기 한판을 받았어요
+              </p>
+              <p className="mt-1 font-mono-retro text-[10.5px] text-ink-60">
+                빙고 {ticketToast}줄 · 「추억의 뽑기왕」에서 쓸 수 있어요
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

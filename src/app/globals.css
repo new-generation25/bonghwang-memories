@@ -918,6 +918,43 @@ a {
 }
 
 /*
+  빙고 한 줄을 채웠을 때 터지는 폭죽.
+
+  조각 하나가 가운데에서 밖으로 날아가 사라진다 — 각도는 인라인
+  스타일(`--a`)로 조각마다 다르게 준다. 캔버스를 들이지 않은 것은
+  한 줄 완성이 잦은 일이 아니어서다. 이 정도면 눈에 남는다.
+*/
+@keyframes firework-fly {
+  0% {
+    transform: rotate(var(--a)) translateY(0) scale(1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--a)) translateY(-120px) scale(0.35);
+    opacity: 0;
+  }
+}
+
+/* 가운데 글자는 커졌다 제자리로 — 터지는 순간의 무게중심이다 */
+@keyframes firework-pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/*
   뽑기 칸이 열릴 때. 살짝 커졌다 제자리로 — 종이 딱지를 뒤집는 결이다.
   판이 스크롤되는 중에도 눈에 띄어야 해서 밝기까지 함께 흔든다.
 */

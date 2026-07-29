@@ -386,9 +386,12 @@ test.describe('슈퍼관리자 모드 — 순서 무시 조작', () => {
 })
 
 test.describe('S30 빙고 — 대각선은 다섯 소원이 채운다', () => {
-  test('대각선만으로 1줄 · 그 줄에서 가게 쿠폰 다섯 장이 나온다', async ({
-    page,
-  }) => {
+  /*
+    보상 흐름이 하나다 — 빙고 한 줄 → 뽑기 한판 → 판에서 한 칸 → 쿠폰.
+    첫 줄도 예외가 아니다. 예전에는 여기서 가게 쿠폰 다섯 장을 한꺼번에
+    냈는데, 보상 자리가 둘로 갈려 있으면 무엇으로 무엇을 받는지 흐려진다.
+  */
+  test('대각선만으로 1줄 · 그 줄에서 뽑기 한판이 나온다', async ({ page }) => {
     await seedTour(page, {
       ...BASE_STATE,
       phase: 'act2',
@@ -399,56 +402,16 @@ test.describe('S30 빙고 — 대각선은 다섯 소원이 채운다', () => {
     await page.goto('/treasure?e2e=1')
     await expect(page.getByText(/1줄/).first()).toBeVisible({ timeout: 15000 })
 
-    // 거점을 지날 때가 아니라 여기서 한꺼번에 받는다
-    await expect
-      .poll(
-        async () =>
-          (
-            await page.evaluate(() =>
-              JSON.parse(window.localStorage.getItem('bh_tour_v2'))
-            )
-          ).coupons,
-        { timeout: 15000 }
-      )
-      .toEqual(expect.arrayContaining(['cp1', 'cp2', 'cp3', 'cp4', 'cp5']))
+    // 첫 줄에도 이용권이 한 장
+    await expect(
+      page.getByRole('button', { name: /뽑기 한판 1장 있어요/ })
+    ).toBeVisible({ timeout: 15000 })
 
-    // 첫 줄은 뽑기가 아니다
-    await expect(page.getByText(/골목 뽑기/)).toHaveCount(0)
-  })
-
-  /*
-    이 판이 배포되기 전에 이미 줄을 채워둔 사람.
-
-    '줄 수가 늘어난 순간'에만 쿠폰을 주면 이 사람은 영영 못 받는다 —
-    실제로 검수 계정이 빙고 8줄에 쿠폰 넉 장인 채로 걸렸다. 두 번 놓친
-    자리라 못박아 둔다.
-  */
-  test('이미 줄을 채운 채 들어와도 빠진 쿠폰을 채운다', async ({ page }) => {
-    await seedTour(page, {
-      ...BASE_STATE,
-      phase: 'act2',
-      tracksCompleted: [1, 2, 3, 4, 5],
-      speechMode: 'casual',
-      bingo: {
-        unlocked: true,
-        cellsDone: ['bunsik', 'b02', 'byeokhwa', 'b04'],
-        lines: 2,
-      },
-      coupons: ['cp1', 'cp2'],
-    })
-    await page.goto('/treasure?e2e=1')
-
-    await expect
-      .poll(
-        async () =>
-          (
-            await page.evaluate(() =>
-              JSON.parse(window.localStorage.getItem('bh_tour_v2'))
-            )
-          ).coupons,
-        { timeout: 15000 }
-      )
-      .toEqual(expect.arrayContaining(['cp1', 'cp2', 'cp3', 'cp4', 'cp5']))
+    // 쿠폰은 뽑기로만 나온다 — 줄을 채웠다고 지갑에 들어오지 않는다
+    const coupons = await page.evaluate(
+      () => JSON.parse(window.localStorage.getItem('bh_tour_v2')).coupons
+    )
+    expect(coupons).toEqual([])
   })
 
   test("카탈로그에 없는 옛 'bingo-line-N'은 걸러진다", async ({ page }) => {
@@ -484,7 +447,7 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
     lines: 0,
   }
 
-  test('두 번째 줄이면 뽑기 1회 — 뽑으면 상품이 남는다', async ({ page }) => {
+  test('두 줄이면 이용권 2장 — 한 칸을 열면 한 장이 준다', async ({ page }) => {
     await seedTour(page, {
       ...BASE_STATE,
       phase: 'act2',
@@ -494,7 +457,7 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
     })
     await page.goto('/treasure?e2e=1')
 
-    const open = page.getByRole('button', { name: /뽑기 한판 1장 있어요/ })
+    const open = page.getByRole('button', { name: /뽑기 한판 2장 있어요/ })
     await expect(open).toBeVisible({ timeout: 15000 })
     await open.click()
 
@@ -511,28 +474,35 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
     // 고른 칸이 그대로 열려야 한다(0-based라 23번 칸 = 22)
     expect(drawn).toEqual([22])
 
-    // 다 쓰면 안내가 사라진다
+    // 한 장을 쓰면 한 장이 남는다
     await page.getByRole('button', { name: '받기' }).click()
-    await expect(page.getByText(/뽑기 한판 .*있어요/)).toHaveCount(0)
+    await expect(
+      page.getByRole('button', { name: /뽑기 한판 1장 있어요/ })
+    ).toBeVisible({ timeout: 10000 })
   })
 
-  test('뽑은 상품은 나의 기록에 남는다', async ({ page }) => {
+  /*
+    뽑기에서 나오는 것은 쿠폰이다 — 지갑에 들어가 가게나 안내소에서 쓴다.
+    포인트만 예외로 적립 쪽에 남는다.
+  */
+  test('뽑은 쿠폰은 지갑에 들어간다', async ({ page }) => {
     await seedTour(page, {
       ...BASE_STATE,
       phase: 'act2',
       tracksCompleted: [1, 2, 3, 4, 5],
       speechMode: 'casual',
       bingo: { ...TWO_LINES, lines: 2 },
-      /*
-        판 배치는 계정마다 섞이지만 어느 칸이든 상품 하나가 나온다 —
-        여기서 보는 것은 '뽑은 것이 기록에 남는가'이지 무엇이 나왔는가가 아니다.
-      */
+      // 판 배치는 계정마다 섞인다. 여기서 보는 것은 '지갑에 한 장이 섰는가'다
       gachaDrawn: [0],
     })
     await page.goto('/me?e2e=1')
-    await expect(page.getByText('🎁 뽑기로 받은 것')).toBeVisible({
-      timeout: 15000,
-    })
+    await expect(page.getByText('🎟 받은 쿠폰')).toBeVisible({ timeout: 15000 })
+
+    // 지갑에 카드가 하나라도 서야 한다 — 포인트가 뽑혔다면 적립 쪽에 뜬다
+    const walletOrPoints = page
+      .getByText(/쓸 수 있어요|안내소에서 교환|뽑기로 받은 포인트/)
+      .first()
+    await expect(walletOrPoints).toBeVisible({ timeout: 15000 })
   })
 
   test('판은 50칸 — 상품 slots 합이 모자라면 여기서 드러난다', async ({
@@ -546,7 +516,7 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
       bingo: TWO_LINES,
     })
     await page.goto('/treasure?e2e=1')
-    await page.getByRole('button', { name: /뽑기 한판 1장 있어요/ }).click()
+    await page.getByRole('button', { name: /뽑기 한판 2장 있어요/ }).click()
 
     await expect(page.getByText(/닫힌 칸/)).toContainText('50', {
       timeout: 10000,

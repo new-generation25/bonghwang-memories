@@ -25,23 +25,41 @@
 
 import { TRACK_MISSIONS } from './tracks'
 
+/**
+ * 쿠폰을 어디서 쓰는가.
+ *
+ * 세 갈래다. 참여자가 카운터 앞에서 "여기서 되나요"를 묻지 않게 하려면
+ * 쿠폰마다 이 값이 분명해야 하고, 사용 처리도 이 값으로 갈린다.
+ *
+ *  · `shop`  특정 가게에서만 — 거점 쿠폰이 그렇다
+ *  · `group` 그 무리의 가게 어디서나 — '협력 카페 공용 할인권'
+ *  · `info`  안내소에서 교환 — 엽서·굿즈처럼 운영자가 직접 건네는 것
+ */
+export type CouponScope = 'shop' | 'group' | 'info'
+
 export interface CouponSpec {
   id: string
+  scope: CouponScope
   /**
-   * 가게 문서 id — Firestore `shops/{shopId}`.
+   * 가게 문서 id — Firestore `shops/{shopId}`. `scope: 'shop'`일 때만 있다.
    *
-   * 지금은 쿠폰 id와 같다(가게 하나에 쿠폰 하나). 그래도 따로 두는 이유는,
-   * 사용 기록이 가리켜야 하는 것이 '쿠폰'이 아니라 '어느 가게에서 썼나'라서다.
-   * 한 가게가 쿠폰을 둘 받게 되면 여기만 갈라주면 된다.
+   * 거점 쿠폰은 쿠폰 id와 같다(가게 하나에 쿠폰 하나). 그래도 따로 두는
+   * 이유는, 사용 기록이 가리켜야 하는 것이 '쿠폰'이 아니라 '어느 가게에서
+   * 썼나'라서다. 한 가게가 쿠폰을 둘 받게 되면 여기만 갈라주면 된다.
    */
-  shopId: string
-  /** 가게 이름 — 쿠폰을 쓸 수 있는 곳 */
+  shopId?: string
+  /**
+   * 협력 가게 무리 — `scope: 'group'`일 때만 있다.
+   * 가게 문서의 `group` 값과 맞는 곳이면 어디서나 쓴다.
+   */
+  group?: string
+  /** 쿠폰을 쓸 수 있는 곳 — 참여자에게 보이는 이름 */
   shop: string
   /** 참여자에게 보이는 혜택 문구 */
   benefit: string
   /** 정산 단가(원) — 가게에 돌려줄 금액을 세는 값이다 */
   unitWon: number
-  /** 어느 거점에서 받는지 */
+  /** 어느 거점에서 받는지. 뽑기로 나오는 쿠폰은 거점이 없어 0이다 */
   track: number
 }
 
@@ -51,11 +69,57 @@ export interface CouponSpec {
  * `scripts/make-shop-qr.mjs`가 이 표를 읽어 가게 문서와 스티커를 만든다.
  */
 export const COUPONS: Record<string, CouponSpec> = {
-  cp1: { id: 'cp1', shopId: 'cp1', shop: '봉황1935', benefit: '음료 1,000원 할인', unitWon: 1000, track: 1 },
-  cp2: { id: 'cp2', shopId: 'cp2', shop: '미야상회', benefit: '바나나우유 500원 할인', unitWon: 500, track: 2 },
-  cp3: { id: 'cp3', shopId: 'cp3', shop: '능소화 고택', benefit: '엽서 1장 증정', unitWon: 1000, track: 3 },
-  cp4: { id: 'cp4', shopId: 'cp4', shop: '카페 탱자', benefit: '아메리카노 1,000원 할인', unitWon: 1000, track: 4 },
-  cp5: { id: 'cp5', shopId: 'cp5', shop: '방하림', benefit: '도자기 1,000원 할인', unitWon: 1000, track: 5 },
+  // ── 거점 쿠폰 — 그 가게에서만 ──
+  cp1: { id: 'cp1', scope: 'shop', shopId: 'cp1', shop: '봉황1935', benefit: '음료 1,000원 할인', unitWon: 1000, track: 1 },
+  cp2: { id: 'cp2', scope: 'shop', shopId: 'cp2', shop: '미야상회', benefit: '바나나우유 500원 할인', unitWon: 500, track: 2 },
+  cp3: { id: 'cp3', scope: 'shop', shopId: 'cp3', shop: '능소화 고택', benefit: '엽서 1장 증정', unitWon: 1000, track: 3 },
+  cp4: { id: 'cp4', scope: 'shop', shopId: 'cp4', shop: '카페 탱자', benefit: '아메리카노 1,000원 할인', unitWon: 1000, track: 4 },
+  cp5: { id: 'cp5', scope: 'shop', shopId: 'cp5', shop: '방하림', benefit: '도자기 1,000원 할인', unitWon: 1000, track: 5 },
+
+  /*
+    ── 뽑기로 나오는 쿠폰 ──
+
+    거점 쿠폰과 달리 어느 칸에서 나올지 정해져 있지 않다. 같은 쿠폰이
+    두 번 나와도 칸 번호가 발급 순번이 되어 코드가 갈린다(gacha.ts).
+
+    `track: 0` — 거점에서 받는 것이 아니라는 표시다.
+  */
+  gcCafe: {
+    id: 'gcCafe', scope: 'group', group: 'cafe', shop: '협력 카페 어디서나',
+    benefit: '음료 1,000원 할인', unitWon: 1000, track: 0,
+  },
+  gcCafe2: {
+    id: 'gcCafe2', scope: 'group', group: 'cafe', shop: '협력 카페 어디서나',
+    benefit: '음료 2,000원 할인', unitWon: 2000, track: 0,
+  },
+  gcTangja: {
+    id: 'gcTangja', scope: 'shop', shopId: 'cp4', shop: '카페 탱자',
+    benefit: '아메리카노 무료', unitWon: 4000, track: 0,
+  },
+  gcBonghwang: {
+    id: 'gcBonghwang', scope: 'shop', shopId: 'cp1', shop: '봉황1935',
+    benefit: '음료 2,000원 할인', unitWon: 2000, track: 0,
+  },
+  gcPostcard: {
+    id: 'gcPostcard', scope: 'info', shop: '안내소',
+    benefit: '능소화 엽서 한 장', unitWon: 1000, track: 0,
+  },
+  gcSticker: {
+    id: 'gcSticker', scope: 'info', shop: '안내소',
+    benefit: '봉황동 스티커 팩', unitWon: 1000, track: 0,
+  },
+  gcSnack: {
+    id: 'gcSnack', scope: 'info', shop: '안내소',
+    benefit: '골목 간식 교환권', unitWon: 2000, track: 0,
+  },
+  gcPolaroid: {
+    id: 'gcPolaroid', scope: 'info', shop: '안내소',
+    benefit: '즉석 필름 사진 한 컷', unitWon: 3000, track: 0,
+  },
+  gcMixtape: {
+    id: 'gcMixtape', scope: 'info', shop: '안내소',
+    benefit: '아버지의 믹스테이프 — 실물 카세트', unitWon: 15000, track: 0,
+  },
 }
 
 export function couponSpec(id: string): CouponSpec | null {

@@ -79,6 +79,7 @@ function ShopVerifyInner() {
       const out = await redeemCoupon({
         code,
         shopId: shop.shopId,
+        shopGroup: shop.group,
         byUid: profile.uid,
         via: 'staff',
       })

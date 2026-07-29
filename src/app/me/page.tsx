@@ -56,12 +56,31 @@ export default function MyRecordPage() {
 
   const recent = [...history].reverse().slice(0, 12)
   /*
-    뽑은 칸 번호에서 상품을 되짚는다.
+    지갑 한 자리.
+
+    거점 쿠폰과 뽑기 쿠폰을 나란히 둔다 — 참여자에게는 '받은 쿠폰'이
+    한 종류이고, 다른 것은 쓰는 곳뿐이다. 카드마다 그 곳이 적혀 있다.
+
+    뽑기 쿠폰은 칸 번호를 발급 순번으로 쓴다. 같은 쿠폰이 두 칸에서
+    나와도 코드가 갈려, 한 장을 써도 나머지가 살아 있다.
 
     판 배치가 계정마다 다르므로 시드가 같아야 같은 상품이 나온다 —
     쿠폰 코드가 쓰는 것과 같은 값이다(로그인 전에는 기기의 투어 시작 시각).
   */
-  const prizes = prizesOf(gachaSeed(profile?.uid, tour.startTime), tour.gachaDrawn)
+  const seed = gachaSeed(profile?.uid, tour.startTime)
+  const wallet = [
+    ...tour.coupons.map((id) => ({ key: id, spec: couponSpec(id), serial: undefined as number | undefined })),
+    ...tour.gachaDrawn.map((slot) => {
+      const prize = prizesOf(seed, [slot])[0]
+      return {
+        key: `g${slot}`,
+        spec: prize?.kind === 'coupon' && prize.couponId ? couponSpec(prize.couponId) : null,
+        serial: slot,
+      }
+    }),
+  ].filter((x) => x.spec)
+  /** 뽑기로 받은 포인트 — 지갑이 아니라 적립 내역에 남는 것들 */
+  const pointPrizes = prizesOf(seed, tour.gachaDrawn).filter((p) => p.kind === 'points')
 
   return (
     <div className="min-h-screen bg-cream-base pb-32">
@@ -121,37 +140,26 @@ export default function MyRecordPage() {
         </div>
 
         {/*
-          뽑기로 받은 상품. 쿠폰과 나란히 두지 않고 위에 둔다 — 가게에서
-          내미는 쿠폰과 달리 이쪽은 안내소에서 받거나 이미 받은 것이라,
-          섞어두면 가게 카운터에서 무엇을 보여줄지 헷갈린다.
+          뽑기로 받은 포인트. 쿠폰은 아래 지갑에 함께 들어가고, 포인트만
+          여기 남는다 — 쓸 곳이 앱 안이라 가게에 내밀 물건이 아니다.
         */}
-        {prizes.length > 0 && (
+        {pointPrizes.length > 0 && (
           <div className="card-paper mb-5 p-4 shadow-lg">
             <h2 className="font-vintage text-sm font-black text-teal-dk">
-              🎁 뽑기로 받은 것
+              🎁 뽑기로 받은 포인트
             </h2>
             <ul className="mt-2 space-y-1.5">
-              {prizes.map((prize, i) => (
-                <li
-                  key={`${prize.id}-${i}`}
-                  className="flex items-center gap-2.5"
-                >
+              {pointPrizes.map((prize, i) => (
+                <li key={`${prize.id}-${i}`} className="flex items-center gap-2.5">
                   <span className="text-[18px]" aria-hidden>
                     {prize.emoji}
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] text-ink">
-                      {prize.name}
-                    </span>
-                    <span className="block truncate font-mono-retro text-[10px] text-ink-60">
-                      {prize.note}
-                    </span>
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
+                    {prize.name}
                   </span>
-                  {prize.tier === 'legend' && (
-                    <span className="shrink-0 rounded bg-rec/10 px-1.5 py-0.5 font-mono-retro text-[9.5px] text-rec">
-                      RARE
-                    </span>
-                  )}
+                  <span className="shrink-0 font-mono-retro text-[10px] text-ink-60">
+                    적립됨
+                  </span>
                 </li>
               ))}
             </ul>
@@ -163,9 +171,10 @@ export default function MyRecordPage() {
           <h2 className="font-vintage text-sm font-black text-teal-dk">
             🎟 받은 쿠폰
           </h2>
-          {tour.coupons.length === 0 ? (
+          {wallet.length === 0 ? (
             <p className="mt-2 text-[12px] text-ink-60">
-              아직 받은 쿠폰이 없어요 — 소원을 이루면 이야기가게 쿠폰이 쌓입니다.
+              아직 받은 쿠폰이 없어요 — 빙고 한 줄을 채우면 「뽑기 한판」이
+              생기고, 판을 열면 쿠폰이 나옵니다.
             </p>
           ) : (
             /*
@@ -174,18 +183,15 @@ export default function MyRecordPage() {
               무엇을 받는지, 그리고 찍을 QR이 있어야 쿠폰 구실을 한다.
             */
             <div className="mt-2">
-              {tour.coupons.map((c) => {
-                const spec = couponSpec(c)
-                if (!spec) return null
-                return (
-                  <CouponCard
-                    key={c}
-                    spec={spec}
-                    uid={couponUid}
-                    signedIn={Boolean(profile?.uid)}
-                  />
-                )
-              })}
+              {wallet.map((item) => (
+                <CouponCard
+                  key={item.key}
+                  spec={item.spec!}
+                  uid={couponUid}
+                  signedIn={Boolean(profile?.uid)}
+                  fixedSerial={item.serial}
+                />
+              ))}
             </div>
           )}
         </div>

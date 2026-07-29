@@ -47,13 +47,20 @@ export default function CouponRedeemSheet({
   const [hint, setHint] = useState('')
 
   const run = useCallback(
-    async (t: string) => {
+    async (t: string, atShop: string) => {
       if (busy) return
       setBusy(true)
       setHint('')
       const outcome = await redeemCoupon({
         code,
-        shopId: spec.shopId,
+        // 찍은 가게에서 쓴다 — 공용 할인권은 쿠폰에 가게가 적혀 있지 않다
+        shopId: atShop,
+        /*
+          공용 할인권의 무리 확인은 여기서 못 한다 — 참여자는 가게 문서를
+          읽을 수 없어(규칙) 그 가게가 협력 카페인지 알 방법이 없다.
+          형식만 통과시키고, '협력 가게가 맞는가'는 규칙이 맡아야 한다.
+        */
+        shopGroup: spec.group,
         byUid: uid,
         via: 'guest',
         uid,
@@ -63,7 +70,7 @@ export default function CouponRedeemSheet({
       setBusy(false)
       if (outcome.kind === 'ok') onRedeemed()
     },
-    [busy, code, spec.shopId, uid, onRedeemed]
+    [busy, code, spec.group, uid, onRedeemed]
   )
 
   /** 스캔값은 가게 스티커여야 한다 — 참여자 쿠폰 QR을 찍으면 여기서 걸린다 */
@@ -74,13 +81,14 @@ export default function CouponRedeemSheet({
         setHint('가게 QR이 아니에요. 카운터에 붙은 스티커를 찍어주세요.')
         return
       }
-      if (shop.shopId !== spec.shopId) {
+      // 특정 가게 쿠폰만 여기서 거른다. 공용 할인권은 어느 협력 가게든 된다
+      if (spec.scope === 'shop' && shop.shopId !== spec.shopId) {
         setHint(`이 쿠폰은 ${spec.shop}에서만 쓸 수 있어요.`)
         return
       }
-      void run(shop.token)
+      void run(shop.token, shop.shopId)
     },
-    [run, spec.shopId, spec.shop]
+    [run, spec.scope, spec.shopId, spec.shop]
   )
 
   // 결과 화면 — 사장님께 보여주는 자리라 크고 단순하게
@@ -161,27 +169,50 @@ export default function CouponRedeemSheet({
     )
   }
 
+  /*
+    손으로 넣는 길은 '그 가게 쿠폰'에만 연다.
+
+    토큰만으로는 어느 가게인지 알 수 없다 — 그 값이 곧 가게의 비밀이라
+    참여자 쪽에서 되짚을 방법이 없다. 특정 가게 쿠폰은 쿠폰에 가게가
+    적혀 있어 괜찮지만, 공용 할인권은 QR을 찍어야 어느 가게인지 정해진다.
+  */
+  const manualShopId = spec.scope === 'shop' ? spec.shopId : null
+
   return (
     <Shell onClose={onClose}>
-      <p className="text-center text-[13px] leading-relaxed text-ink-60">
-        스티커 QR 아래에 적힌 <b className="text-ink">8자리</b>를 입력해 주세요.
-      </p>
-      <input
-        value={token}
-        onChange={(e) => setToken(e.target.value.toUpperCase())}
-        onKeyDown={submitOnEnter(() => void run(token), token.trim().length === 8)}
-        placeholder="XXXXXXXX"
-        maxLength={8}
-        autoCapitalize="characters"
-        className="mt-4 w-full rounded-xl border border-line bg-paper px-4 py-3 text-center font-mono-retro text-[17px] tracking-[0.18em] text-ink"
-      />
-      <button
-        onClick={() => void run(token)}
-        disabled={busy || token.trim().length !== 8}
-        className="btn-teal mt-3 w-full text-center disabled:opacity-40"
-      >
-        {busy ? '확인 중…' : '사용하기'}
-      </button>
+      {manualShopId ? (
+        <>
+          <p className="text-center text-[13px] leading-relaxed text-ink-60">
+            스티커 QR 아래에 적힌 <b className="text-ink">8자리</b>를 입력해 주세요.
+          </p>
+          <input
+            value={token}
+            onChange={(e) => setToken(e.target.value.toUpperCase())}
+            onKeyDown={submitOnEnter(
+              () => void run(token, manualShopId),
+              token.trim().length === 8
+            )}
+            placeholder="XXXXXXXX"
+            maxLength={8}
+            autoCapitalize="characters"
+            className="mt-4 w-full rounded-xl border border-line bg-paper px-4 py-3 text-center font-mono-retro text-[17px] tracking-[0.18em] text-ink"
+          />
+          <button
+            onClick={() => void run(token, manualShopId)}
+            disabled={busy || token.trim().length !== 8}
+            className="btn-teal mt-3 w-full text-center disabled:opacity-40"
+          >
+            {busy ? '확인 중…' : '사용하기'}
+          </button>
+        </>
+      ) : (
+        <p className="rounded-xl border border-line bg-cream-dp px-4 py-4 text-center text-[12.5px] leading-relaxed text-ink-60">
+          공용 할인권은 <b className="text-ink">QR을 찍어야</b> 어느 가게에서
+          쓰는지 정해져요.
+          <br />
+          카운터의 스티커를 카메라로 찍어주세요.
+        </p>
+      )}
       <button
         onClick={() => setMode('scan')}
         className="mt-4 w-full text-center text-[12px] text-ink-60 underline underline-offset-2"

@@ -54,6 +54,13 @@ export interface Shop {
   staffUids: string[]
   active: boolean
   /**
+   * 협력 가게 무리 — 예: `'cafe'`.
+   *
+   * 공용 할인권(`scope: 'group'`)이 이 값으로 통과한다. 비어 있으면
+   * 그 가게는 공용 쿠폰을 받지 않는다는 뜻이다.
+   */
+  group?: string
+  /**
    * 카운터 스티커에 박힌 값. 참여자에게는 절대 닿지 않는다 — 규칙이
    * shops 읽기를 관리자와 그 가게 직원에게만 연다.
    * 관리자 화면이 스티커를 다시 뽑을 때 보려고 담아둔다.
@@ -105,6 +112,8 @@ interface RedeemOptions {
   code: string
   /** 어느 가게에서 쓰는가 */
   shopId: string
+  /** 그 가게가 든 협력 무리 — 공용 할인권을 받으려면 있어야 한다 */
+  shopGroup?: string
   /** 이 요청을 만든 계정. 규칙이 byUid로 대조한다 */
   byUid: string
   via: 'guest' | 'staff'
@@ -131,10 +140,30 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
   // 여기서 먼저 끊어야 사장님께 "드리지 않으셔도 됩니다"를 보여줄 수 있다.
   if (parsed.isTest) return { kind: 'test' }
 
-  if (parsed.spec.shopId !== opts.shopId) {
+  /*
+    쓰는 곳을 가른다(CouponScope).
+
+     · shop  — 그 가게에서만
+     · group — 그 무리에 든 가게 어디서나. 가게 문서의 group과 맞는지는
+               규칙이 본다. 여기서는 형식만 통과시킨다
+     · info  — 안내소 교환권. 가게 카운터에서 찍을 것이 아니다
+  */
+  if (parsed.spec.scope === 'info') {
+    return {
+      kind: 'denied',
+      reason: '안내소에서 교환하는 쿠폰이에요. 가게에서는 쓸 수 없어요.',
+    }
+  }
+  if (parsed.spec.scope === 'shop' && parsed.spec.shopId !== opts.shopId) {
     return {
       kind: 'denied',
       reason: `이 쿠폰은 ${parsed.spec.shop}에서만 쓸 수 있어요.`,
+    }
+  }
+  if (parsed.spec.scope === 'group' && parsed.spec.group !== opts.shopGroup) {
+    return {
+      kind: 'denied',
+      reason: `이 쿠폰은 ${parsed.spec.shop} 쓸 수 있어요 — 이 가게는 해당되지 않아요.`,
     }
   }
 

@@ -214,10 +214,28 @@ service cloud.firestore {
       }
 
       // cp1 코드를 cp3 가게에서 태울 수 없다. 문 닫은 가게도 막는다.
+      /*
+        이 가게가 이 쿠폰을 받는가.
+
+        쿠폰은 세 갈래다(coupons.ts의 CouponScope). 규칙은 카탈로그를 읽지
+        못하므로 가게 문서가 스스로 '무엇을 받는지' 들고 있어야 한다:
+
+         · couponId  — 그 가게 전용 쿠폰 하나(거점 쿠폰)
+         · accepts[] — 이 가게가 더 받는 쿠폰들. 뽑기로 나오는 특정 가게
+                       쿠폰(gcTangja 등)이 여기 들어간다
+         · group     — 협력 무리. 공용 할인권(gcCafe…)이 이 값으로 통과한다
+
+        안내소 교환권은 가게에서 쓰는 것이 아니라 어느 갈래에도 들지 않는다 —
+        여기서 저절로 막힌다.
+      */
       function servesShop() {
         return shopExists(p().shopId)
-               && shopData(p().shopId).couponId == p().couponId
-               && shopData(p().shopId).active == true;
+               && shopData(p().shopId).active == true
+               && (
+                    shopData(p().shopId).couponId == p().couponId
+                    || p().couponId in shopData(p().shopId).get('accepts', [])
+                    || p().couponId in shopData(p().shopId).get('groupCoupons', [])
+                  );
       }
 
       // 주 경로 — 참여자가 가게 스티커를 찍었다.
