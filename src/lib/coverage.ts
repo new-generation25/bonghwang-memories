@@ -92,7 +92,7 @@ export interface SettlementConfig {
  * 지우지 않는다. 아직 이 판이 무엇인지 보여드리지 못한 채로 청구서부터
  * 보내면 다음 해에 남을 가게가 없다. 시범운영이 끝나면 설정 화면에서
  * 등급별 값을 넣고, 가게마다 등급을 눌러 반영한다 — 그 시점 **이후**
- * 사용분부터 새 율이 찍히고 지난 기록은 움직이지 않는다.
+ * 사용분부터 새 충당률이 적용되고 지난 기록은 움직이지 않는다.
  */
 export const DEFAULT_SETTLEMENT: SettlementConfig = {
   coverage: { new: 0, basic: 0, premium: 0 },

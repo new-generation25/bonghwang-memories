@@ -568,7 +568,7 @@ export default function AdminPage() {
                       {/*
                         등급을 시간이 저 혼자 바꾸지 않는다. 유예가 끝나면
                         여기서 짚어주고 사람이 누른다 — 그래야 언제 바뀌었는지가
-                        기록에 남고(rateSince), 그 뒤 사용분부터 새 율이 찍힌다.
+                        기록에 남고(rateSince), 그 뒤 사용분부터 새 충당률이 적용된다.
                       */}
                       <td className="py-1.5">
                         <select
@@ -666,7 +666,7 @@ export default function AdminPage() {
         <p className="mt-3 text-[11px] leading-relaxed text-ink-60">
           <b className="text-ink">신규</b>는 가입일부터 {cfg.graceMonths}개월 —
           이 기간 할인액은 운영사가 전액 부담합니다. 등급을 바꾸면 그{' '}
-          <b className="text-ink">시점 이후</b> 사용분부터 새 율이 찍히고, 이미
+          <b className="text-ink">시점 이후</b> 사용분부터 새 충당률이 적용되고, 이미
           찍힌 기록은 움직이지 않습니다.
         </p>
 

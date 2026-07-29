@@ -4,7 +4,7 @@
  * 가게에서 쿠폰 쓰기 — 참여자가 가게 스티커를 찍는다.
  *
  * 이 화면이 있는 이유가 이 시스템의 전부다. 예전에는 참여자가 가게에 가지
- * 않고도 확인 주소를 자기 폰에서 열어 쿠폰을 태울 수 있었다. 카운터에 붙은
+ * 않고도 확인 주소를 자기 폰에서 열어 쿠폰을 사용 처리할 수 있었다. 카운터에 붙은
  * 스티커의 토큰을 읽어야만 사용 처리가 되게 하면, 그 앞에 서 본 사람만
  * 쿠폰을 쓸 수 있다.
  *
@@ -20,7 +20,7 @@ import { useCallback, useState } from 'react'
 import QRScanner from '@/components/QRScanner'
 import { submitOnEnter } from '@/lib/submitOnEnter'
 import type { CouponSpec } from '@/lib/coupons'
-import { parseShopQr, redeemCoupon, type RedeemOutcome } from '@/lib/shops'
+import { parseShopQr, redeemCoupon, shopName, type RedeemOutcome } from '@/lib/shops'
 
 interface Props {
   spec: CouponSpec
@@ -45,6 +45,18 @@ export default function CouponRedeemSheet({
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<RedeemOutcome | null>(null)
   const [hint, setHint] = useState('')
+  /**
+   * 찍기는 했고 아직 사용 처리는 안 한 상태.
+   *
+   * 예전에는 QR을 읽는 순간 그대로 사용 처리했다. 카메라는 손에 들고 있으면
+   * 저 혼자 읽는 물건이라, 스티커 근처에 카메라를 켜 둔 것만으로 쿠폰이
+   * 없어졌다 — 참여자는 무엇을 눌러서 그렇게 됐는지도 모른다.
+   * 되돌리는 길은 새 번호를 뜯는 것뿐이라(사용 기록은 관리자만 지운다)
+   * 예방이 유일한 방어다.
+   */
+  const [pending, setPending] = useState<{ token: string; shopId: string } | null>(
+    null
+  )
 
   const run = useCallback(
     async (t: string, atShop: string) => {
@@ -86,10 +98,20 @@ export default function CouponRedeemSheet({
         setHint(`이 쿠폰은 ${spec.shop}에서만 쓸 수 있어요.`)
         return
       }
-      void run(shop.token, shop.shopId)
+      // 찍었다고 곧바로 사용 처리하지 않는다 — 무엇을 어디서 쓰는지 보여주고 묻는다
+      setPending({ token: shop.token, shopId: shop.shopId })
     },
-    [run, spec.scope, spec.shopId, spec.shop]
+    [spec.scope, spec.shopId, spec.shop]
   )
+
+  /*
+    확인 화면에 적을 가게 이름.
+
+    참여자는 가게 문서를 읽을 수 없으므로(읽히면 스티커 토큰이 샌다)
+    카탈로그에서 찾는다. 공용 할인권을 카탈로그에 없는 협력 가게에서
+    쓰면 id가 그대로 보이는데, 그때도 무엇을 쓰는지(혜택 문구)는 맞다.
+  */
+  const atShopName = pending ? shopName(pending.shopId) : ''
 
   // 결과 화면 — 사장님께 보여주는 자리라 크고 단순하게
   if (result) {
@@ -147,6 +169,49 @@ export default function CouponRedeemSheet({
     )
   }
 
+  /*
+    확인 — 무엇을, 어디서.
+
+    카운터 앞에서 참여자가 답해야 하는 질문은 하나다. "이거 여기서 쓰는
+    거 맞아?" 그래서 가게 이름과 혜택을 크게 놓고 묻는다. 되돌릴 수 없다는
+    말을 함께 두는 이유는, 이 화면이 마지막 문이기 때문이다.
+  */
+  if (pending) {
+    return (
+      <Shell onClose={onClose}>
+        <div className="rounded-2xl border-2 border-sunset-yellow bg-sunset-yellow/10 px-5 py-8 text-center">
+          <p className="font-mono-retro text-[11px] tracking-[0.2em] text-ink-60">
+            여기서 사용합니다
+          </p>
+          <p className="mt-3 font-display text-[24px] text-ink">{atShopName}</p>
+          <p className="mt-2 text-[17px] font-bold text-ink">{spec.benefit}</p>
+          <p className="mt-5 text-[14px] leading-relaxed text-ink">
+            이 쿠폰을 사용할까요?
+          </p>
+          <p className="mt-1 text-[11.5px] text-ink-60">
+            한 번 쓰면 되돌릴 수 없어요
+          </p>
+        </div>
+        <button
+          onClick={() => void run(pending.token, pending.shopId)}
+          disabled={busy}
+          className="btn-teal mt-5 w-full text-center disabled:opacity-40"
+        >
+          {busy ? '사용 처리 중…' : '사용하기'}
+        </button>
+        <button
+          onClick={() => {
+            setPending(null)
+            setToken('')
+          }}
+          className="mt-2 w-full rounded-xl border border-line bg-paper py-3 text-[13px] font-bold text-ink"
+        >
+          취소
+        </button>
+      </Shell>
+    )
+  }
+
   if (mode === 'scan') {
     return (
       <Shell onClose={onClose}>
@@ -189,7 +254,7 @@ export default function CouponRedeemSheet({
             value={token}
             onChange={(e) => setToken(e.target.value.toUpperCase())}
             onKeyDown={submitOnEnter(
-              () => void run(token, manualShopId),
+              () => setPending({ token, shopId: manualShopId }),
               token.trim().length === 8
             )}
             placeholder="XXXXXXXX"
@@ -197,12 +262,13 @@ export default function CouponRedeemSheet({
             autoCapitalize="characters"
             className="mt-4 w-full rounded-xl border border-line bg-paper px-4 py-3 text-center font-mono-retro text-[17px] tracking-[0.18em] text-ink"
           />
+          {/* 손으로 넣는 길도 같은 문을 지난다 — 확인 화면이 하나여야 한다 */}
           <button
-            onClick={() => void run(token, manualShopId)}
-            disabled={busy || token.trim().length !== 8}
+            onClick={() => setPending({ token, shopId: manualShopId })}
+            disabled={token.trim().length !== 8}
             className="btn-teal mt-3 w-full text-center disabled:opacity-40"
           >
-            {busy ? '확인 중…' : '사용하기'}
+            확인
           </button>
         </>
       ) : (

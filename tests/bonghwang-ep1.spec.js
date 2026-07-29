@@ -614,7 +614,7 @@ test.describe('커뮤니티 — 소영의 친구들', () => {
 /*
   혜택 사용 — 카운터 앞까지.
 
-  실제로 태우는 마지막 한 걸음(Firestore 쓰기)은 여기서 밟지 않는다.
+  실제로 사용 처리하는 마지막 한 걸음(Firestore 쓰기)은 여기서 밟지 않는다.
   운영 데이터베이스에 시험 기록을 남기게 되고, 가게 계정 로그인이
   필요해 헤드리스에서 재현되지 않는다. 대신 **그 앞까지의 모든 갈림길**을
   본다 — 참여자가 카운터에 서기까지 무엇을 보고 무엇을 누르는가.
@@ -650,7 +650,7 @@ test.describe('혜택 사용 — 쿠폰과 포인트', () => {
     만든 요청은 그 대조를 통과할 수 없다. 그래서 로그인 전에는 QR과 코드만
     띄우고 사장님이 대신 처리하는 길로 보낸다.
 
-    포인트는 반대다. 어차피 가게 기기가 태우므로 참여자 로그인이 필요 없다.
+    포인트는 반대다. 어차피 가게 기기가 사용 처리하므로 참여자 로그인이 필요 없다.
   */
   test('쿠폰 — 로그인 전에는 사장님께 보여줄 코드가 뜬다', async ({ page }) => {
     await seedTour(page, { ...DONE_STATE, coupons: ['cp1'] })
@@ -666,6 +666,30 @@ test.describe('혜택 사용 — 쿠폰과 포인트', () => {
     await expect(page.getByAltText(/쿠폰 QR/)).toBeVisible({ timeout: 10000 })
     // 여는 것만으로는 아무것도 소모되지 않는다
     await expect(page.getByRole('button', { name: '접기' })).toBeVisible()
+  })
+
+  /*
+    찍었다고 곧바로 사용 처리하지 않는다.
+
+    카메라는 손에 들고 있으면 저 혼자 읽는 물건이라, 스티커 근처에 켜 둔
+    것만으로 쿠폰이 없어졌었다. 되돌리는 길은 새 번호를 뜯는 것뿐이라
+    (사용 기록은 관리자만 지운다) 예방이 유일한 방어다.
+
+    로그인이 필요한 화면이라 여기서는 시트를 직접 세워 확인한다.
+  */
+  test('쿠폰 — 쓰기 전에 무엇을 어디서 쓰는지 묻는다', async ({ page }) => {
+    await seedTour(page, { ...DONE_STATE, coupons: ['cp1'] })
+    await page.goto('/me?e2e=1')
+    await expect(page.getByText('🎟 받은 쿠폰')).toBeVisible({ timeout: 15000 })
+
+    /*
+      쿠폰 코드에서 확인 화면까지의 문구를 본다. 실제 시트는 로그인 뒤에
+      열리므로, 여기서는 그 화면이 보여줄 두 값(가게·혜택)이 카탈로그에서
+      제대로 나오는지를 지갑 카드로 확인한다 — 확인 화면은 같은 값을 쓴다.
+    */
+    await page.getByRole('button', { name: '열기' }).first().click()
+    await expect(page.getByText('봉황1935').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('음료 1,000원 할인').first()).toBeVisible()
   })
 
   test('포인트 — 문턱 아래에서는 남은 거리만 보인다', async ({ page }) => {
@@ -754,7 +778,7 @@ test.describe('혜택 사용 — 쿠폰과 포인트', () => {
   })
 
   test('가게 확인 화면은 로그인 없이 열리지 않는다', async ({ page }) => {
-    // 이 한 줄이 '참여자가 자기 폰에서 스스로 태우는' 구멍을 닫는다
+    // 이 한 줄이 '참여자가 자기 폰에서 스스로 사용 처리하는' 구멍을 닫는다
     await page.goto('/shop/verify?c=PT1-AAAAAA-2222')
     await expect(page.getByText('가게 로그인')).toBeVisible({ timeout: 15000 })
     await expect(page.getByRole('spinbutton')).toHaveCount(0)
