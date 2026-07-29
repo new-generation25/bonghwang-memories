@@ -11,7 +11,7 @@
  * 그때 쌓인 포인트는 로컬에 남았다가 로그인 시 서버로 올라간다.
  */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import MyPoints from '@/components/MyPoints'
@@ -19,24 +19,22 @@ import AuthModal from '@/components/AuthModal'
 import CouponCard from '@/components/CouponCard'
 import JCard from '@/components/JCard'
 import SettingsSheet from '@/components/SettingsSheet'
+import GachaSheet from '@/components/GachaSheet'
 import { couponSpec } from '@/lib/coupons'
-import { gachaSeed, prizesOf } from '@/lib/gacha'
+import { gachaSeed, prizesOf, type GachaPrize } from '@/lib/gacha'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
-import {
-  localPointHistory,
-  POINTS_EVENT,
-  REASON_LABEL,
-  type PointEntry,
-} from '@/lib/points'
+import { markGachaDrawn } from '@/lib/tourState'
+import { awardDynamic } from '@/lib/points'
+import { logEvent } from '@/lib/analytics'
 
 export default function MyRecordPage() {
   const router = useRouter()
   const { profile, loading: authLoading } = useAuth()
   const tour = useTourState()
-  const [history, setHistory] = useState<PointEntry[]>([])
   const [showAuth, setShowAuth] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [gachaOpen, setGachaOpen] = useState(false)
 
   /*
     쿠폰 코드의 사용자 부분.
@@ -46,15 +44,6 @@ export default function MyRecordPage() {
   */
   const couponUid = profile?.uid ?? `local-${tour.startTime ?? 0}`
 
-  // 적립은 화면을 보는 중에도 일어난다(설문 응답 등) — 이벤트로 따라간다
-  useEffect(() => {
-    const sync = () => setHistory(localPointHistory())
-    sync()
-    window.addEventListener(POINTS_EVENT, sync)
-    return () => window.removeEventListener(POINTS_EVENT, sync)
-  }, [])
-
-  const recent = [...history].reverse().slice(0, 12)
   /*
     지갑 한 자리.
 
@@ -81,6 +70,33 @@ export default function MyRecordPage() {
   ].filter((x) => x.spec)
   /** 뽑기로 받은 포인트 — 지갑이 아니라 적립 내역에 남는 것들 */
   const pointPrizes = prizesOf(seed, tour.gachaDrawn).filter((p) => p.kind === 'points')
+
+  /*
+    남은 뽑기 이용권 — 빙고 한 줄에 한 장.
+
+    빙고판이 저장해둔 줄 수에서 연 칸 수를 뺀다. 줄 판정은 빙고판이 하고
+    여기는 결과만 읽는다 — 같은 계산을 두 곳에서 하면 언젠가 갈라진다.
+  */
+  const drawsLeft = Math.max(0, tour.bingo.lines - tour.gachaDrawn.length)
+
+  /**
+   * 한 칸이 열렸다 — 기록하고 상품을 건넨다.
+   *
+   * 쿠폰이면 지갑에 들어간다. 지갑에 따로 담지 않고 gachaDrawn(칸 번호)에서
+   * 파생시킨다 — tour.coupons는 id 집합이라 같은 쿠폰을 두 번 담지 못하는데,
+   * 칸 번호는 겹치지 않아 두 장을 각각 셀 수 있다.
+   * 포인트면 그 자리에서 적립한다 — 쓸 곳이 앱 안이라 지갑에 넣지 않는다.
+   */
+  const handleDrawn = (slot: number, prize: GachaPrize) => {
+    markGachaDrawn(slot)
+    logEvent('gacha_drawn', { id: prize.id, tier: prize.tier, slot })
+    if (prize.kind === 'points' && prize.points) {
+      // refId에 칸 번호를 넣는다 — 같은 상품을 두 번 뽑아도 각각 적립된다
+      void awardDynamic(`slot-${slot}`, prize.points, 'gacha')
+    } else if (prize.kind === 'coupon' && prize.couponId) {
+      logEvent('coupon_granted', { by: 'gacha', id: prize.couponId, slot })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-cream-base pb-32">
@@ -140,6 +156,41 @@ export default function MyRecordPage() {
         </div>
 
         {/*
+          뽑기 이용권 — 여기가 쓰는 자리다.
+
+          받은 것(쿠폰·포인트) 바로 위에 둔다. 빙고판은 걷는 동안 보는
+          화면이라 거기서 판을 열면, 판에서 나온 쿠폰을 보러 또 여기로
+          와야 했다. 받는 곳과 여는 곳이 한자리여야 한 번에 끝난다.
+        */}
+        {drawsLeft > 0 && (
+          <button
+            onClick={() => setGachaOpen(true)}
+            className="mb-5 flex w-full items-center gap-3 rounded-xl border-2 border-sunset-yellow bg-paper px-4 py-3 text-left active:scale-[0.99]"
+          >
+            {/* 이용권을 장수로 보여준다 — 쌓인 것이 눈에 보여야 쓰고 싶어진다 */}
+            <span className="relative shrink-0" aria-hidden>
+              <span className="text-[26px]">🎟</span>
+              {drawsLeft > 1 && (
+                <span className="absolute -right-1.5 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rec px-1 font-mono-retro text-[10px] text-cream">
+                  {drawsLeft}
+                </span>
+              )}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13.5px] font-bold text-ink">
+                뽑기 한판 {drawsLeft}장 있어요
+              </span>
+              <span className="block font-mono-retro text-[10.5px] text-ink-60">
+                한 장을 내면 「추억의 뽑기왕」 판이 열려요
+              </span>
+            </span>
+            <span className="shrink-0 font-mono-retro text-[11px] text-teal-dk">
+              쓰기 ▶
+            </span>
+          </button>
+        )}
+
+        {/*
           뽑기로 받은 포인트. 쿠폰은 아래 지갑에 함께 들어가고, 포인트만
           여기 남는다 — 쓸 곳이 앱 안이라 가게에 내밀 물건이 아니다.
         */}
@@ -196,33 +247,14 @@ export default function MyRecordPage() {
           )}
         </div>
 
-        {/* 적립 내역 */}
-        <div className="card-paper p-4 shadow-lg">
-          <h2 className="font-vintage text-sm font-black text-teal-dk">
-            🧾 포인트 적립 내역
-          </h2>
-          {recent.length === 0 ? (
-            <p className="mt-2 text-[12px] text-ink-60">
-              아직 적립 내역이 없어요.
-            </p>
-          ) : (
-            <ul className="mt-3 space-y-1">
-              {recent.map((entry) => (
-                <li
-                  key={entry.refId}
-                  className="flex items-center gap-2 border-b border-line/60 py-1.5 last:border-0"
-                >
-                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
-                    {REASON_LABEL[entry.reason] ?? entry.reason}
-                  </span>
-                  <span className="shrink-0 font-mono-retro text-[12px] text-teal">
-                    +{entry.points}P
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {/*
+          적립 내역은 맨 위 「봉황 포인트」 카드 안에 있다.
+
+          여기 따로 두었던 목록은 **로컬 원장만** 읽어서, 기기를 바꾸거나
+          캐시를 지운 사람에게는 위에서 2,400P가 보이는데 아래는 "없어요"로
+          나왔다. 한 화면에서 두 값이 어긋나면 어느 쪽도 못 믿는다.
+          MyPoints는 서버까지 읽고 사유별로 묶어 보여주므로 그쪽이 맞다.
+        */}
 
         <button
           onClick={() => router.push('/community')}
@@ -242,6 +274,17 @@ export default function MyRecordPage() {
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
       />
+
+      {gachaOpen && (
+        <GachaSheet
+          key={seed}
+          seed={seed}
+          drawn={tour.gachaDrawn}
+          ticketsLeft={drawsLeft}
+          onDrawn={handleDrawn}
+          onClose={() => setGachaOpen(false)}
+        />
+      )}
 
       <Navigation />
     </div>

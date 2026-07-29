@@ -6,7 +6,7 @@ import { formatBytes, prepareImage } from '@/lib/imagePrep'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlob } from '@/lib/blobStore'
-import { award, awardCampaign } from '@/lib/points'
+import { award, awardDynamic } from '@/lib/points'
 import { activeBonusMissions } from '@/lib/bonusMissions'
 import { submitOnCtrlEnter } from '@/lib/submitOnEnter'
 
@@ -176,7 +176,7 @@ export default function PostComposer({ onPosted }: PostComposerProps) {
 
       // 한정 미션으로 태그했으면 그 캠페인의 지급액을 따로 준다
       const picked = campaigns.find((c) => c.id === campaignId)
-      if (picked) void awardCampaign(picked.id, picked.points)
+      if (picked) void awardDynamic(picked.id, picked.points)
 
       setComment('')
       setMissionTitle('')

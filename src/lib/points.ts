@@ -47,21 +47,35 @@ export const POINT_TABLE = {
   survey: 200,
   /**
    * 일시한정 캠페인(축제 인증 등). 지급액이 캠페인마다 달라 표가 아니라
-   * bonusMissions.ts의 값을 쓴다 — awardCampaign()으로만 적립한다.
+   * bonusMissions.ts의 값을 쓴다 — awardDynamic()으로만 적립한다.
    */
   campaign: 0,
+  /**
+   * 뽑기판에서 나온 포인트. 상품마다 액수가 달라 여기서도 표를 쓰지 않는다.
+   *
+   * campaign과 갈라 둔 이유는 화면 때문이다. 한데 묶으면 뽑기로 받은
+   * 점수가 '한정 보너스미션'으로 적혀, 하지도 않은 미션을 한 것으로 읽힌다.
+   */
+  gacha: 0,
 } as const
 
 export type PointReason = keyof typeof POINT_TABLE
 
+/**
+ * 적립 내역에 적히는 이름.
+ *
+ * 참여자가 화면에서 읽는 말과 같아야 한다 — '보물찾기'는 빙고가 그 이름이던
+ * 시절의 잔재라 지금 화면 어디에도 없는 말이었다.
+ */
 export const REASON_LABEL: Record<PointReason, string> = {
   mainMission: '메인미션 완주',
-  bonusMission: '보너스미션',
+  bonusMission: '빙고 칸',
   specialMission: '스페셜미션',
   shareRecord: '나의 기록 공유',
-  treasureLine: '보물찾기',
+  treasureLine: '빙고 한 줄',
   survey: '완주 설문',
   campaign: '한정 보너스미션',
+  gacha: '뽑기 당첨',
 }
 
 // ---------------------------------------------------------------------------
@@ -203,22 +217,39 @@ export async function award(refId: string, reason: PointReason): Promise<void> {
 }
 
 /**
- * 일시한정 캠페인 적립 — 지급액을 캠페인 정의에서 직접 받는다.
+ * 액수가 정해지지 않은 적립의 상한.
  *
- * 배너에 "+100"이라 써놓고 실제로는 아무것도 주지 않던 것을 잇는다.
- * 사진이 정말 그 부스에서 찍힌 것인지는 앱이 판별할 수 없으므로, 관리자
- * 화면의 글 목록에서 사후 확인하는 것을 전제로 한다. 지금은 포인트를 돈으로
- * 바꿀 수 없어(적립 단계까지만) 악용 위험이 낮다.
+ * 표에 없는 값을 부르는 자리(캠페인·뽑기)라 화면 쪽 실수가 그대로 점수가
+ * 된다. 뽑기 1등이 1,000P라 거기에 맞춘다 — 상품을 더 키우려면 이 값을
+ * 먼저 올려야 한다. **말없이 버리므로**, 안 올리면 적립이 조용히 사라진다.
  */
-export async function awardCampaign(
+export const MAX_DYNAMIC_AWARD = 1000
+
+/**
+ * 표에 없는 적립 — 지급액을 부르는 쪽에서 직접 받는다.
+ *
+ * 일시한정 캠페인(축제 인증 등)과 뽑기 당첨이 여기를 쓴다. 배너에 "+100"
+ * 이라 써놓고 실제로는 아무것도 주지 않던 것을 잇는다. 사진이 정말 그
+ * 부스에서 찍힌 것인지는 앱이 판별할 수 없으므로, 관리자 화면의 글 목록에서
+ * 사후 확인하는 것을 전제로 한다. 지금은 포인트를 돈으로 바꿀 수 없어
+ * (적립 단계까지만) 악용 위험이 낮다.
+ *
+ * reason을 받는 이유는 적립 내역에 적힐 이름이 갈라져야 하기 때문이다 —
+ * 뽑기로 받은 점수가 '한정 보너스미션'으로 적히면 하지도 않은 미션이 된다.
+ */
+export async function awardDynamic(
   missionId: string,
-  points: number
+  points: number,
+  reason: Extract<PointReason, 'campaign' | 'gacha'> = 'campaign'
 ): Promise<void> {
-  if (!Number.isInteger(points) || points <= 0 || points > 500) return
+  if (!Number.isInteger(points) || points <= 0 || points > MAX_DYNAMIC_AWARD) {
+    return
+  }
 
   const entry: PointEntry = {
-    refId: `campaign-${missionId}`,
-    reason: 'campaign',
+    // refId 앞머리는 reason별로 갈라 둔다 — 같은 id가 두 갈래에서 와도 겹치지 않는다
+    refId: `${reason}-${missionId}`,
+    reason,
     points,
     createdAt: Date.now(),
   }

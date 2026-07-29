@@ -31,6 +31,7 @@ const ORDER: PointReason[] = [
   'shareRecord',
   'survey',
   'campaign',
+  'gacha',
 ]
 
 export default function MyPoints({ compact = false }: { compact?: boolean }) {
@@ -77,7 +78,7 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="font-vintage text-sm font-black text-teal-dk">
-              🎟️ 내 포인트
+              🎟️ 봉황 포인트
             </h2>
             <p className="mt-0.5 text-[11px] text-ink-60">
               {profile
