@@ -112,3 +112,22 @@ export function countLines(donePositions: Set<number>): number {
   return BINGO_LINES.filter((line) => line.every((p) => donePositions.has(p)))
     .length
 }
+
+/** 판에 놓인 2막 칸 수 — 진행도의 분모다 */
+export const ACT2_TOTAL = BINGO_CELLS.length
+
+/**
+ * 채운 2막 칸 수.
+ *
+ * 배열 길이로 세지 않는다 — **지금 판에 있는 칸만** 센다. cellsDone는
+ * 기기에 쌓이고 tourSync가 서버 기록과 합집합으로 병합하므로, 판에서 빠진
+ * 칸의 id가 남아 있을 수 있다(B01~B20은 콘텐츠 시트가 오면 갈아끼울 자리다).
+ * 그대로 세면 '23 / 20'처럼 분모를 넘고 진행 바가 100%를 넘어 삐져나온다.
+ *
+ * 세는 곳이 여럿이라 여기 한 번만 둔다 — 빙고판과 J-카드가 각자 세다가
+ * 한쪽만 틀렸다.
+ */
+export function countAct2Done(cellsDone: string[]): number {
+  const ids = new Set(BINGO_CELLS.map((c) => c.id))
+  return cellsDone.filter((id) => ids.has(id)).length
+}

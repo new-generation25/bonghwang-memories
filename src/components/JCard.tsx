@@ -28,6 +28,7 @@ import { playCassetteFlip, playStamp } from '@/lib/sfx'
 import { useTourState } from '@/hooks/useTourState'
 import { formatElapsed } from '@/lib/tourState'
 import { JCARD_FILLABLE_TRACKS, TRACK_STATIONS } from '@/lib/tracks'
+import { countAct2Done } from '@/lib/bingoCells'
 
 /** 다섯째 줄 상태 문구 — 잠금이 아니라 남겨둔 자리라는 뜻 */
 const FIFTH_WISH_RESERVED = '아버지의 몫'
@@ -174,7 +175,7 @@ export default function JCard() {
         <p className="mt-3 border-t border-line pt-2 font-mono-retro text-[11px] text-ink-60">
           {formatElapsed(tour.startTime)} 걷는 중
           {tour.bingo.unlocked &&
-            ` · 골목 빙고 ${tour.bingo.cellsDone.length}칸 · ${tour.bingo.lines}줄`}
+            ` · 골목 빙고 ${countAct2Done(tour.bingo.cellsDone)}칸 · ${tour.bingo.lines}줄`}
         </p>
       )}
     </div>
