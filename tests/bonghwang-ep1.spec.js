@@ -494,12 +494,13 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
     })
     await page.goto('/treasure?e2e=1')
 
-    const open = page.getByRole('button', { name: /골목 뽑기 1회 남았어요/ })
+    const open = page.getByRole('button', { name: /뽑기 한판 1장 있어요/ })
     await expect(open).toBeVisible({ timeout: 15000 })
     await open.click()
 
-    await page.getByRole('button', { name: /한 칸 열기/ }).click()
-    // 굴리는 연출 뒤에 결과가 선다
+    // 참여자가 칸을 직접 고른다 — 기계가 뽑아주지 않는다
+    await page.getByRole('button', { name: '23번 칸' }).click()
+    // 여는 연출 뒤에 결과가 선다
     await expect(page.getByRole('button', { name: '받기' })).toBeVisible({
       timeout: 15000,
     })
@@ -507,13 +508,12 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
     const drawn = await page.evaluate(
       () => JSON.parse(window.localStorage.getItem('bh_tour_v2')).gachaDrawn
     )
-    expect(drawn).toHaveLength(1)
-    expect(drawn[0]).toBeGreaterThanOrEqual(0)
-    expect(drawn[0]).toBeLessThan(50)
+    // 고른 칸이 그대로 열려야 한다(0-based라 23번 칸 = 22)
+    expect(drawn).toEqual([22])
 
     // 다 쓰면 안내가 사라진다
     await page.getByRole('button', { name: '받기' }).click()
-    await expect(page.getByText(/골목 뽑기 .*남았어요/)).toHaveCount(0)
+    await expect(page.getByText(/뽑기 한판 .*있어요/)).toHaveCount(0)
   })
 
   test('뽑은 상품은 나의 기록에 남는다', async ({ page }) => {
@@ -523,7 +523,10 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
       tracksCompleted: [1, 2, 3, 4, 5],
       speechMode: 'casual',
       bingo: { ...TWO_LINES, lines: 2 },
-      // 0번 칸 — 판 배치가 고정이라 어떤 상품인지 정해져 있다
+      /*
+        판 배치는 계정마다 섞이지만 어느 칸이든 상품 하나가 나온다 —
+        여기서 보는 것은 '뽑은 것이 기록에 남는가'이지 무엇이 나왔는가가 아니다.
+      */
       gachaDrawn: [0],
     })
     await page.goto('/me?e2e=1')
@@ -543,11 +546,13 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
       bingo: TWO_LINES,
     })
     await page.goto('/treasure?e2e=1')
-    await page.getByRole('button', { name: /골목 뽑기 1회 남았어요/ }).click()
+    await page.getByRole('button', { name: /뽑기 한판 1장 있어요/ }).click()
 
     await expect(page.getByText(/닫힌 칸/)).toContainText('50', {
       timeout: 10000,
     })
+    // 칸이 전부 눌리는 버튼이어야 한다 — 고르는 것이 이 놀이의 전부다
+    await expect(page.getByRole('button', { name: /\d+번 칸/ })).toHaveCount(50)
   })
 })
 

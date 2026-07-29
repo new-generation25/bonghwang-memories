@@ -139,82 +139,124 @@ export function prizeById(id: string): GachaPrize | null {
 }
 
 /**
- * 50칸 판 — 칸 번호 → 상품 id.
+ * 상품을 칸 수만큼 늘어놓은 기본 배열 — 섞기 전의 재료다.
  *
- * 같은 상품을 이어 붙이지 않고 하나씩 돌아가며 놓는다. 뽑는 칸이 어차피
- * 무작위라 결과는 같지만, 판을 펼쳤을 때 한쪽에만 몰려 보이면 '짜여
- * 있다'는 인상을 준다.
+ * 같은 상품을 이어 붙이지 않고 하나씩 돌아가며 놓는다. 어차피 아래에서
+ * 섞지만, slots 합이 모자랄 때 한쪽만 비는 것을 여기서 막는다.
  */
-export const GACHA_BOARD: string[] = (() => {
+const BASE_POOL: string[] = (() => {
   const remaining = GACHA_PRIZES.map((p) => ({ id: p.id, left: p.slots }))
-  const board: string[] = []
-  while (board.length < GACHA_SLOTS) {
+  const pool: string[] = []
+  while (pool.length < GACHA_SLOTS) {
     let placed = false
     for (const item of remaining) {
       if (item.left <= 0) continue
-      board.push(item.id)
+      pool.push(item.id)
       item.left -= 1
       placed = true
-      if (board.length >= GACHA_SLOTS) break
+      if (pool.length >= GACHA_SLOTS) break
     }
     // slots 합이 GACHA_SLOTS보다 작으면 여기서 멈춘다(설정 실수 방어)
     if (!placed) break
   }
-  return board
+  return pool
 })()
 
 /**
- * 진짜 무작위로 한 칸.
+ * 시드 난수 — 같은 시드는 늘 같은 순열을 낸다(mulberry32).
  *
- * Math.random()을 쓰지 않는다. 뽑기는 참여자가 결과를 납득해야 하는
- * 자리라, 브라우저가 주는 암호학적 난수를 쓴다. 나머지 연산으로 생기는
- * 치우침(modulo bias)도 걷어낸다 — 흔한 상품이 아주 조금 더 자주 나오는
- * 정도지만, 공정하다고 말하려면 그 정도도 없어야 한다.
+ * 판 배치는 **재현되어야** 한다. 저장하는 것이 뽑은 '칸 번호'뿐이라,
+ * 화면을 새로 열 때 같은 배치가 나오지 않으면 어제 뽑은 상품이 오늘
+ * 다른 것으로 바뀐다. 그래서 여기만은 crypto가 아니라 시드 난수다.
  */
-function randomBelow(n: number): number {
-  if (n <= 0) return 0
-  const limit = Math.floor(0xffffffff / n) * n
-  const buf = new Uint32Array(1)
-  for (let i = 0; i < 100; i++) {
-    crypto.getRandomValues(buf)
-    if (buf[0] < limit) return buf[0] % n
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
-  // 100번 연속으로 걸릴 확률은 사실상 0이지만, 무한 반복은 만들지 않는다
-  return buf[0] % n
+}
+
+/** 문자열 → 32비트 시드 (FNV-1a) */
+function seedOf(key: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return h >>> 0
+}
+
+/**
+ * 이 사람의 판 — 칸 번호 → 상품 id.
+ *
+ * 사람마다 배치를 섞는다. 모두가 같은 판이면 누군가 한 번 열어보고
+ * "17번이 카세트"라고 알리는 순간 뽑기가 아니게 된다. 고르는 재미는
+ * 그대로 두고 공략만 막는 방법이 이것이다.
+ *
+ * 시드가 없으면(비로그인) 고정 판을 쓴다 — 그 기기 안에서만은 배치가
+ * 일정해야 뽑은 상품이 흔들리지 않는다.
+ */
+export function boardFor(seed: string): string[] {
+  const board = [...BASE_POOL]
+  const rnd = mulberry32(seedOf(seed || 'bh-guest'))
+  // Fisher–Yates
+  for (let i = board.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1))
+    ;[board[i], board[j]] = [board[j], board[i]]
+  }
+  return board
+}
+
+/**
+ * 이 사람의 판 시드.
+ *
+ * 로그인 계정이 있으면 uid, 없으면 투어 시작 시각을 쓴다 — 쿠폰 코드가
+ * 사람을 가리는 방식과 같다(coupons.ts). 로그인 전후로 시드가 바뀌면
+ * 판 배치도 바뀌는데, 아직 아무 칸도 열지 않았다면 문제가 없고 이미
+ * 열었다면 그 칸의 상품이 달라진다 — 그래서 열 때마다 상품을 기록으로
+ * 남기지 않고 판에서 파생시키는 지금 구조에서는 **로그인을 먼저 권한다**.
+ */
+export function gachaSeed(uid: string | null | undefined, startTime: number | null): string {
+  return uid || `local-${startTime ?? 0}`
 }
 
 export interface GachaResult {
-  /** 뽑힌 칸 번호(0~49) — 판에서 어디가 열렸는지 보여줄 때 쓴다 */
+  /** 연 칸 번호(0~49) */
   slot: number
   prize: GachaPrize
 }
 
 /**
- * 아직 열지 않은 칸 중에서 하나를 뽑는다.
+ * 참여자가 고른 칸을 연다.
  *
- * 뽑은 칸은 그 사람의 판에서 사라진다(비복원). 제비뽑기와 같은 결이라
- * 뽑을수록 남은 것이 줄어드는 것이 눈에 보인다. 한 사람이 얻을 수 있는
- * 뽑기 횟수는 최대 11회(12줄 − 첫 줄)라 판이 마르지 않는다.
+ * 무작위로 뽑아주지 않는다 — 어느 칸을 열지는 사람이 정한다. 판이
+ * 이미 섞여 있으므로 어느 칸을 고르든 확률은 같고, 고르는 행위만
+ * 참여자의 것이 된다. 문방구 뽑기판 앞에서 손가락을 옮기던 그 순간이다.
+ *
+ * 연 칸은 그 사람의 판에서 사라진다(비복원). 한 사람이 얻는 이용권은
+ * 최대 11장(12줄 − 첫 줄)이라 판이 마르지 않는다.
  */
-export function drawPrize(drawnSlots: number[]): GachaResult | null {
-  const taken = new Set(drawnSlots)
-  const open: number[] = []
-  for (let i = 0; i < GACHA_BOARD.length; i++) {
-    if (!taken.has(i)) open.push(i)
-  }
-  if (open.length === 0) return null
-
-  const slot = open[randomBelow(open.length)]
-  const prize = prizeById(GACHA_BOARD[slot])
+export function openSlot(
+  seed: string,
+  slot: number,
+  drawnSlots: number[]
+): GachaResult | null {
+  if (slot < 0 || slot >= GACHA_SLOTS) return null
+  if (drawnSlots.includes(slot)) return null
+  const prize = prizeById(boardFor(seed)[slot] ?? '')
   if (!prize) return null
   return { slot, prize }
 }
 
-/** 뽑은 칸 번호들 → 상품 목록(뽑은 순서 그대로) */
-export function prizesOf(drawnSlots: number[]): GachaPrize[] {
+/** 연 칸 번호들 → 상품 목록(연 순서 그대로) */
+export function prizesOf(seed: string, drawnSlots: number[]): GachaPrize[] {
+  const board = boardFor(seed)
   const out: GachaPrize[] = []
   for (const slot of drawnSlots) {
-    const prize = prizeById(GACHA_BOARD[slot] ?? '')
+    const prize = prizeById(board[slot] ?? '')
     if (prize) out.push(prize)
   }
   return out

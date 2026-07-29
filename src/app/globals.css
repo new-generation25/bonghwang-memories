@@ -917,6 +917,24 @@ a {
   to { opacity: 1; }
 }
 
+/*
+  뽑기 칸이 열릴 때. 살짝 커졌다 제자리로 — 종이 딱지를 뒤집는 결이다.
+  판이 스크롤되는 중에도 눈에 띄어야 해서 밝기까지 함께 흔든다.
+*/
+@keyframes gacha-pop {
+  0% {
+    transform: scale(0.82);
+    filter: brightness(1.6);
+  }
+  55% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
 @keyframes slideUp {
   from {
     transform: translateY(20px);

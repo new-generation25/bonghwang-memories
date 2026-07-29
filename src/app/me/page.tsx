@@ -20,7 +20,7 @@ import CouponCard from '@/components/CouponCard'
 import JCard from '@/components/JCard'
 import SettingsSheet from '@/components/SettingsSheet'
 import { couponSpec } from '@/lib/coupons'
-import { prizesOf } from '@/lib/gacha'
+import { gachaSeed, prizesOf } from '@/lib/gacha'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import {
@@ -55,8 +55,13 @@ export default function MyRecordPage() {
   }, [])
 
   const recent = [...history].reverse().slice(0, 12)
-  // 뽑은 칸 번호에서 상품을 되짚는다 — 판 배치가 고정이라 칸만 있으면 된다
-  const prizes = prizesOf(tour.gachaDrawn)
+  /*
+    뽑은 칸 번호에서 상품을 되짚는다.
+
+    판 배치가 계정마다 다르므로 시드가 같아야 같은 상품이 나온다 —
+    쿠폰 코드가 쓰는 것과 같은 값이다(로그인 전에는 기기의 투어 시작 시각).
+  */
+  const prizes = prizesOf(gachaSeed(profile?.uid, tour.startTime), tour.gachaDrawn)
 
   return (
     <div className="min-h-screen bg-cream-base pb-32">

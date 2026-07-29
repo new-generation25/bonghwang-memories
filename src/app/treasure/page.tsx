@@ -28,7 +28,8 @@ import {
   mutateTour,
 } from '@/lib/tourState'
 import GachaSheet from '@/components/GachaSheet'
-import type { GachaPrize } from '@/lib/gacha'
+import { gachaSeed, type GachaPrize } from '@/lib/gacha'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   POINT_TABLE,
   POINTS_EVENT,
@@ -40,6 +41,9 @@ import { logEvent } from '@/lib/analytics'
 
 export default function BingoPage() {
   const tour = useTourState()
+  const { profile } = useAuth()
+  /** 판 배치를 정하는 시드 — 계정마다 판이 다르게 섞인다 */
+  const seed = gachaSeed(profile?.uid, tour.startTime)
   // 모드를 켜면 잠금 화면이 그 자리에서 열려야 한다
   useSuperAdmin()
   const cueState = useCue()
@@ -49,6 +53,8 @@ export default function BingoPage() {
   /** 2막 여는 대사가 끝난 직후 한 번 띄우는 안내 */
   const [welcome, setWelcome] = useState(false)
   const [gachaOpen, setGachaOpen] = useState(false)
+  /** 방금 받은 이용권 장수 — 줄을 채운 순간에만 잠깐 뜬다 */
+  const [ticketToast, setTicketToast] = useState<number | null>(null)
 
   const board = useMemo(() => buildBoard(), [])
 
@@ -102,8 +108,21 @@ export default function BingoPage() {
         줄 수가 아니라 잡음으로 들린다. 몇 줄인지는 화면 숫자가 말한다.
       */
       playBingoLine()
+      /*
+        첫 줄(대각선)은 가게 쿠폰이 나오는 자리라 이용권을 세지 않는다.
+        두 번째 줄부터 '뽑기 한판'이 한 장씩 — 받은 것이 화면에 뜨지 않으면
+        쌓이는 줄도 모른 채 지나간다.
+      */
+      if (lines > 1) setTicketToast(lines - 1)
     }
   }, [lines, tour.bingo.lines])
+
+  // 받은 이용권 알림은 잠깐만 — 판을 가리지 않는다
+  useEffect(() => {
+    if (ticketToast === null) return
+    const t = setTimeout(() => setTicketToast(null), 3600)
+    return () => clearTimeout(t)
+  }, [ticketToast])
 
   /*
     첫 줄에 가게 쿠폰 다섯 장.
@@ -321,19 +340,25 @@ export default function BingoPage() {
             className="mb-4 flex w-full items-center gap-3 rounded-xl border-2 border-sunset-yellow bg-paper px-4 py-3 text-left active:scale-[0.99]"
             style={{ animation: 'slideUp 0.4s ease-out' }}
           >
-            <span className="text-[26px]" aria-hidden>
-              🎁
+            {/* 이용권을 장수로 보여준다 — 쌓인 것이 눈에 보여야 쓰고 싶어진다 */}
+            <span className="relative shrink-0" aria-hidden>
+              <span className="text-[26px]">🎟</span>
+              {drawsLeft > 1 && (
+                <span className="absolute -right-1.5 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rec px-1 font-mono-retro text-[10px] text-cream">
+                  {drawsLeft}
+                </span>
+              )}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[13.5px] font-bold text-ink">
-                골목 뽑기 {drawsLeft}회 남았어요
+                뽑기 한판 {drawsLeft}장 있어요
               </span>
               <span className="block font-mono-retro text-[10.5px] text-ink-60">
-                빙고 한 줄에 한 번 — 50칸 중 하나가 열립니다
+                한 장을 내면 「추억의 뽑기왕」 판이 열려요
               </span>
             </span>
             <span className="shrink-0 font-mono-retro text-[11px] text-teal-dk">
-              열기 ▶
+              쓰기 ▶
             </span>
           </button>
         )}
@@ -430,8 +455,29 @@ export default function BingoPage() {
       )}
 
       {/* 뽑기 — 다른 창보다 위에 뜬다. 지금 하는 일이 이것이다 */}
+      {/*
+        이용권을 받았다는 알림. 줄을 채운 그 순간에만 뜬다 —
+        보상이 조용히 늘어나면 받은 줄도 모른 채 지나간다.
+      */}
+      {ticketToast !== null && !gachaOpen && (
+        <div
+          className="fixed left-1/2 top-20 z-50 w-[min(340px,88vw)] -translate-x-1/2 rounded-xl border-2 border-sunset-yellow bg-paper px-4 py-3 text-center shadow-lg"
+          style={{ animation: 'slideUp 0.4s ease-out' }}
+          role="status"
+        >
+          <p className="text-[13.5px] font-bold text-ink">
+            🎟 뽑기 한판을 받았어요
+          </p>
+          <p className="mt-0.5 font-mono-retro text-[10.5px] text-ink-60">
+            지금 {ticketToast}장 · 「추억의 뽑기왕」에서 쓸 수 있어요
+          </p>
+        </div>
+      )}
+
       {gachaOpen && (
         <GachaSheet
+          key={seed}
+          seed={seed}
           drawn={tour.gachaDrawn}
           onDrawn={handleDrawn}
           onClose={() => setGachaOpen(false)}
