@@ -151,16 +151,24 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
                 쓰는 길을 화면에 둔다. 예전에는 "쓸 수 있어요"라고만 적혀
                 있어서, 정작 카운터 앞에 선 사람이 무엇을 눌러야 하는지
                 알 수 없었다 — 쿠폰은 지갑에 QR이 있는데 포인트는 없었다.
+
+                로그인을 요구하는 것은 규칙이 그렇기 때문이다. 사용 기록의
+                uid를 요청 계정과 대조해 남이 대신 쓰는 것을 막는데, 로그인
+                없이는 그 대조를 통과할 수 없다. 여기서 막지 않으면 카운터
+                앞까지 가서야 거절당한다.
               */}
-              <button
-                onClick={() => setRedeeming(true)}
-                className="btn-teal mt-2.5 w-full text-center text-[13px]"
-              >
-                가게에서 사용하기
-              </button>
-              {!profile?.uid && (
-                <p className="mt-1.5 text-center text-[10.5px] text-ink-60">
-                  로그인하면 다른 기기에서도 이어집니다
+              {profile?.uid ? (
+                <button
+                  onClick={() => setRedeeming(true)}
+                  className="btn-teal mt-2.5 w-full text-center text-[13px]"
+                >
+                  가게에서 사용하기
+                </button>
+              ) : (
+                <p className="mt-2.5 rounded-xl border border-line bg-cream-dp px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-60">
+                  포인트를 쓰려면 로그인이 필요해요.
+                  <br />
+                  본인이 걸어서 모은 포인트라 계정에 묶여 있습니다.
                 </p>
               )}
             </>

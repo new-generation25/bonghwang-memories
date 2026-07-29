@@ -690,7 +690,14 @@ test.describe('혜택 사용 — 쿠폰과 포인트', () => {
     ).toHaveCount(0)
   })
 
-  test('포인트 — 문턱을 넘으면 코드가 뜬다', async ({ page }) => {
+  /*
+    포인트도 쿠폰과 같다 — 본인 계정에 묶여 있다.
+
+    쓰는 화면 자체(금액 넣기 → 스티커 찍기 → 확인 → 완료)는 로그인 뒤에만
+    열려서 헤드리스로 지날 수 없다. 그 흐름이 실제로 서는지는 규칙 시험이
+    본다 — 토큰·양도·스냅샷을 에뮬레이터에서 잰다(npm run test:rules).
+  */
+  test('포인트 — 문턱을 넘어도 로그인 전에는 쓸 수 없다고 말한다', async ({ page }) => {
     await seedTour(page, DONE_STATE)
     await seedPoints(page, [earn('m1', 2000), earn('m2', 1500)])
     await page.goto('/me?e2e=1')
@@ -700,39 +707,15 @@ test.describe('혜택 사용 — 쿠폰과 포인트', () => {
       timeout: 15000,
     })
 
-    await page.getByRole('button', { name: '가게에서 사용하기' }).click()
-
     /*
-      쿠폰과 같은 차례를 지난다 — 다른 것은 앞에 금액 칸 하나뿐이다.
-      쿠폰은 액면이 정해져 있지만 포인트는 얼마를 쓸지가 그 자리에서 정해진다.
+      카운터 앞까지 가서 거절당하지 않게, 쓰는 자리에서 미리 말한다.
+      쿠폰 카드와 같은 문장 구조를 쓴다 — 둘이 같은 규칙을 따르므로
+      설명도 같아야 한다.
     */
-    const amount = page.getByRole('spinbutton')
-    await expect(amount).toBeVisible({ timeout: 10000 })
-
-    // 쓸 수 있는 것보다 많이 넣으면 나아가지 못한다
-    await amount.fill('9000')
-    await expect(page.getByText(/쓸 수 있는 포인트.*넘었어요/)).toBeVisible()
-    await expect(page.getByRole('button', { name: '가게 스티커 찍기' })).toBeDisabled()
-
-    await amount.fill('3000')
-    await expect(page.getByRole('button', { name: '가게 스티커 찍기' })).toBeEnabled()
-    await page.getByRole('button', { name: '가게 스티커 찍기' }).click()
-
-    // 그 다음은 쿠폰과 똑같다 — 스티커를 찍는다
-    await expect(page.getByText(/봉황 메모리즈 스티커/)).toBeVisible({ timeout: 10000 })
-    /*
-      카메라를 못 여는 기기를 위한 길이 늘 함께 있어야 한다.
-
-      좌표 클릭 대신 이벤트를 직접 보낸다. 헤드리스에서는 카메라 자리의
-      <video>가 그 위를 덮고 있어 좌표로는 그리로 먹힌다 — 실제 기기에서는
-      미리보기 아래에 이 버튼이 따로 서 있다.
-    */
-    await page
-      .getByRole('button', { name: /카메라가 안 되나요/ })
-      .dispatchEvent('click')
-    await expect(page.getByPlaceholder('XXXXXXXX')).toBeVisible()
-    // 포인트는 어느 가게든 쓸 수 있어 8자리만으로는 가게를 알 수 없다
-    await expect(page.getByRole('combobox')).toBeVisible()
+    await expect(page.getByText(/포인트를 쓰려면 로그인이 필요해요/)).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: '가게에서 사용하기' })
+    ).toHaveCount(0)
   })
 
   test('포인트 — FIFO로 깎이고, 쓴 몫이 따로 적힌다', async ({ page }) => {

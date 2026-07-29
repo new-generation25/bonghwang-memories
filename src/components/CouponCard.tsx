@@ -194,8 +194,12 @@ export default function CouponCard({
 
             평소에는 눈에 띌 이유가 없어 작은 글자로 둔다 — 잘못 누르면
             멀쩡한 코드가 새 번호로 바뀌어 헷갈린다.
+
+            로그인 전에는 감춘다. 코드가 화면에 보이지 않게 된 뒤로는
+            눌러도 달라지는 것이 없어 보이는데, 애초에 쓸 수 없는 상태에서
+            "새 번호"를 권하면 그게 해결책인 줄 알고 계속 누르게 된다.
           */}
-          {fixedSerial === undefined && (
+          {fixedSerial === undefined && signedIn && (
             <>
               <button
                 type="button"
