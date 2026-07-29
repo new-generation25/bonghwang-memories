@@ -245,9 +245,14 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
 
   try {
     const provider = new GoogleAuthProvider()
-    // 계정이 여러 개일 때 매번 고를 수 있도록
-    provider.setCustomParameters({ prompt: 'select_account' })
+    /*
+      prompt를 지정하지 않는다.
 
+      전에는 `select_account`를 넣어 계정이 여러 개일 때 고를 수 있게 했는데,
+      그 값은 **고를 것이 하나뿐일 때도** 선택 화면을 강제로 띄운다. 이미
+      로그인해둔 사람에게도 매번 창이 떠서 "또 로그인하네"로 읽혔다.
+      비워두면 구글이 알아서 판단한다 — 계정이 여럿이면 그때만 고르라고 한다.
+    */
     const cred = await signInWithPopup(a, provider)
     const existing = await getProfile(cred.user.uid)
     if (existing) return { kind: 'existing', profile: existing }
