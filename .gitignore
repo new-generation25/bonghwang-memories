@@ -64,3 +64,9 @@ shop-qr/
 # Playwright 산출물 — 리포트와 실패 스크린샷은 돌릴 때마다 새로 생긴다
 /playwright-report/
 /test-results/
+
+# Firebase 에뮬레이터 산출물 — 규칙 시험을 돌릴 때마다 새로 생긴다
+firestore-debug.log
+ui-debug.log
+firebase-debug.log
+/.firebase/
