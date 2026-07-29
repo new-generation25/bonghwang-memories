@@ -52,15 +52,30 @@ service cloud.firestore {
         allow read, write: if isOwner(userId) || isAdmin();
       }
 
-      // ───────── 포인트 적립 내역 ─────────
+      // ───────── 포인트 원장 ─────────
+      //
       // 문서 ID가 refId라 같은 미션을 두 번 완료해도 덮어쓰기가 되어
       // 중복 적립이 되지 않는다. 수정·삭제는 막는다.
+      //
+      // 적립만이 아니라 **차감도 여기 쌓인다.** 적립 건을 깎지 않고 음수
+      // 건을 따로 남기는 것은, 얼마를 받았고 얼마를 썼는지를 나중에
+      // 되짚을 수 있어야 하기 때문이다. 지갑 잔액은 읽을 때 합산한다.
       match /points/{refId} {
         allow read: if isOwner(userId) || isAdmin();
+
+        // 적립 상한이 500이던 시절에는 뽑기 1등(1,000P)이 규칙에서 떨어졌다.
+        // MAX_DYNAMIC_AWARD를 올리면 여기도 함께 올려야 한다.
         allow create: if (isOwner(userId)
                           && request.resource.data.points is int
-                          && request.resource.data.points > 0
-                          && request.resource.data.points <= 500)
+                          && (
+                               (request.resource.data.points > 0
+                                && request.resource.data.points <= 2000)
+                               ||
+                               // 차감 — 문서 id가 사용 코드라 한 번만 쌓인다
+                               (request.resource.data.reason == 'redeem'
+                                && request.resource.data.points < 0
+                                && request.resource.data.points >= -100000)
+                             ))
                       || isAdmin();
         allow update: if isAdmin();
         allow delete: if isAdmin();
@@ -107,6 +122,25 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // ───────── 설정값 ─────────
+    //
+    // 배점·문턱·충당률은 협의로 움직이는 값이라 배포를 기다리게 하면 안 된다.
+    // 설문 문항을 코드 밖에 둔 것과 같은 이유다.
+    //
+    // 문서를 둘로 가른 것은 읽는 사람이 다르기 때문이다.
+    //  · points     — 배점·문턱·유효기간. 참여자 화면이 읽어야 하므로 공개
+    //  · settlement — 등급별 충당률·회비·상한. **관리자만.** 이 값이 새면
+    //                 가게끼리 서로의 계약 조건을 알게 되고, 참여자에게는
+    //                 애초에 보이면 안 되는 값이다
+    match /config/points {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /config/settlement {
+      allow read, write: if isAdmin();
+    }
+
 
     // ───────── 게시글 ─────────
     match /posts/{postId} {
@@ -203,6 +237,20 @@ service cloud.firestore {
 
       function p() { return request.resource.data; }
 
+      /*
+        정산이 보는 칸.
+
+        base는 반드시 있어야 하고, snap(충당률 스냅샷)은 **누가 쓰느냐에
+        따라 있고 없다.** 참여자가 직접 찍는 주 경로는 가게 문서를 못 읽어
+        율을 모른다 — 비운 채로 만들고, 율을 아는 기기(가게·관리자)가
+        나중에 아래 update로 찍는다.
+      */
+      function baseKeys() {
+        return ['code', 'couponId', 'shopId', 'userTag', 'uid',
+                'via', 'byUid', 'token', 'kind', 'amountWon', 'usedAt'];
+      }
+      function snapKeys() { return ['coverageRate', 'shopWon', 'opsWon']; }
+
       // 코드 조각과 필드가 어긋난 채로 쌓이면 정산에서 어느 쪽이 참인지
       // 알 수 없다. BH1T(시험용)는 이 정규식에 걸리지 않아 애초에 기록이
       // 남지 않는다 — 확인 흐름을 시험하며 쿠폰을 태우지 않으려는 것이다.
@@ -211,6 +259,32 @@ service cloud.firestore {
                && code.matches('BH1-[A-Z0-9]{2,8}-[2-9A-Z]{6}-[2-9A-Z]{4}')
                && p().couponId == code.split('-')[1].lower()
                && p().userTag == code.split('-')[2];
+      }
+
+      // 포인트 사용 코드 — PT1-{사용자 6자}-{순번 2자}{체크 2자}.
+      // 쿠폰과 머리를 갈라 두어 한쪽 규칙이 다른 쪽을 통과시키지 못한다.
+      function matchesPointCode() {
+        return p().code == code
+               && code.matches('PT1-[2-9A-Z]{6}-[2-9A-Z]{4}')
+               && p().couponId == 'pt'
+               && p().userTag == code.split('-')[1];
+      }
+
+      /*
+        분담액 검산.
+
+        율을 클라이언트가 보내되 **가게 문서의 값과 한 자리도 다르면
+        거절한다.** 그래서 이 값은 '클라이언트가 부르는 값'이 아니라
+        '클라이언트가 옮겨 적는 값'이다. 소수를 안 쓰고 정수 퍼센트로 둔
+        이유가 여기 있다 — 아래 나눗셈이 화면의 계산과 똑같이 떨어져야 한다.
+      */
+      function shopRate(shopId) {
+        return shopData(shopId).get('coverageRate', 0);
+      }
+      function snapshotOk() {
+        return p().get('coverageRate', -1) == shopRate(p().shopId)
+               && p().get('shopWon', -1) == p().amountWon * shopRate(p().shopId) / 100
+               && p().get('opsWon', -1) == p().amountWon - p().get('shopWon', -1);
       }
 
       // cp1 코드를 cp3 가게에서 태울 수 없다. 문 닫은 가게도 막는다.
@@ -238,22 +312,56 @@ service cloud.firestore {
                   );
       }
 
+      function isStaffOf(shopId) {
+        return request.auth.uid in shopData(shopId).staffUids;
+      }
+
       // 주 경로 — 참여자가 가게 스티커를 찍었다.
       // 토큰은 가게 문서에만 있고 아무도 읽을 수 없으므로,
       // 그 스티커 앞에 서 본 사람만 이 요청을 만들 수 있다.
+      //
+      // **스냅샷 칸을 들고 올 수 없다.** 참여자가 율을 알 방법이 없으니
+      // 들고 왔다면 어디선가 새어 나온 값이다 — 통째로 막는다.
       function guestRedeem() {
         return p().via == 'guest'
                && p().uid == request.auth.uid
-               && p().token == shopData(p().shopId).postToken;
+               && p().token == shopData(p().shopId).postToken
+               && !p().keys().hasAny(snapKeys());
       }
 
       // 보조 경로 — 가게 계정으로 로그인한 기기만.
       // 참여자 카메라가 안 되거나 계정이 없을 때의 유일한 길이다.
+      // 이쪽은 가게 문서를 읽을 수 있으니 율을 그 자리에서 찍는다.
       function staffRedeem() {
         return p().via == 'staff'
-               && request.auth.uid in shopData(p().shopId).staffUids
+               && isStaffOf(p().shopId)
                && p().token == ''
-               && p().uid == '';
+               && p().uid == ''
+               && snapshotOk();
+      }
+
+      /*
+        포인트 사용 — 가게 계정만.
+
+        참여자가 스스로 태우는 길을 두지 않았다. 금액이 카운터에서 정해지는
+        값이라 사장님이 확인하지 않은 숫자가 기록이 되면 안 되고, 무엇보다
+        스냅샷에 들어갈 율이 참여자에게 닿으면 안 된다.
+
+        어느 가게든 받는다 — 쿠폰과 달리 포인트에는 '어디서 쓰는 것'이라는
+        표시가 없다. 대신 계약이 살아 있어야 한다.
+      */
+      function pointRedeem() {
+        return p().kind == 'points'
+               && matchesPointCode()
+               && shopExists(p().shopId)
+               && shopData(p().shopId).active == true
+               && shopData(p().shopId).get('contract', 'active') == 'active'
+               && isStaffOf(p().shopId)
+               && p().via == 'staff'
+               && p().token == ''
+               && p().uid == ''
+               && p().amountWon > 0
+               && snapshotOk();
       }
 
       // 코드를 알아야 문서 id를 만들 수 있다 — 참여자가 자기 쿠폰이
@@ -271,21 +379,66 @@ service cloud.firestore {
                       && request.auth.uid in shopData(resource.data.shopId).staffUids);
 
       allow create: if isSignedIn()
-                    && p().keys().hasOnly(
-                         ['code', 'couponId', 'shopId', 'userTag', 'uid',
-                          'via', 'byUid', 'token', 'usedAt'])
-                    && p().keys().hasAll(
-                         ['code', 'couponId', 'shopId', 'userTag', 'uid',
-                          'via', 'byUid', 'token', 'usedAt'])
+                    && p().keys().hasAll(baseKeys())
+                    && p().keys().hasOnly(baseKeys().concat(snapKeys()))
                     && p().byUid == request.auth.uid
                     && p().usedAt == request.time
-                    && matchesCode()
-                    && servesShop()
-                    && (guestRedeem() || staffRedeem());
+                    && p().amountWon is int
+                    && p().amountWon >= 0
+                    // 한 건이 이보다 클 일이 없다. 자릿수를 잘못 넣은 값이
+                    // 그대로 청구서에 오르는 것을 여기서 끊는다
+                    && p().amountWon <= 100000
+                    && (
+                         (p().kind == 'coupon'
+                          && matchesCode()
+                          && servesShop()
+                          && (guestRedeem() || staffRedeem()))
+                         || pointRedeem()
+                       );
+
+      /*
+        스냅샷 찍기 — 주 경로가 비워 둔 율을 나중에 채운다.
+
+        가게 계정에게 여는 유일한 수정이다. 채울 수 있는 칸이 정해져 있고,
+        **이미 찍힌 기록은 다시 못 건드린다**(coverageRate가 있으면 거절).
+        그러지 않으면 등급이 오른 뒤 지난 달 기록을 다시 찍어 청구액을
+        올릴 수 있다 — 스냅샷을 두는 이유가 통째로 무너진다.
+
+        값은 여기서도 가게 문서와 대조한다. 옮겨 적는 것이지 부르는 것이
+        아니라는 원칙이 만들 때와 찍을 때 똑같이 선다.
+      */
+      function stampsSnapshot() {
+        return isStaffOf(resource.data.shopId)
+               && !resource.data.keys().hasAny(snapKeys())
+               && changedKeys().hasOnly(['coverageRate', 'shopWon', 'opsWon', 'stampedAt'])
+               && changedKeys().hasAll(['coverageRate', 'shopWon', 'opsWon', 'stampedAt'])
+               && p().stampedAt == request.time
+               && p().coverageRate == shopRate(resource.data.shopId)
+               && p().shopWon == resource.data.get('amountWon', 0)
+                                 * shopRate(resource.data.shopId) / 100
+               && p().opsWon == resource.data.get('amountWon', 0) - p().shopWon;
+      }
 
       // 잘못 찍힌 기록을 되돌리는 길은 관리자에게만 남긴다.
-      // 정정·백필에 필요해 update도 관리자에게만 연다.
-      allow update, delete: if isAdmin();
+      // 정정·백필에 필요해 관리자에게는 update를 통째로 연다.
+      allow update: if isAdmin() || (isSignedIn() && stampsSnapshot());
+      allow delete: if isAdmin();
+    }
+
+    // ───────── 월 정산 마감 ─────────
+    //
+    // 마감한 달의 청구서를 값으로 굳혀 둔다. 서버 배치를 두지 않기로 했으므로
+    // 관리자 화면의 「마감」이 이 문서를 만든다 — 만들어진 뒤에는 사용 기록이
+    // 늘거나 등급이 바뀌어도 이 문서의 숫자는 움직이지 않는다. 그것이 마감의
+    // 뜻이고, 이의 제기(마감 후 5영업일)가 가리키는 대상도 이 문서다.
+    //
+    // 사장님은 자기 가게 것만 읽는다. 남의 가게 청구서가 보이면 서로의
+    // 계약 조건을 역산할 수 있다.
+    match /settlements/{id} {
+      allow read: if isAdmin()
+                  || (isSignedIn()
+                      && request.auth.uid in shopData(resource.data.shopId).staffUids);
+      allow write: if isAdmin();
     }
   }
 }

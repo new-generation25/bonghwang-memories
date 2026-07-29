@@ -18,7 +18,25 @@ import { BINGO_CELLS } from '@/lib/bingoCells'
 import { REASON_LABEL, PointReason } from '@/lib/points'
 import { DEFAULT_SURVEY } from '@/lib/survey'
 import { COUPONS, couponSpec } from '@/lib/coupons'
-import { addShop, fetchAllShops, setShopActive, type Shop } from '@/lib/shops'
+import {
+  addShop,
+  fetchAllShops,
+  setShopActive,
+  setShopCap,
+  setShopContract,
+  setShopTier,
+  stampPending,
+  toMerchant,
+  type Shop,
+} from '@/lib/shops'
+import {
+  closeMonth,
+  fetchClosedMonth,
+  fetchSettlementConfig,
+  saveSettlementConfig,
+  type SettlementDoc,
+} from '@/lib/settlement'
+import type { SettlementConfig, SettlementMerchant } from '@/lib/coverage'
 import {
   AdminCouponUse,
   AdminEvent,
@@ -42,8 +60,15 @@ import {
   hourlyStarts,
   isAdminUser,
   periodStats,
-  shopSettlement,
   surveySummary,
+  CONTRACT_LABEL,
+  DEFAULT_SETTLEMENT,
+  TIER_LABEL,
+  coverageReport,
+  graceExpired,
+  issuedFaceValue,
+  monthKey,
+  settleMonth,
 } from '@/lib/admin'
 
 const won = (n: number) => `${n.toLocaleString()}원`
@@ -78,12 +103,32 @@ export default function AdminPage() {
   */
   const [panel, setPanel] = useState<'none' | 'shop' | 'account'>('none')
 
+  /*
+    정산 설정. 배포 없이 바꿀 수 있어야 하는 값이라 Firestore에 산다
+    (config/points는 공개, config/settlement은 관리자만 — 충당률이 새면
+    가게끼리 서로의 계약 조건을 알게 된다).
+  */
+  const [cfg, setCfg] = useState<SettlementConfig>(DEFAULT_SETTLEMENT)
+  const [cfgDraft, setCfgDraft] = useState<SettlementConfig>(DEFAULT_SETTLEMENT)
+  const [cfgOpen, setCfgOpen] = useState(false)
+  const [cfgMsg, setCfgMsg] = useState('')
+  /** 어느 달을 정산하는가 — 기본은 이번 달 */
+  const [month, setMonth] = useState(monthKey())
+  const [closed, setClosed] = useState<SettlementDoc[]>([])
+  const [settleMsg, setSettleMsg] = useState('')
+  const [settleBusy, setSettleBusy] = useState(false)
+
   const loadShops = useCallback(async () => {
     try {
       setShops(await fetchAllShops())
     } catch {
       setShops([])
     }
+  }, [])
+
+  /** 마감 여부는 달을 바꿀 때마다 다시 본다 — 버튼을 잠그는 근거다 */
+  const loadClosed = useCallback(async (m: string) => {
+    setClosed(await fetchClosedMonth(m))
   }, [])
   const [state, setState] = useState<
     'idle' | 'loading' | 'ready' | 'denied' | 'error'
@@ -97,13 +142,14 @@ export default function AdminPage() {
   const load = useCallback(async () => {
     setState('loading')
     try {
-      const [u, p, r, po, cu, ev] = await Promise.all([
+      const [u, p, r, po, cu, ev, conf] = await Promise.all([
         fetchUsers(),
         fetchAllPoints(),
         fetchSurveyResponses(),
         fetchPosts(),
         fetchCouponUses(),
         fetchEvents(),
+        fetchSettlementConfig(),
       ])
       setUsers(u)
       setPoints(p)
@@ -111,7 +157,10 @@ export default function AdminPage() {
       setPosts(po)
       setCouponUses(cu)
       setEvents(ev)
+      setCfg(conf)
+      setCfgDraft(conf)
       void loadShops()
+      void loadClosed(month)
       setState('ready')
     } catch (err) {
       // 규칙을 아직 게시하지 않았으면 users 읽기가 권한 거부로 떨어진다.
@@ -119,7 +168,13 @@ export default function AdminPage() {
       setErrorMsg(err instanceof Error ? err.message : String(err))
       setState('error')
     }
-  }, [loadShops])
+    // month는 첫 적재 때의 값만 쓰면 된다 — 달을 바꾸면 아래 effect가 다시 본다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadShops, loadClosed])
+
+  useEffect(() => {
+    if (state === 'ready') void loadClosed(month)
+  }, [month, state, loadClosed])
 
   useEffect(() => {
     if (loading) return
@@ -172,11 +227,81 @@ export default function AdminPage() {
     애초에 사용 기록이 남지 않고, 남은 것은 실제로 가게에서 찍힌 것뿐이라
     빼면 오히려 돌려드릴 금액이 줄어든다.
   */
-  const settlement = useMemo(() => shopSettlement(couponUses), [couponUses])
-  const settlementTotal = useMemo(
-    () => settlement.reduce((n, r) => n + r.won, 0),
+  const merchants = useMemo<SettlementMerchant[]>(
+    () =>
+      shops.map((s) => ({
+        ...toMerchant(s, cfg),
+        name: s.name,
+        feeWon: s.monthlyFeeWon ?? cfg.monthlyFee[s.tier ?? 'new'],
+      })),
+    [shops, cfg]
+  )
+
+  /** 그 달의 QR 스캔 수 — 충당액 옆에 '무엇을 받았는지'를 놓기 위한 값 */
+  const scansByShop = useMemo(() => {
+    const out: Record<string, number> = {}
+    for (const e of events) {
+      if (e.name !== 'qr_scan') continue
+      const id = String(e.props?.shopId ?? e.props?.station ?? '')
+      if (id) out[id] = (out[id] ?? 0) + 1
+    }
+    return out
+  }, [events])
+
+  const settlement = useMemo(
+    () =>
+      settleMonth({
+        merchants,
+        redemptions: couponUses,
+        scansByShop,
+        month,
+        alertPercent: cfg.capAlertPercent,
+      }),
+    [merchants, couponUses, scansByShop, month, cfg.capAlertPercent]
+  )
+
+  /** 아직 충당률이 안 찍힌 기록 — 정산에서 0원으로 셈해지므로 눈에 띄어야 한다 */
+  const pendingStamp = useMemo(
+    () => couponUses.filter((u) => u.coverageRate < 0).length,
+    [couponUses]
+  )
+
+  const monthTotals = useMemo(
+    () =>
+      settlement.reduce(
+        (a, r) => ({
+          count: a.count + r.count,
+          amount: a.amount + r.amountWon,
+          covered: a.covered + r.coveredWon,
+          ops: a.ops + r.opsWon,
+          billed: a.billed + r.billedWon,
+        }),
+        { count: 0, amount: 0, covered: 0, ops: 0, billed: 0 }
+      ),
     [settlement]
   )
+
+  /** 이미 마감한 달인가 — 마감 뒤에는 숫자가 움직이면 안 된다 */
+  const isClosed = closed.length > 0
+
+  /*
+    운영사 부담이 매출의 몇 %인가.
+
+    분모는 코스 결제 매출이다. 가게 충당액은 여기 들어가지 않는다 —
+    그것은 매출이 아니라 원가의 차감 항목이다.
+  */
+  const report = useMemo(() => {
+    const paid = view.users.filter((u) => u.paid).length
+    return coverageReport({
+      redemptions: couponUses,
+      issuedWon: issuedFaceValue(view.points, paid, cfg.couponFaceWon),
+      // 소멸분은 부채로 잡지 않으므로 참고 지표로만 둔다. 원장을 읽을 때
+      // 판정하는 값이라 여기서 다시 세지 않는다
+      expiredWon: 0,
+      revenueWon: paid * TICKET_PRICE,
+      budgetPercent: cfg.budgetPercent,
+    })
+  }, [couponUses, view, cfg.couponFaceWon, cfg.budgetPercent])
 
   const pointsByReason = useMemo(() => {
     const out: Record<string, { count: number; sum: number }> = {}
@@ -421,54 +546,129 @@ export default function AdminPage() {
               <thead>
                 <tr className="border-b border-line text-left font-mono-retro text-[10px] tracking-[0.1em] text-ink-60">
                   <th className="py-1.5">가게</th>
-                  <th className="py-1.5">쿠폰</th>
-                  <th className="py-1.5 text-right">단가</th>
+                  <th className="py-1.5">등급 · 충당률</th>
+                  <th className="py-1.5 text-right">월 상한</th>
                   <th className="py-1.5">스티커 토큰</th>
                   <th className="py-1.5 text-right">직원</th>
+                  <th className="py-1.5 text-right">계약</th>
                   <th className="py-1.5 text-right">상태</th>
                 </tr>
               </thead>
               <tbody>
-                {shops.map((s) => (
-                  <tr key={s.shopId} className="border-b border-line/60">
-                    <td className="py-1.5 text-ink">{s.name}</td>
-                    <td className="py-1.5 font-mono-retro text-[11px] text-ink-60">
-                      {s.couponId}
-                    </td>
-                    <td className="py-1.5 text-right tabular-nums text-ink">
-                      {(s.unitWon ?? 0).toLocaleString()}
-                    </td>
-                    {/*
-                      토큰을 관리자에게 보여주는 이유 — 스티커가 훼손됐을 때
-                      같은 값으로 다시 뽑아야 한다. 바꾸면 이미 붙은 것이 죽는다.
-                    */}
-                    <td className="py-1.5 font-mono-retro text-[11px] tracking-[0.08em] text-ink">
-                      {s.postToken ?? '—'}
-                    </td>
-                    <td className="py-1.5 text-right tabular-nums text-ink-60">
-                      {s.staffUids?.length ?? 0}
-                    </td>
-                    <td className="py-1.5 text-right">
-                      <button
-                        onClick={async () => {
-                          await setShopActive(s.shopId, !s.active)
-                          void loadShops()
-                        }}
-                        className={`rounded px-2 py-0.5 font-mono-retro text-[10px] ${
-                          s.active
-                            ? 'bg-teal/15 text-teal-dk'
-                            : 'bg-rec/15 text-rec'
-                        }`}
-                      >
-                        {s.active ? '영업' : '중지'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {shops.map((s) => {
+                  const m = toMerchant(s, cfg)
+                  return (
+                    <tr key={s.shopId} className="border-b border-line/60">
+                      <td className="py-1.5 text-ink">
+                        {s.name}
+                        <span className="ml-1 font-mono-retro text-[10px] text-ink-60">
+                          {s.couponId}
+                        </span>
+                      </td>
+                      {/*
+                        등급을 시간이 저 혼자 바꾸지 않는다. 유예가 끝나면
+                        여기서 짚어주고 사람이 누른다 — 그래야 언제 바뀌었는지가
+                        기록에 남고(rateSince), 그 뒤 사용분부터 새 율이 찍힌다.
+                      */}
+                      <td className="py-1.5">
+                        <select
+                          value={m.tier}
+                          onChange={async (e) => {
+                            await setShopTier(
+                              s.shopId,
+                              e.target.value as typeof m.tier,
+                              cfg
+                            )
+                            void loadShops()
+                          }}
+                          className="rounded border border-line bg-cream px-1.5 py-0.5 text-[11px] text-ink"
+                        >
+                          {(['new', 'basic', 'premium'] as const).map((t) => (
+                            <option key={t} value={t}>
+                              {TIER_LABEL[t]} {cfg.coverage[t]}%
+                            </option>
+                          ))}
+                        </select>
+                        <span className="ml-1 font-mono-retro text-[10.5px] text-ink-60">
+                          {m.coverageRate}%
+                        </span>
+                        {graceExpired(m) && (
+                          <span className="ml-1 rounded bg-sunset-yellow/30 px-1 py-0.5 font-mono-retro text-[9.5px] text-ink">
+                            유예 끝 — 올리세요
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1.5 text-right">
+                        <input
+                          type="number"
+                          defaultValue={m.monthlyCapWon}
+                          onBlur={async (e) => {
+                            const v = Number(e.target.value)
+                            if (!Number.isFinite(v) || v === m.monthlyCapWon) return
+                            await setShopCap(s.shopId, v)
+                            void loadShops()
+                          }}
+                          className="w-[86px] rounded border border-line bg-cream px-1.5 py-0.5 text-right font-mono-retro text-[11px] text-ink"
+                        />
+                      </td>
+                      {/*
+                        토큰을 관리자에게 보여주는 이유 — 스티커가 훼손됐을 때
+                        같은 값으로 다시 뽑아야 한다. 바꾸면 이미 붙은 것이 죽는다.
+                      */}
+                      <td className="py-1.5 font-mono-retro text-[11px] tracking-[0.08em] text-ink">
+                        {s.postToken ?? '—'}
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums text-ink-60">
+                        {s.staffUids?.length ?? 0}
+                      </td>
+                      <td className="py-1.5 text-right">
+                        <select
+                          value={m.contract}
+                          onChange={async (e) => {
+                            await setShopContract(
+                              s.shopId,
+                              e.target.value as typeof m.contract
+                            )
+                            void loadShops()
+                          }}
+                          className="rounded border border-line bg-cream px-1.5 py-0.5 text-[11px] text-ink"
+                        >
+                          {(['active', 'paused', 'ended'] as const).map((c) => (
+                            <option key={c} value={c}>
+                              {CONTRACT_LABEL[c]}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-1.5 text-right">
+                        <button
+                          onClick={async () => {
+                            await setShopActive(s.shopId, !s.active)
+                            void loadShops()
+                          }}
+                          className={`rounded px-2 py-0.5 font-mono-retro text-[10px] ${
+                            s.active
+                              ? 'bg-teal/15 text-teal-dk'
+                              : 'bg-rec/15 text-rec'
+                          }`}
+                        >
+                          {s.active ? '영업' : '중지'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         )}
+
+        <p className="mt-3 text-[11px] leading-relaxed text-ink-60">
+          <b className="text-ink">신규</b>는 가입일부터 {cfg.graceMonths}개월 —
+          이 기간 할인액은 운영사가 전액 부담합니다. 등급을 바꾸면 그{' '}
+          <b className="text-ink">시점 이후</b> 사용분부터 새 율이 찍히고, 이미
+          찍힌 기록은 움직이지 않습니다.
+        </p>
 
         {/* 추가는 접어둔다 — 평소에 보는 것은 위의 목록이다 */}
         <div className="mt-4">
@@ -600,58 +800,362 @@ export default function AdminPage() {
       {/* ───── 골목 가게 정산 ───── */}
       <Section
         title="골목 가게 정산"
-        hint={`실제 사용 ${couponUses.length}장 · 합계 ${settlementTotal.toLocaleString()}원`}
+        hint={`${month} · 사용 ${monthTotals.count}건 · 청구 ${won(monthTotals.billed)}`}
       >
-        {couponUses.length === 0 ? (
-          <Empty>아직 사용된 쿠폰이 없습니다.</Empty>
+        {/* 어느 달을 보는가. 마감은 익월 10일이라 지난 달을 보는 일이 잦다 */}
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value || monthKey())}
+            className="rounded-lg border border-line bg-cream px-2.5 py-1.5 font-mono-retro text-[12px] text-ink"
+          />
+          {isClosed ? (
+            <span className="rounded-lg bg-teal/15 px-2.5 py-1.5 font-mono-retro text-[11px] text-teal-dk">
+              마감됨 · {closed.length}곳
+            </span>
+          ) : (
+            <button
+              disabled={settleBusy || settlement.length === 0}
+              onClick={async () => {
+                setSettleBusy(true)
+                setSettleMsg('')
+                try {
+                  const r = await closeMonth(settlement, month)
+                  setSettleMsg(
+                    `${month} 마감 — ${r.closed}곳 굳혔습니다` +
+                      (r.skipped ? ` (이미 마감 ${r.skipped}곳은 그대로)` : '')
+                  )
+                  await loadClosed(month)
+                } catch (e) {
+                  setSettleMsg(e instanceof Error ? e.message : '마감하지 못했습니다.')
+                } finally {
+                  setSettleBusy(false)
+                }
+              }}
+              className="btn-teal px-3 py-1.5 text-[12px] disabled:opacity-40"
+            >
+              {settleBusy ? '마감하는 중…' : '이 달 마감하기'}
+            </button>
+          )}
+          {/*
+            주 경로가 남긴 기록에는 충당률이 비어 있다. 가게 화면이 열릴 때도
+            찍히지만, 문을 안 여는 가게가 있으므로 여기서도 찍는다.
+          */}
+          {pendingStamp > 0 && (
+            <button
+              disabled={settleBusy}
+              onClick={async () => {
+                setSettleBusy(true)
+                setSettleMsg('')
+                let ok = 0
+                let skip = 0
+                for (const s of shops) {
+                  const r = await stampPending(s, cfg)
+                  ok += r.stamped
+                  skip += r.skipped
+                }
+                setSettleMsg(
+                  `${ok}건 반영` +
+                    (skip ? ` · ${skip}건은 율이 바뀐 뒤라 손으로 봐야 합니다` : '')
+                )
+                setCouponUses(await fetchCouponUses())
+                setSettleBusy(false)
+              }}
+              className="rounded-lg border border-sunset-yellow bg-sunset-yellow/20 px-3 py-1.5 text-[12px] font-bold text-ink disabled:opacity-40"
+            >
+              미반영 {pendingStamp}건 채우기
+            </button>
+          )}
+        </div>
+        {settleMsg && <p className="mt-2 text-[11.5px] text-ink">{settleMsg}</p>}
+
+        {settlement.length === 0 ? (
+          <Empty>등록된 가게가 없습니다.</Empty>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[380px] text-[12px]">
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[620px] text-[12px]">
                 <thead>
                   <tr className="border-b border-line text-left font-mono-retro text-[10px] tracking-[0.1em] text-ink-60">
                     <th className="py-1.5">가게</th>
-                    <th className="py-1.5 text-right">장수</th>
-                    <th className="py-1.5 text-right">직접</th>
+                    <th className="py-1.5 text-right">율</th>
+                    <th className="py-1.5 text-right">건수</th>
                     <th className="py-1.5 text-right">대리</th>
-                    <th className="py-1.5 text-right">정산액</th>
+                    <th className="py-1.5 text-right">할인</th>
+                    <th className="py-1.5 text-right">가게</th>
+                    <th className="py-1.5 text-right">운영사</th>
+                    <th className="py-1.5 text-right">청구</th>
                   </tr>
                 </thead>
                 <tbody>
                   {settlement.map((r) => (
                     <tr key={r.shopId} className="border-b border-line/60">
-                      <td className="py-1.5 text-ink">{r.name}</td>
-                      <td className="py-1.5 text-right text-ink">{r.total}</td>
-                      <td className="py-1.5 text-right text-teal-dk">{r.guest}</td>
+                      <td className="py-1.5 text-ink">
+                        {r.name}
+                        <span className="ml-1 font-mono-retro text-[10px] text-ink-60">
+                          {TIER_LABEL[r.tier]}
+                        </span>
+                        {/* 상한에 닿았으면 그 가게에서는 더 못 쓴다 — 눈에 띄어야 한다 */}
+                        {r.cap.state !== 'ok' && (
+                          <span
+                            className={`ml-1 rounded px-1 py-0.5 font-mono-retro text-[9.5px] ${
+                              r.cap.state === 'closed'
+                                ? 'bg-rec/15 text-rec'
+                                : 'bg-sunset-yellow/30 text-ink'
+                            }`}
+                          >
+                            상한 {r.cap.percent}%
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums text-ink-60">
+                        {r.currentRate}%
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums text-ink">
+                        {r.count}
+                        {r.pointCount > 0 && (
+                          <span className="ml-0.5 text-[10px] text-teal-dk">
+                            (P{r.pointCount})
+                          </span>
+                        )}
+                      </td>
                       {/*
                         대리가 유난히 많은 가게는 들여다볼 신호다. 손님이 오지
                         않아도 사장님 기기만으로 기록을 만들 수 있는 경로라서다.
                       */}
                       <td
-                        className={`py-1.5 text-right ${
-                          r.total > 0 && r.staff / r.total > 0.7
+                        className={`py-1.5 text-right tabular-nums ${
+                          r.count > 0 && r.staff / r.count > 0.7
                             ? 'font-bold text-rec'
                             : 'text-ink-60'
                         }`}
                       >
                         {r.staff}
                       </td>
-                      <td className="py-1.5 text-right font-bold text-ink">
-                        {r.won.toLocaleString()}
+                      <td className="py-1.5 text-right tabular-nums text-ink-60">
+                        {r.amountWon.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums text-ink">
+                        {r.coveredWon.toLocaleString()}
+                        {r.overCapWon > 0 && (
+                          <span className="ml-0.5 text-[10px] text-rec">
+                            +{r.overCapWon.toLocaleString()}↑
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums text-ink-60">
+                        {r.opsWon.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right font-bold tabular-nums text-ink">
+                        {r.billedWon.toLocaleString()}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
             <p className="mt-3 text-[11px] leading-relaxed text-ink-60">
-              참여자 수로 추정하지 않고 <b className="text-ink">실제 찍힌 장수</b>로
-              셉니다. &lsquo;직접&rsquo;은 손님이 가게 스티커를 앱으로 찍은 것,
-              &lsquo;대리&rsquo;는 사장님이 대신 처리한 것입니다. 개편 전의 옛
-              기록은 어느 가게 몫인지 알 수 없어 빠집니다.
+              분담액은 <b className="text-ink">사용 시점에 굳은 값</b>입니다 —
+              지금 등급을 다시 곱하지 않으므로, 등급을 바꿔도 지난 정산은
+              움직이지 않습니다. &lsquo;가게&rsquo; 칸의 붉은{' '}
+              <b className="text-rec">↑</b>는 월 상한을 넘겨 찍힌 몫으로, 청구에서
+              빼고 <b className="text-ink">운영사가 부담</b>합니다(참여자 기기는
+              그 가게의 상한을 알 수 없어 주 경로에서 막지 못합니다).
+              충당액 대비 매출 유입은 사장님 화면에서 함께 보입니다.
             </p>
+
+            {/* ── 운영사 예산 ── */}
+            <div
+              className={`mt-4 rounded-xl border px-3 py-3 ${
+                report.overBudget ? 'border-rec bg-rec/10' : 'border-line bg-paper'
+              }`}
+            >
+              {/*
+                이 칸만 달을 나누지 않고 **누적**으로 본다. 예산 천장은
+                한 달의 등락이 아니라 지금까지의 추세로 판단할 값이고,
+                달로 자르면 초기의 적은 표본에서 3%가 쉽게 튄다.
+              */}
+              <p className="font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
+                운영사 부담 · 리워드 예산 (누적)
+              </p>
+              <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Metric label="발행 액면" value={won(report.issuedWon)} />
+                <Metric label="사용 액면" value={won(report.usedWon)} />
+                <Metric label="운영사 부담" value={won(report.opsWon)} />
+                <Metric label="사용률" value={`${report.useRate}%`} />
+              </div>
+              <p
+                className={`mt-2 text-[11.5px] leading-snug ${
+                  report.overBudget ? 'font-bold text-rec' : 'text-ink-60'
+                }`}
+              >
+                운영사 부담이 매출의 {report.opsShareOfRevenue}%입니다 (천장{' '}
+                {cfg.budgetPercent}%).
+                {report.overBudget
+                  ? ' 배점이나 충당률을 손볼 때입니다.'
+                  : ' 아직 여유가 있습니다.'}
+              </p>
+              {/*
+                충당액은 매출이 아니다. 운영사 원가의 차감 항목이라 매출로
+                계상하면 재무제표가 부풀려진다 — 비용에 올리는 것은 운영사
+                부담액뿐이다.
+              */}
+              <p className="mt-1.5 text-[10.5px] leading-relaxed text-ink-60">
+                가게 충당액({won(monthTotals.covered)})은 <b>매출이 아닙니다.</b>{' '}
+                운영사 원가의 차감 항목으로 처리하고, 비용 계정에는 운영사
+                부담액만 올립니다.
+              </p>
+            </div>
           </>
         )}
+      </Section>
+
+      {/* ───── 정산 설정 ───── */}
+      <Section
+        title="정산 설정"
+        hint="배포 없이 바뀝니다 — 저장하면 바로 적용"
+      >
+        <button
+          onClick={() => setCfgOpen((v) => !v)}
+          className="rounded-xl border border-line bg-paper px-3 py-2 text-[12px] font-bold text-ink"
+        >
+          {cfgOpen ? '✕ 닫기' : '⚙ 값 보기 · 고치기'}
+        </button>
+
+        <div hidden={!cfgOpen} className="mt-3 rounded-xl border border-line bg-paper p-3">
+          <p className="font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
+            등급별 충당률 (%)
+          </p>
+          <div className="mt-1.5 grid grid-cols-3 gap-2">
+            {(['new', 'basic', 'premium'] as const).map((t) => (
+              <NumField
+                key={t}
+                label={TIER_LABEL[t]}
+                value={cfgDraft.coverage[t]}
+                onChange={(v) =>
+                  setCfgDraft({ ...cfgDraft, coverage: { ...cfgDraft.coverage, [t]: v } })
+                }
+              />
+            ))}
+          </div>
+
+          <p className="mt-3 font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
+            등급별 월 회비 (원)
+          </p>
+          <div className="mt-1.5 grid grid-cols-3 gap-2">
+            {(['new', 'basic', 'premium'] as const).map((t) => (
+              <NumField
+                key={t}
+                label={TIER_LABEL[t]}
+                value={cfgDraft.monthlyFee[t]}
+                onChange={(v) =>
+                  setCfgDraft({
+                    ...cfgDraft,
+                    monthlyFee: { ...cfgDraft.monthlyFee, [t]: v },
+                  })
+                }
+              />
+            ))}
+          </div>
+
+          <p className="mt-3 font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
+            등급별 월 충당 상한 (원)
+          </p>
+          <div className="mt-1.5 grid grid-cols-3 gap-2">
+            {(['new', 'basic', 'premium'] as const).map((t) => (
+              <NumField
+                key={t}
+                label={TIER_LABEL[t]}
+                value={cfgDraft.monthlyCap[t]}
+                onChange={(v) =>
+                  setCfgDraft({
+                    ...cfgDraft,
+                    monthlyCap: { ...cfgDraft.monthlyCap, [t]: v },
+                  })
+                }
+              />
+            ))}
+          </div>
+
+          <p className="mt-3 font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
+            그 밖
+          </p>
+          <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <NumField
+              label="신규 유예(개월)"
+              value={cfgDraft.graceMonths}
+              onChange={(v) => setCfgDraft({ ...cfgDraft, graceMonths: v })}
+            />
+            <NumField
+              label="상한 알림(%)"
+              value={cfgDraft.capAlertPercent}
+              onChange={(v) => setCfgDraft({ ...cfgDraft, capAlertPercent: v })}
+            />
+            <NumField
+              label="예산 천장(%)"
+              value={cfgDraft.budgetPercent}
+              onChange={(v) => setCfgDraft({ ...cfgDraft, budgetPercent: v })}
+            />
+            <NumField
+              label="쿠폰 액면(원)"
+              value={cfgDraft.couponFaceWon}
+              onChange={(v) => setCfgDraft({ ...cfgDraft, couponFaceWon: v })}
+            />
+            <NumField
+              label="포인트 문턱(P)"
+              value={cfgDraft.minRedeemPoints}
+              onChange={(v) => setCfgDraft({ ...cfgDraft, minRedeemPoints: v })}
+            />
+            <NumField
+              label="유효기간(개월)"
+              value={cfgDraft.pointExpiryMonths}
+              onChange={(v) => setCfgDraft({ ...cfgDraft, pointExpiryMonths: v })}
+            />
+            <NumField
+              label="미션 칸(P)"
+              value={cfgDraft.missionPoints}
+              onChange={(v) => setCfgDraft({ ...cfgDraft, missionPoints: v })}
+            />
+            <NumField
+              label="빙고 줄(P)"
+              value={cfgDraft.linePoints}
+              onChange={(v) => setCfgDraft({ ...cfgDraft, linePoints: v })}
+            />
+            <NumField
+              label="완주 보너스(P)"
+              value={cfgDraft.completePoints}
+              onChange={(v) => setCfgDraft({ ...cfgDraft, completePoints: v })}
+            />
+          </div>
+
+          <button
+            onClick={async () => {
+              setCfgMsg('')
+              try {
+                await saveSettlementConfig(cfgDraft)
+                setCfg(cfgDraft)
+                setCfgMsg(
+                  '저장했습니다. 가게에 걸린 율은 그대로입니다 — ' +
+                    '아래 가게 목록에서 등급을 다시 눌러야 따라 움직입니다.'
+                )
+              } catch (e) {
+                setCfgMsg(e instanceof Error ? e.message : '저장하지 못했습니다.')
+              }
+            }}
+            className="btn-teal mt-3 text-[12px]"
+          >
+            저장
+          </button>
+          {cfgMsg && <p className="mt-2 text-[11.5px] text-ink">{cfgMsg}</p>}
+
+          <p className="mt-2 text-[10.5px] leading-relaxed text-ink-60">
+            여기서 율을 바꿔도 <b className="text-ink">이미 굳은 사용 기록은
+            움직이지 않습니다.</b> 그것이 스냅샷을 두는 이유입니다 — 지난 달
+            청구서가 오늘의 설정으로 다시 계산되면 안 됩니다.
+          </p>
+        </div>
       </Section>
 
       {/* ───── 인기 장소 ───── */}
@@ -845,6 +1349,37 @@ function Section({
       </div>
       {children}
     </section>
+  )
+}
+
+/**
+ * 설정값 한 칸.
+ *
+ * 빈 칸을 0으로 읽지 않는다 — 지우고 다시 넣는 동안 0이 저장되면
+ * 충당률이 0%가 되어 그 뒤 사용분을 운영사가 전액 진다.
+ */
+function NumField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number
+  onChange: (v: number) => void
+}) {
+  return (
+    <label className="block">
+      <span className="block text-[10.5px] text-ink-60">{label}</span>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => {
+          const v = Number(e.target.value)
+          if (Number.isFinite(v) && v >= 0) onChange(v)
+        }}
+        className="mt-0.5 w-full rounded-lg border border-line bg-cream px-2 py-1.5 text-right font-mono-retro text-[12px] text-ink"
+      />
+    </label>
   )
 }
 

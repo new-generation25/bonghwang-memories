@@ -40,7 +40,20 @@ import {
 } from 'firebase/firestore'
 import { logEvent } from './analytics'
 import { db } from './firebase'
-import { COUPONS, parseCouponCode } from './coupons'
+import { COUPONS, parseCouponCode, parsePointCode } from './coupons'
+import {
+  CAP_CLOSED_MESSAGE,
+  DEFAULT_SETTLEMENT,
+  capStatus,
+  graceEndsAt,
+  monthKey,
+  splitCoverage,
+  wouldExceedCap,
+  type ContractState,
+  type MerchantLike,
+  type MerchantTier,
+  type SettlementConfig,
+} from './coverage'
 
 /** 인쇄 스티커 QR의 머리 — scripts/make-shop-qr.mjs의 PREFIX와 같아야 한다 */
 export const SHOP_QR_PREFIX = 'BHSHOP'
@@ -54,12 +67,49 @@ export interface Shop {
   staffUids: string[]
   active: boolean
   /**
+   * 등급 — 신규 / 기본 협력 / 프리미엄.
+   *
+   * 등급과 율을 **둘 다** 문서에 둔다. 율을 등급에서 매번 파생하면
+   * 설정표를 고치는 순간 지난 달 정산이 함께 움직이는데, 사용 기록의
+   * 스냅샷은 이미 굳어 있어 두 숫자가 어긋난다. 율이 값으로 있어야
+   * 보안 규칙도 한 번의 get으로 검산할 수 있다.
+   */
+  tier?: MerchantTier
+  /** 사용 시점에 적용할 충당률(%) — 정수. 규칙이 이 값과 대조한다 */
+  coverageRate?: number
+  /** 가입일 */
+  joinedAt?: Date | null
+  /** 신규 유예가 끝나는 날 — 지나면 관리자 화면이 등급 올리기를 권한다 */
+  graceUntil?: Date | null
+  /** 이 가게의 월 충당 상한(원) */
+  monthlyCapWon?: number
+  /** 월 회비(원) */
+  monthlyFeeWon?: number
+  contract?: ContractState
+  /**
+   * 지금의 충당률이 언제부터인가.
+   *
+   * 주 경로(참여자가 스티커를 찍는 길)는 사용 기록에 율을 못 남긴다 —
+   * 참여자 기기가 그 값을 알 방법이 없기 때문이다. 그 기록은 가게·관리자
+   * 기기가 나중에 찍어주는데(`stampPending`), 그 사이에 율이 바뀌었다면
+   * 지금 율로 찍으면 안 된다. 이 날짜보다 앞선 기록은 찍지 않고 남겨
+   * 관리자가 손으로 판단하게 한다.
+   */
+  rateSince?: Date | null
+  /**
    * 협력 가게 무리 — 예: `'cafe'`.
    *
    * 공용 할인권(`scope: 'group'`)이 이 값으로 통과한다. 비어 있으면
    * 그 가게는 공용 쿠폰을 받지 않는다는 뜻이다.
    */
   group?: string
+  /**
+   * 이 가게가 더 받는 쿠폰들 — 뽑기로 나오는 특정 가게 쿠폰이 여기 든다.
+   * 규칙이 이 칸을 보고 통과시키므로 시드 문서에 없으면 교환이 거절된다.
+   */
+  accepts?: string[]
+  /** 이 가게가 받는 공용 할인권 id들 */
+  groupCoupons?: string[]
   /**
    * 카운터 스티커에 박힌 값. 참여자에게는 절대 닿지 않는다 — 규칙이
    * shops 읽기를 관리자와 그 가게 직원에게만 연다.
@@ -77,10 +127,82 @@ export interface ShopUse {
   uid: string
   via: 'guest' | 'staff'
   usedAt: Date | null
+  /** 쿠폰인가 포인트인가 — 가게 입장에서는 같은 값으로 쓰이지만 세는 칸은 다르다 */
+  kind: 'coupon' | 'points'
+  /** 할인 액면(원). 옛 기록에는 없어 0이다 */
+  amountWon: number
+  /** **사용 시점에 값으로 굳은** 충당률(%) */
+  coverageRate: number
+  shopWon: number
+  opsWon: number
 }
 
 const toDate = (v: unknown): Date | null =>
   v instanceof Timestamp ? v.toDate() : null
+
+const numOr = (v: unknown, fallback: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : fallback
+
+/**
+ * 가게 문서를 정산이 보는 모양으로 옮긴다.
+ *
+ * 옛 문서에는 등급·율·상한이 없다. 없을 때 **신규(0%)로 떨어뜨리는 것**이
+ * 안전한 기본값이다 — 잘못 짚어도 운영사가 더 부담할 뿐, 가게에 없는
+ * 청구서를 보내지 않는다.
+ */
+export function toMerchant(
+  shop: Shop,
+  cfg: SettlementConfig = DEFAULT_SETTLEMENT
+): MerchantLike {
+  const tier: MerchantTier = shop.tier ?? 'new'
+  const joinedAt = shop.joinedAt ? shop.joinedAt.getTime() : null
+  return {
+    shopId: shop.shopId,
+    tier,
+    coverageRate: numOr(shop.coverageRate, cfg.coverage[tier]),
+    joinedAt,
+    graceUntil: shop.graceUntil
+      ? shop.graceUntil.getTime()
+      : joinedAt !== null
+        ? graceEndsAt(joinedAt, cfg.graceMonths)
+        : null,
+    monthlyCapWon: numOr(shop.monthlyCapWon, cfg.monthlyCap[tier]),
+    contract: shop.contract ?? 'active',
+    active: shop.active !== false,
+  }
+}
+
+/**
+ * 새로 세우는 가게의 정산 칸.
+ *
+ * 무조건 **신규(0%)로 연다.** 가입 직후 3개월은 할인액을 운영사가 전액
+ * 부담하는 기간이고, 그 사이에 가게는 이 판이 어떤 것인지 본다. 여기서
+ * 기본 협력으로 열면, 아직 아무것도 받아보지 못한 가게에 첫 달부터
+ * 청구서가 간다.
+ */
+function coverageDefaults(cfg: SettlementConfig = DEFAULT_SETTLEMENT) {
+  const now = Date.now()
+  return {
+    tier: 'new' as MerchantTier,
+    coverageRate: cfg.coverage.new,
+    monthlyCapWon: cfg.monthlyCap.new,
+    monthlyFeeWon: cfg.monthlyFee.new,
+    contract: 'active' as ContractState,
+    joinedAt: Timestamp.fromMillis(now),
+    graceUntil: Timestamp.fromMillis(graceEndsAt(now, cfg.graceMonths)),
+    rateSince: Timestamp.fromMillis(now),
+  }
+}
+
+/** 문서에서 읽어 올린 가게 — 정산에 필요한 값이 전부 채워진 꼴 */
+function shopFromDoc(v: Record<string, unknown>): Shop {
+  return {
+    ...(v as unknown as Shop),
+    joinedAt: toDate(v.joinedAt),
+    graceUntil: toDate(v.graceUntil),
+    rateSince: toDate(v.rateSince),
+  }
+}
 
 /**
  * 스티커 QR을 뜯어본다 — `BHSHOP:cp1:AW5NAYAY`.
@@ -102,6 +224,14 @@ export type RedeemOutcome =
   | { kind: 'used'; at: string }
   /** 규칙이 거절했거나 애초에 맞지 않는 쿠폰 — 통신 문제가 아니다 */
   | { kind: 'denied'; reason: string }
+  /**
+   * 그 가게의 이번 달 혜택이 마감됐다.
+   *
+   * denied와 갈라 두는 이유는 문구다. 참여자에게는 가게 사정도 충당률도
+   * 말하지 않고 다른 가게로 보내야 하는데, 거절 사유를 그대로 보여주는
+   * 자리에 섞이면 "이 가게가 안 받아준다"로 읽힌다.
+   */
+  | { kind: 'capped' }
   /** 슈퍼관리자 시험용 코드 — 기록을 남기지 않는다 */
   | { kind: 'test' }
   /** 서버에 못 닿았다. 통과시키지 않는다 */
@@ -121,6 +251,14 @@ interface RedeemOptions {
   uid?: string
   /** 주 경로에서 스티커의 토큰 */
   token?: string
+  /**
+   * 보조 경로에서 그 가게 문서.
+   *
+   * 있으면 충당률을 그 자리에서 찍는다. 주 경로에는 올 수 없는 값이다 —
+   * 참여자는 가게 문서를 읽지 못한다(읽히면 스티커 토큰이 샌다).
+   */
+  shop?: Shop
+  cfg?: SettlementConfig
 }
 
 /**
@@ -179,9 +317,35 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
     return { kind: 'used', at: at ? at.toLocaleString('ko-KR') : '기록 있음' }
   }
 
+  /*
+    할인 액면은 참여자 기기도 안다 — 카탈로그에 적혀 있다. 반면 충당률은
+    가게 문서에만 있어 주 경로에서는 비워 둔다. 그 기록은 나중에
+    stampPending()이 채운다.
+  */
+  const cfg = opts.cfg ?? DEFAULT_SETTLEMENT
+  const amountWon = parsed.spec.unitWon
+  const snapshot = opts.shop
+    ? (() => {
+        const m = toMerchant(opts.shop as Shop, cfg)
+        const s = splitCoverage(amountWon, m.coverageRate)
+        return { coverageRate: s.coverageRate, shopWon: s.shopWon, opsWon: s.opsWon }
+      })()
+    : {}
+
   try {
     const seen = await already()
     if (seen) return seen
+
+    // 보조 경로는 상한을 그 자리에서 잴 수 있다. 주 경로는 재지 못하고,
+    // 넘겨 찍힌 몫은 정산에서 운영사가 진다(coverage.ts의 coveredWon).
+    if (opts.shop && 'shopWon' in snapshot) {
+      const m = toMerchant(opts.shop, cfg)
+      const used = await monthUsage(opts.shopId)
+      const cap = capStatus(used, m.monthlyCapWon, cfg.capAlertPercent)
+      if (cap.state === 'closed' || wouldExceedCap(cap, snapshot.shopWon as number)) {
+        return { kind: 'capped' }
+      }
+    }
 
     await setDoc(ref, {
       code: key,
@@ -192,6 +356,9 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
       via: opts.via,
       byUid: opts.byUid,
       token: opts.token ?? '',
+      kind: 'coupon',
+      amountWon,
+      ...snapshot,
       usedAt: serverTimestamp(),
     })
     // §11 계측 — 주 경로는 참여자 계정으로, 보조 경로는 가게 계정으로 남는다
@@ -224,6 +391,132 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
   }
 }
 
+// ---------------------------------------------------------------------------
+// 포인트 사용 — 쿠폰과 같은 통화, 같은 기록, 같은 정산
+// ---------------------------------------------------------------------------
+
+/**
+ * 이번 달 이 가게에 쌓인 부담액.
+ *
+ * 가게 기기만 부를 수 있다(규칙이 couponUses 목록을 그 가게 직원에게만
+ * 연다). 참여자 기기가 상한을 확인할 길은 없으므로 주 경로에서 상한을
+ * 넘겨 찍히는 일이 생길 수 있는데, 그 몫은 정산에서 운영사가 진다
+ * (coverage.ts의 `coveredWon`).
+ */
+export async function monthUsage(
+  shopId: string,
+  month = monthKey()
+): Promise<number> {
+  const uses = await fetchShopUses(shopId, 500)
+  return uses
+    .filter((u) => u.usedAt && monthKey(u.usedAt) === month)
+    .reduce((n, u) => n + u.shopWon, 0)
+}
+
+interface RedeemPointsOptions {
+  /** 참여자가 띄운 `PT1-…` 코드 — 문서 id가 된다 */
+  code: string
+  /** 사장님이 카운터에서 넣은 금액. 1p = 1원이라 그대로 포인트 수다 */
+  amountWon: number
+  /** 가게 문서 — 율과 상한이 여기 있다 */
+  shop: Shop
+  /** 이 요청을 만든 가게 계정 */
+  byUid: string
+  cfg?: SettlementConfig
+}
+
+/**
+ * 포인트를 태운다 — `redeemCoupon()`과 짝이 되는 쓰기 경로.
+ *
+ * 가게 입장에서 2,000원 쿠폰과 2,000p 포인트는 같은 형태로 쓰인다. 그래서
+ * 같은 컬렉션(`couponUses`)에 같은 모양으로 남긴다 — 정산이 두 갈래를
+ * 따로 세면 어느 쪽이 빠졌는지 알 수 없다.
+ *
+ * **가게 기기만 이 함수를 부른다.** 금액이 카운터에서 정해지는 값이고,
+ * 무엇보다 충당률이 참여자에게 닿으면 안 되기 때문이다. 참여자 기기는
+ * 자기가 만든 코드로 이 문서를 나중에 읽어 원장을 맞춘다(points.ts).
+ *
+ * 참여자 지갑에 그만큼이 남아 있는지는 여기서 확인하지 못한다 — 남의
+ * 적립 내역은 규칙이 막는다. 그 검사는 참여자 화면이 하고, 여기서는
+ * 사장님이 본 잔액을 믿는다. 쿠폰의 체크값과 같은 무게의 방어다.
+ */
+export async function redeemPoints(
+  opts: RedeemPointsOptions
+): Promise<RedeemOutcome> {
+  const parsed = parsePointCode(opts.code)
+  if (!parsed) {
+    return { kind: 'denied', reason: '포인트 사용 코드가 아닙니다.' }
+  }
+
+  const amount = Math.round(opts.amountWon)
+  if (!Number.isInteger(amount) || amount <= 0) {
+    return { kind: 'denied', reason: '금액을 넣어주세요.' }
+  }
+
+  const cfg = opts.cfg ?? DEFAULT_SETTLEMENT
+  const m = toMerchant(opts.shop, cfg)
+  if (!m.active || m.contract !== 'active') {
+    return { kind: 'denied', reason: '지금은 이 가게에서 사용할 수 없습니다.' }
+  }
+
+  const split = splitCoverage(amount, m.coverageRate)
+
+  if (!db) return { kind: 'offline' }
+
+  const key = opts.code.trim().toUpperCase()
+  const ref = doc(db, 'couponUses', key)
+
+  try {
+    const seen = await getDoc(ref)
+    if (seen.exists()) {
+      const at = toDate(seen.data()?.usedAt)
+      return { kind: 'used', at: at ? at.toLocaleString('ko-KR') : '기록 있음' }
+    }
+
+    // 상한은 쓰기 직전에 잰다. 화면을 열어둔 사이 다른 손님이 채울 수 있다
+    const used = await monthUsage(opts.shop.shopId)
+    const cap = capStatus(used, m.monthlyCapWon, cfg.capAlertPercent)
+    if (cap.state === 'closed' || wouldExceedCap(cap, split.shopWon)) {
+      return { kind: 'capped' }
+    }
+
+    await setDoc(ref, {
+      code: key,
+      couponId: 'pt',
+      shopId: opts.shop.shopId,
+      userTag: parsed.userTag,
+      uid: '',
+      via: 'staff',
+      byUid: opts.byUid,
+      token: '',
+      kind: 'points',
+      amountWon: split.amountWon,
+      coverageRate: split.coverageRate,
+      shopWon: split.shopWon,
+      opsWon: split.opsWon,
+      usedAt: serverTimestamp(),
+    })
+    logEvent('points_used', {
+      shopId: opts.shop.shopId,
+      amount: split.amountWon,
+    })
+    return { kind: 'ok' }
+  } catch (err) {
+    const code = (err as { code?: string })?.code ?? ''
+    if (code === 'permission-denied') {
+      return {
+        kind: 'denied',
+        reason: '확인되지 않는 요청입니다. 코드를 다시 찍어주세요.',
+      }
+    }
+    console.error('[포인트 사용 실패]', { code, key, shopId: opts.shop.shopId })
+    return { kind: 'offline' }
+  }
+}
+
+/** 상한이 닫혔을 때 참여자·사장님 화면이 함께 쓰는 문구 */
+export { CAP_CLOSED_MESSAGE }
+
 /**
  * 이 계정이 맡은 가게들.
  * 사장님 기기가 '내 가게가 어디인지'를 스스로 찾는다 — 주소에 가게를 박아두면
@@ -234,7 +527,7 @@ export async function fetchMyShops(uid: string): Promise<Shop[]> {
   const snap = await getDocs(
     query(collection(db, 'shops'), where('staffUids', 'array-contains', uid))
   )
-  return snap.docs.map((d) => d.data() as Shop)
+  return snap.docs.map((d) => shopFromDoc(d.data()))
 }
 
 /**
@@ -263,8 +556,63 @@ export async function fetchShopUses(shopId: string, max = 200): Promise<ShopUse[
       uid: (v.uid as string) ?? '',
       via: (v.via as 'guest' | 'staff') ?? 'staff',
       usedAt: toDate(v.usedAt),
+      kind: v.kind === 'points' ? 'points' : 'coupon',
+      amountWon: numOr(v.amountWon, 0),
+      // -1은 '아직 안 찍혔다'는 뜻이다. 0은 신규 가게(0%)의 정당한 값이라
+      // 둘을 같은 값으로 두면 다 찍힌 신규 가게가 영원히 대기로 보인다.
+      coverageRate: numOr(v.coverageRate, -1),
+      shopWon: numOr(v.shopWon, 0),
+      opsWon: numOr(v.opsWon, 0),
     }
   })
+}
+
+/**
+ * 아직 충당률이 안 찍힌 기록에 스냅샷을 채운다.
+ *
+ * 주 경로(참여자가 스티커를 찍는 길)가 남긴 기록에는 율이 없다. 참여자
+ * 기기가 그 값을 알 방법이 없기 때문이다 — 가게 문서를 읽히면 스티커
+ * 토큰이 함께 샌다. 그래서 율을 아는 기기가 뒤늦게 찍는다. 가게 내역
+ * 화면과 관리자 정산 화면이 열릴 때마다 부른다.
+ *
+ * **율이 바뀐 뒤의 기록에는 지금 율을 찍지 않는다.** `rateSince`보다 앞선
+ * 것은 건드리지 않고 세어서 돌려준다 — 지어내는 것보다 관리자가 손으로
+ * 판단하는 편이 낫고, 그 숫자가 화면에 뜨면 미룰 수 없게 된다.
+ */
+export async function stampPending(
+  shop: Shop,
+  cfg: SettlementConfig = DEFAULT_SETTLEMENT
+): Promise<{ stamped: number; skipped: number }> {
+  if (!db) return { stamped: 0, skipped: 0 }
+
+  const m = toMerchant(shop, cfg)
+  const since = shop.rateSince ? shop.rateSince.getTime() : 0
+  const uses = await fetchShopUses(shop.shopId, 500)
+
+  let stamped = 0
+  let skipped = 0
+  for (const u of uses) {
+    if (u.coverageRate >= 0) continue
+    if (!u.usedAt || u.usedAt.getTime() < since) {
+      skipped++
+      continue
+    }
+    const s = splitCoverage(u.amountWon, m.coverageRate)
+    try {
+      await updateDoc(doc(db, 'couponUses', u.code), {
+        coverageRate: s.coverageRate,
+        shopWon: s.shopWon,
+        opsWon: s.opsWon,
+        stampedAt: serverTimestamp(),
+      })
+      stamped++
+    } catch {
+      // 규칙이 막으면(남의 가게·관리자 아님) 조용히 넘긴다 — 다음에 여는
+      // 기기가 찍는다. 여기서 던지면 내역 화면이 통째로 안 뜬다.
+      skipped++
+    }
+  }
+  return { stamped, skipped }
 }
 
 /** 쿠폰 하나가 이미 쓰였는지 — 참여자 지갑이 회색으로 바꿀 때 쓴다 */
@@ -315,6 +663,15 @@ export async function seedShops(raw: string): Promise<{ ok: string[]; fail: stri
       continue
     }
     try {
+      /*
+        이미 있는 가게에는 등급·율·가입일을 다시 심지 않는다. 다시 심으면
+        신규 유예가 처음부터 다시 흐르고, 이미 프리미엄인 가게가 조용히
+        신규로 내려앉는다 — 시드는 문서를 세우는 도구이지 계약을 되돌리는
+        도구가 아니다.
+      */
+      const before = await getDoc(doc(db, 'shops', item.shopId))
+      const coverage = before.exists() ? {} : coverageDefaults()
+
       await setDoc(doc(db, 'shops', item.shopId), {
         shopId: item.shopId,
         name: item.name ?? item.shopId,
@@ -324,6 +681,15 @@ export async function seedShops(raw: string): Promise<{ ok: string[]; fail: stri
         postToken: item.postToken,
         staffUids: Array.isArray(item.staffUids) ? item.staffUids.filter(Boolean) : [],
         active: item.active !== false,
+        /*
+          그룹·추가 쿠폰을 받아 넣는다. 규칙은 이 두 칸을 보고 그룹·뽑기
+          쿠폰을 통과시키는데, 시드 문서에 없어서 교환 시점에 거절되던
+          것을 여기서 잇는다.
+        */
+        group: item.group ?? '',
+        accepts: Array.isArray(item.accepts) ? item.accepts : [],
+        groupCoupons: Array.isArray(item.groupCoupons) ? item.groupCoupons : [],
+        ...coverage,
       })
       ok.push(`${item.shopId} ${item.name ?? ''}`)
     } catch (err) {
@@ -342,13 +708,52 @@ export async function seedShops(raw: string): Promise<{ ok: string[]; fail: stri
 export async function fetchAllShops(): Promise<Shop[]> {
   if (!db) return []
   const snap = await getDocs(query(collection(db, 'shops'), orderBy('shopId')))
-  return snap.docs.map((d) => d.data() as Shop)
+  return snap.docs.map((d) => shopFromDoc(d.data()))
 }
 
 /** 문 닫은 가게는 사용 처리를 막는다 — 규칙이 active를 본다 */
 export async function setShopActive(shopId: string, active: boolean): Promise<void> {
   if (!db) throw new Error('서버에 닿지 못했습니다.')
   await updateDoc(doc(db, 'shops', shopId), { active })
+}
+
+/**
+ * 등급을 바꾼다 — 율·회비·상한이 함께 움직인다.
+ *
+ * `rateSince`를 지금으로 찍는 것이 이 함수의 핵심이다. 이 값이 없으면
+ * 아직 안 찍힌 지난 기록에 새 율이 소급돼 버린다. 이미 찍힌 기록은
+ * 스냅샷이라 무슨 짓을 해도 움직이지 않는다 — 그게 스냅샷을 두는 이유다.
+ */
+export async function setShopTier(
+  shopId: string,
+  tier: MerchantTier,
+  cfg: SettlementConfig = DEFAULT_SETTLEMENT
+): Promise<void> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+  await updateDoc(doc(db, 'shops', shopId), {
+    tier,
+    coverageRate: cfg.coverage[tier],
+    monthlyCapWon: cfg.monthlyCap[tier],
+    monthlyFeeWon: cfg.monthlyFee[tier],
+    rateSince: serverTimestamp(),
+  })
+}
+
+/** 계약 상태 — `active`가 아니면 그 가게에서 혜택을 쓸 수 없다 */
+export async function setShopContract(
+  shopId: string,
+  contract: ContractState
+): Promise<void> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+  await updateDoc(doc(db, 'shops', shopId), { contract })
+}
+
+/** 그 가게만 상한을 달리 잡을 때 — 등급 기본값을 덮어쓴다 */
+export async function setShopCap(shopId: string, capWon: number): Promise<void> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+  await updateDoc(doc(db, 'shops', shopId), {
+    monthlyCapWon: Math.max(0, Math.round(capWon)),
+  })
 }
 
 export async function removeShopStaff(shopId: string, uid: string): Promise<void> {
@@ -412,6 +817,10 @@ export async function addShop(opts: {
       postToken,
       staffUids: [],
       active: true,
+      group: '',
+      accepts: [],
+      groupCoupons: [],
+      ...coverageDefaults(),
     })
   }
 

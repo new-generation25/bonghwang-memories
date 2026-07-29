@@ -32,14 +32,31 @@ import { auth, db, isFirebaseReady } from './firebase'
 // 포인트 표 — 여기만 고치면 전체에 반영된다
 // ---------------------------------------------------------------------------
 
+export type PointReason =
+  | 'mainMission'
+  | 'bonusMission'
+  | 'specialMission'
+  | 'shareRecord'
+  | 'treasureLine'
+  | 'courseComplete'
+  | 'survey'
+  | 'campaign'
+  | 'gacha'
+  | 'redeem'
+
 /**
  * 포인트 표 (2026-07-29 혜택 체계).
  *
  * **1p = 1원이다.** 별도 화폐를 두지 않고 쿠폰 체계에 흡수시킨다 — 참여자가
  * 환산을 하지 않아도 되고, 가맹점은 쿠폰과 같은 방식으로 결제 금액에서
  * 뺀다. 그래서 여기 적는 숫자는 곧 원가다. 배점을 올리면 그만큼 돈이 나간다.
+ *
+ * `as const`를 뗀 이유가 있다. 배점은 협의로 움직이는 값이라 배포를 기다리게
+ * 하면 안 된다 — `config/settlement` 문서가 이 객체의 값을 **제자리에서**
+ * 덮어쓴다(applyPointConfig). 화면들이 이 객체를 그대로 참조하므로 다음
+ * 그리기부터 새 값이 보인다. 아래 숫자는 그 문서가 없을 때의 출발점이다.
  */
-export const POINT_TABLE = {
+export const POINT_TABLE: Record<PointReason, number> = {
   /** 미션 칸 하나 — 메인·보너스 공통. 칸은 칸이라 값이 갈리지 않는다 */
   mainMission: 100,
   /** 골목 빙고 칸 하나 — 메인과 같은 값 */
@@ -66,9 +83,15 @@ export const POINT_TABLE = {
    * 점수가 '한정 보너스미션'으로 적혀, 하지도 않은 미션을 한 것으로 읽힌다.
    */
   gacha: 0,
-} as const
-
-export type PointReason = keyof typeof POINT_TABLE
+  /**
+   * 가게에서 쓴 몫. 이 사유의 적립 건만 **음수**로 쌓인다.
+   *
+   * 원장에서 적립 건을 깎지 않고 차감 건을 따로 쌓는다 — 깎으면 "얼마를
+   * 받았고 얼마를 썼나"를 나중에 되짚을 수 없고, 서버와 기기를 합칠 때
+   * 어느 쪽이 더 깎였는지 판정할 근거가 없어진다.
+   */
+  redeem: 0,
+}
 
 /**
  * 적립 내역에 적히는 이름.
@@ -86,6 +109,7 @@ export const REASON_LABEL: Record<PointReason, string> = {
   survey: '완주 설문',
   campaign: '한정 보너스미션',
   gacha: '뽑기 당첨',
+  redeem: '가게에서 사용',
 }
 
 // ---------------------------------------------------------------------------
@@ -361,24 +385,87 @@ export function pendingPointTotal(): number {
  */
 export const POINT_TO_WON = 1
 
-/** 이 값을 넘겨야 쓸 수 있다. 2회 방문 누적을 전제로 잡은 문턱이다 */
-export const MIN_REDEEM_POINTS = 3000
+/**
+ * 문턱과 유효기간.
+ *
+ * 배점과 같은 이유로 객체에 담는다 — `config/settlement`이 제자리에서
+ * 덮어쓰고, 이 객체를 참조하는 화면은 다음 그리기부터 새 값을 읽는다.
+ */
+export const POINT_RULES = {
+  /** 이 값을 넘겨야 쓸 수 있다. 2회 방문 누적을 전제로 잡은 문턱이다 */
+  minRedeem: 3000,
+  /** 발급일 기준 유효기간(개월). 경과분은 소멸하고 **이월하지 않는다** */
+  expiryMonths: 6,
+}
 
-/** 발급일 기준 유효기간. 경과분은 소멸하고 **이월하지 않는다** */
-export const POINT_EXPIRY_MONTHS = 6
+const CONFIG_KEY = 'bh_point_config_v1'
+
+/**
+ * 관리자가 정한 배점·문턱을 적용한다.
+ *
+ * 마지막 값을 로컬에도 남긴다. 이 앱은 골목에서 신호가 끊긴 채로 적립이
+ * 일어나는 앱이라, 설정을 못 읽었다고 코드 기본값으로 되돌아가면 같은
+ * 미션이 기기마다 다른 점수를 준다. 못 읽으면 **마지막으로 알던 값**을 쓴다.
+ */
+export function applyPointConfig(cfg: {
+  missionPoints?: number
+  linePoints?: number
+  completePoints?: number
+  minRedeemPoints?: number
+  pointExpiryMonths?: number
+}): void {
+  const n = (v: unknown, fallback: number) =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v) : fallback
+
+  POINT_TABLE.mainMission = n(cfg.missionPoints, POINT_TABLE.mainMission)
+  POINT_TABLE.bonusMission = POINT_TABLE.mainMission
+  POINT_TABLE.treasureLine = n(cfg.linePoints, POINT_TABLE.treasureLine)
+  POINT_TABLE.courseComplete = n(cfg.completePoints, POINT_TABLE.courseComplete)
+  POINT_RULES.minRedeem = n(cfg.minRedeemPoints, POINT_RULES.minRedeem)
+  POINT_RULES.expiryMonths = n(cfg.pointExpiryMonths, POINT_RULES.expiryMonths)
+
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(
+      CONFIG_KEY,
+      JSON.stringify({
+        missionPoints: POINT_TABLE.mainMission,
+        linePoints: POINT_TABLE.treasureLine,
+        completePoints: POINT_TABLE.courseComplete,
+        minRedeemPoints: POINT_RULES.minRedeem,
+        pointExpiryMonths: POINT_RULES.expiryMonths,
+      })
+    )
+  } catch {
+    /* 저장 실패로 흐름을 막지 않는다 */
+  }
+}
+
+/** 앱이 켜질 때 마지막으로 알던 설정을 먼저 얹는다 — 서버는 그 뒤에 온다 */
+export function restorePointConfig(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const raw = window.localStorage.getItem(CONFIG_KEY)
+    if (raw) applyPointConfig(JSON.parse(raw))
+  } catch {
+    /* 못 읽으면 코드 기본값 그대로 */
+  }
+}
 
 /** 적립 한 건이 소멸하는 시각 */
 export function expiresAt(entry: PointEntry): number {
   const d = new Date(entry.createdAt)
-  d.setMonth(d.getMonth() + POINT_EXPIRY_MONTHS)
+  d.setMonth(d.getMonth() + POINT_RULES.expiryMonths)
   return d.getTime()
 }
 
 export interface PointWallet {
-  /** 아직 살아 있는 포인트 — 화면에 띄우는 값은 늘 이것이다 */
+  /** 아직 살아 있고 쓰지 않은 포인트 — 화면에 띄우는 값은 늘 이것이다 */
   total: number
   /** 원으로 환산한 값 */
   won: number
+  /** 지금까지 가게에서 쓴 몫 */
+  spent: number
   /** 기간이 지나 사라진 몫. 부채로 잡지 않으므로 참고용이다 */
   expired: number
   /** 지금 쓸 수 있는가 */
@@ -390,36 +477,177 @@ export interface PointWallet {
 }
 
 /**
- * 원장을 유효기간으로 걸러 지금 쓸 수 있는 상태를 낸다.
+ * 원장을 유효기간과 사용분으로 걸러 지금 쓸 수 있는 상태를 낸다.
  *
- * 만료를 원장에서 지우지 않고 **읽을 때마다 판정한다.** 지우면 왜 줄었는지
- * 물어볼 때 답할 근거가 없어지고, 기기마다 지운 시점이 달라 서버와 합칠 때
- * 어긋난다. 소멸분은 부채로 잡지 않으므로 회계상 지울 이유도 없다.
+ * **만료 배치를 돌리지 않는다.** 지우는 대신 읽을 때마다 판정한다 — 지우면
+ * 왜 줄었는지 물어볼 때 답할 근거가 없어지고, 기기마다 지운 시점이 달라
+ * 서버와 합칠 때 어긋난다. 소멸분은 부채로 잡지 않으므로 회계상 지울 이유도
+ * 없다. 날마다 도는 배치가 하는 일을 이 함수가 호출마다 하는 셈이다.
+ *
+ * 소진 순서는 **먼저 받은 것부터**(FIFO)다. 나중 것부터 쓰면 앞의 적립이
+ * 만료로 사라지는데, 참여자 입장에서는 "썼는데도 없어졌다"가 된다.
  */
 export function pointWallet(
   entries: PointEntry[],
   now = Date.now()
 ): PointWallet {
+  // 받은 것은 오래된 순으로 줄 세우고, 쓴 것은 합계만 있으면 된다
+  const earned = entries
+    .filter((e) => e.points > 0)
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((e) => ({ entry: e, left: e.points }))
+  const spent = entries.reduce((n, e) => (e.points < 0 ? n - e.points : n), 0)
+
+  let rest = spent
+  for (const slot of earned) {
+    if (rest <= 0) break
+    const take = Math.min(slot.left, rest)
+    slot.left -= take
+    rest -= take
+  }
+
   let total = 0
   let expired = 0
   let nextExpiry: number | null = null
 
-  for (const e of entries) {
-    const at = expiresAt(e)
+  for (const slot of earned) {
+    if (slot.left <= 0) continue
+    const at = expiresAt(slot.entry)
     if (at <= now) {
-      expired += e.points
+      expired += slot.left
       continue
     }
-    total += e.points
+    total += slot.left
     if (nextExpiry === null || at < nextExpiry) nextExpiry = at
   }
 
   return {
     total,
     won: total * POINT_TO_WON,
+    spent,
     expired,
-    redeemable: total >= MIN_REDEEM_POINTS,
-    toThreshold: Math.max(0, MIN_REDEEM_POINTS - total),
+    redeemable: total >= POINT_RULES.minRedeem,
+    toThreshold: Math.max(0, POINT_RULES.minRedeem - total),
     nextExpiry,
+  }
+}
+
+/**
+ * 아직 결과를 못 본 포인트 사용 코드.
+ *
+ * 포인트는 가게 기기가 태운다(충당률이 참여자에게 닿으면 안 된다). 그래서
+ * 참여자 기기는 자기가 띄운 코드가 실제로 쓰였는지를 **나중에 확인해서**
+ * 원장을 맞춰야 한다. 코드를 여기 적어두고, 확인되면 지운다.
+ *
+ * 화면을 닫아버려도 다음에 열 때 맞춰진다 — 카운터에서 결제가 끝나면
+ * 사람은 폰을 주머니에 넣지, 확인 화면을 지키고 있지 않는다.
+ */
+const OPEN_KEY = 'bh_point_codes_v1'
+
+function openCodes(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const v = JSON.parse(window.localStorage.getItem(OPEN_KEY) || '[]')
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+function writeOpenCodes(list: string[]) {
+  if (typeof window === 'undefined') return
+  try {
+    // 오래된 것부터 버린다 — 안 쓰인 코드가 영원히 쌓이면 열 때마다 느려진다
+    window.localStorage.setItem(OPEN_KEY, JSON.stringify(list.slice(-20)))
+  } catch {
+    /* 저장 실패로 흐름을 막지 않는다 */
+  }
+}
+
+/** 코드를 띄웠다 — 아직 쓰였는지는 모른다 */
+export function trackPointCode(code: string): void {
+  const list = openCodes()
+  if (!list.includes(code)) writeOpenCodes([...list, code])
+}
+
+/**
+ * 띄워 둔 코드가 실제로 쓰였는지 보고 원장을 맞춘다.
+ *
+ * 사용 기록은 규칙상 문서 id를 아는 사람만 읽을 수 있다(`allow get`).
+ * 그 코드를 만든 것이 이 기기라, 참여자가 자기 사용분을 확인하는 유일한
+ * 통로가 이것이다. 남의 코드는 애초에 만들어낼 수 없다.
+ *
+ * @returns 이번에 새로 반영한 사용 건수
+ */
+export async function reconcilePointSpends(): Promise<number> {
+  const list = openCodes()
+  if (list.length === 0 || !db || !isFirebaseReady()) return 0
+
+  const left: string[] = []
+  let settled = 0
+
+  for (const code of list) {
+    try {
+      const snap = await getDoc(doc(db, 'couponUses', code))
+      if (!snap.exists()) {
+        left.push(code)
+        continue
+      }
+      const amount = Number(snap.data()?.amountWon) || 0
+      if (amount > 0) {
+        await recordSpend(code, amount)
+        settled++
+      }
+    } catch {
+      // 못 읽었으면 다음 기회에 — 지우면 쓴 몫이 원장에서 영영 빠진다
+      left.push(code)
+    }
+  }
+
+  writeOpenCodes(left)
+  return settled
+}
+
+/**
+ * 가게에서 쓴 몫을 원장에 남긴다 — 사용 기록이 만들어진 **뒤에만** 부른다.
+ *
+ * 순서가 중요하다. 먼저 깎고 사용 기록이 실패하면 참여자는 쓰지도 못한
+ * 포인트를 잃는다. 반대로 사용 기록이 먼저 남고 여기가 실패하면 대기열에
+ * 들어가 다음 기회에 올라간다 — 잃는 쪽이 아니라 늦는 쪽으로 실패하게 둔다.
+ *
+ * refId가 쿠폰 코드라 같은 사용을 두 번 불러도 한 번만 깎인다.
+ */
+export async function recordSpend(code: string, amount: number): Promise<void> {
+  if (!Number.isInteger(amount) || amount <= 0) return
+
+  const entry: PointEntry = {
+    refId: `redeem-${code}`,
+    reason: 'redeem',
+    points: -amount,
+    createdAt: Date.now(),
+  }
+  if (!appendLedger(entry)) return
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(POINTS_EVENT, { detail: entry }))
+  }
+
+  const queue = () => {
+    const pending = readPending()
+    if (!pending.some((p) => p.refId === entry.refId)) {
+      writePending([...pending, entry])
+    }
+  }
+
+  const uid = auth?.currentUser?.uid
+  if (!uid || !isFirebaseReady()) return queue()
+  try {
+    await writeEntry(uid, entry)
+  } catch (err) {
+    console.error('[포인트 차감 기록 실패]', {
+      refId: entry.refId,
+      code: (err as { code?: string })?.code,
+    })
+    queue()
   }
 }

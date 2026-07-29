@@ -295,6 +295,19 @@ export interface AdminCouponUse {
   /** guest = 손님이 가게 스티커를 직접 찍음 / staff = 사장님이 대신 처리 */
   via: 'guest' | 'staff'
   usedAt: number | null
+  /** 쿠폰인가 포인트인가 — 가게에서는 같은 값으로 쓰이지만 세는 칸은 다르다 */
+  kind: 'coupon' | 'points'
+  /** 할인 액면(원) */
+  amountWon: number
+  /**
+   * **사용 시점에 값으로 굳은** 충당률(%). `-1`이면 아직 안 찍힌 기록이다.
+   *
+   * 0과 -1을 갈라야 한다. 0은 신규 가게의 정당한 값이라, 같은 값으로 두면
+   * 다 찍힌 신규 가게가 영원히 '대기'로 보인다.
+   */
+  coverageRate: number
+  shopWon: number
+  opsWon: number
 }
 
 /**
@@ -311,12 +324,19 @@ export async function fetchCouponUses(max = 1000): Promise<AdminCouponUse[]> {
     )
     return snap.docs.map((d) => {
       const v = d.data()
+      const num = (x: unknown, fallback: number) =>
+        typeof x === 'number' && Number.isFinite(x) ? x : fallback
       return {
         code: v.code ?? d.id,
         couponId: v.couponId ?? '',
         shopId: v.shopId ?? '',
         via: v.via === 'guest' ? 'guest' : 'staff',
         usedAt: ms(v.usedAt),
+        kind: v.kind === 'points' ? 'points' : 'coupon',
+        amountWon: num(v.amountWon, 0),
+        coverageRate: num(v.coverageRate, -1),
+        shopWon: num(v.shopWon, 0),
+        opsWon: num(v.opsWon, 0),
       }
     })
   } catch {
@@ -334,11 +354,29 @@ export {
   hourlyStarts,
   averageDurationMin,
   surveySummary,
-  shopSettlement,
+  issuedFaceValue,
   eventBreakdown,
 } from './adminStats'
+export type { PeriodStats, EventBreakdownRow } from './adminStats'
+
+// 충당률 정산도 순수 계산이라 같은 이유로 갈라져 있다(coverage.ts)
+export {
+  CONTRACT_LABEL,
+  DEFAULT_SETTLEMENT,
+  TIER_LABEL,
+  capStatus,
+  coverageReport,
+  graceExpired,
+  monthKey,
+  settleMonth,
+  settlementDueAt,
+} from './coverage'
 export type {
-  PeriodStats,
-  ShopSettlementRow,
-  EventBreakdownRow,
-} from './adminStats'
+  CapStatus,
+  ContractState,
+  CoverageReport,
+  MerchantTier,
+  SettlementConfig,
+  SettlementMerchant,
+  SettlementRow,
+} from './coverage'

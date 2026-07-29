@@ -33,6 +33,10 @@ export type AnalyticsEventName =
   | 'act2_entered'
   | 'bingo_line'
   | 'coupon_used'
+  // 포인트도 가게에서 쓰이는 값이라 쿠폰과 나란히 센다. 갈라 둔 이유는
+  // 액면이 정해진 쿠폰과 달리 금액이 카운터에서 정해져서다 — 한데 묶으면
+  // '한 건'의 무게가 달라 사용률을 못 읽는다
+  | 'points_used'
   | 'finale_saved'
   | 'ep2_reserved'
   | 'review_written'

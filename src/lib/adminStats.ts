@@ -10,10 +10,8 @@ import type {
   AdminUser,
   AdminPointEntry,
   AdminSurveyResponse,
-  AdminCouponUse,
   AdminEvent,
 } from './admin'
-import { COUPONS } from './coupons'
 
 /**
  * 가격 체계 (브랜드 v2.1 §5).
@@ -143,80 +141,34 @@ export function surveySummary(
 // ---------------------------------------------------------------------------
 // 골목 가게 정산
 // ---------------------------------------------------------------------------
-
-export interface ShopSettlementRow {
-  shopId: string
-  name: string
-  unitWon: number
-  /** 전체 사용 장수 */
-  total: number
-  /** 손님이 가게 스티커를 직접 찍은 것 */
-  guest: number
-  /** 사장님이 대신 처리한 것 */
-  staff: number
-  /** 돌려드릴 금액 */
-  won: number
-}
+//
+// 가게별 정산은 coverage.ts의 `settleMonth()`로 옮겼다.
+//
+// 예전 `shopSettlement()`는 사용 기록의 장수를 세고 카탈로그 단가를 곱해
+// "돌려드릴 금액"을 냈다. 충당률이 들어오면서 그 계산이 통째로 틀렸다 —
+// 할인액은 가게와 운영사가 나누어 지고, 그 비율은 **사용 시점에 굳은
+// 스냅샷**이지 지금 카탈로그가 아니다. 카탈로그를 다시 곱하는 방식은
+// 등급이 바뀌는 순간 지난 달 정산까지 함께 움직인다.
+//
+// 아래 `issuedFaceValue()`만 여기 남는다. 발행 액면은 무엇이 쓰였는지가
+// 아니라 무엇을 내보냈는지라, 카탈로그를 봐야 하는 유일한 집계다.
 
 /**
- * 가게별 정산.
+ * 기간 안에 내보낸 액면 총액 — 쿠폰 액면 + 적립 포인트.
  *
- * 금액을 참여자 수에서 추정하지 않고 **실제 사용 기록에서 센다.**
- * REWARD_COUPON_VALUE(4,000원)는 쿠폰 다섯 장을 다 썼을 때의 상한이지
- * 실제로 나간 돈이 아니다 — 정산은 찍힌 장수로만 한다.
- *
- * guest/staff를 갈라 두는 이유가 있다. 대리 처리는 손님이 오지 않아도
- * 사장님 기기만으로 기록을 만들 수 있는 경로다. 한 가게의 기록이 거의
- * 전부 '대리'로 쌓이면 들여다볼 신호다 — 그래서 금액 옆에 비율을 같이 둔다.
- *
- * shopId가 없는 옛 기록은 빠진다. 가게를 신뢰할 수 있게 기록하기
- * 시작한 것이 이번 개편부터라, 그 전 것은 어느 가게 몫인지 알 수 없다.
+ * 사용률(쓰인 액면 ÷ 발행 액면)의 분모다. 쿠폰은 발급 기록을 따로 두지
+ * 않으므로 결제 건수에서 세고, 포인트는 적립 원장을 그대로 더한다.
  */
-export function shopSettlement(
-  uses: AdminCouponUse[],
-  since = 0
-): ShopSettlementRow[] {
-  const rows = new Map<string, ShopSettlementRow>()
-
-  /*
-    가게 칸은 '특정 가게 쿠폰'에서만 세운다.
-
-    공용 할인권은 쿠폰에 가게가 적혀 있지 않고 **실제로 쓴 가게**의 몫이라,
-    사용 기록의 shopId를 보고 아래에서 그 가게 줄에 얹는다.
-    안내소 교환권은 가게에 돌려줄 돈이 아니라 여기 오지 않는다.
-  */
-  for (const spec of Object.values(COUPONS)) {
-    if (spec.scope !== 'shop' || !spec.shopId) continue
-    if (rows.has(spec.shopId)) continue
-    rows.set(spec.shopId, {
-      shopId: spec.shopId,
-      name: spec.shop,
-      unitWon: spec.unitWon,
-      total: 0,
-      guest: 0,
-      staff: 0,
-      won: 0,
-    })
-  }
-
-  for (const u of uses) {
-    if (!u.shopId) continue
-    if (since && (u.usedAt ?? 0) < since) continue
-    const row = rows.get(u.shopId)
-    if (!row) continue
-    row.total += 1
-    if (u.via === 'guest') row.guest += 1
-    else row.staff += 1
-    /*
-      금액은 그 가게의 기본 단가가 아니라 **쓴 쿠폰의 단가**로 센다.
-      공용 할인권과 뽑기 쿠폰은 값이 저마다 달라서, 가게 단가로 세면
-      실제로 나간 금액과 어긋난다.
-    */
-    row.won += COUPONS[u.couponId]?.unitWon ?? row.unitWon
-  }
-
-  // Array.from을 쓰는 이유는 tsconfig target이 낮아 Map 순회 전개가 막혀서다
-  return Array.from(rows.values())
+export function issuedFaceValue(
+  points: AdminPointEntry[],
+  paidCount: number,
+  couponFaceWon: number,
+  from = 0
+): number {
+  const earned = points
+    .filter((p) => p.points > 0 && (p.createdAt ?? 0) >= from)
+    .reduce((n, p) => n + p.points, 0)
+  return earned + paidCount * couponFaceWon
 }
 
 // ---------------------------------------------------------------------------

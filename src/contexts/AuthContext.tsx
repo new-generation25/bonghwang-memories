@@ -19,7 +19,12 @@ import {
   startTourSync,
   syncUserStats,
 } from '@/lib/tourSync'
-import { clearLocalPoints, flushPendingPoints } from '@/lib/points'
+import {
+  clearLocalPoints,
+  flushPendingPoints,
+  reconcilePointSpends,
+} from '@/lib/points'
+import { loadPointConfig } from '@/lib/settlement'
 import { flushTelemetry } from '@/lib/telemetry'
 import { markAdminAccount } from '@/lib/admin'
 import { resetTour } from '@/lib/tourState'
@@ -72,6 +77,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setAvailable(isFirebaseReady())
 
+    /*
+      배점·문턱을 서버에서 받아 얹는다.
+
+      로그인을 기다리지 않는다 — 로그인 없이도 보너스 미션으로 포인트를
+      쌓을 수 있고(그 동선을 막지 않기로 했다), 그 사람에게도 같은 배점이
+      적용돼야 한다. 못 읽으면 마지막으로 알던 값을 쓴다.
+    */
+    void loadPointConfig()
+
     const unsubscribe = subscribeAuth(async (user) => {
       // 이전 계정의 동기화를 먼저 끊는다
       stopSyncRef.current?.()
@@ -93,6 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           stopSyncRef.current = startTourSync(user.uid)
           // 로그인 전에 쌓인 적립을 올린다 — 투어 도중 로그인하는 경우가 있다
           await flushPendingPoints(user.uid)
+          // 가게에서 쓴 몫도 맞춘다 — 포인트는 가게 기기가 태우므로
+          // 참여자 기기는 나중에 확인해야 원장이 맞는다
+          await reconcilePointSpends()
           // 로그인 전에 쌓인 계측도 같은 결로 올린다
           await flushTelemetry(user.uid)
           await syncUserStats(user.uid)

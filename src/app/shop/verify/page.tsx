@@ -23,9 +23,23 @@ import QRScanner from '@/components/QRScanner'
 import { useAuth } from '@/contexts/AuthContext'
 import { signIn } from '@/lib/auth'
 import { submitOnEnter } from '@/lib/submitOnEnter'
-import { fetchMyShops, redeemCoupon, type RedeemOutcome, type Shop } from '@/lib/shops'
+import { parsePointCode } from '@/lib/coupons'
+import { CAP_CLOSED_MESSAGE } from '@/lib/coverage'
+import {
+  fetchMyShops,
+  redeemCoupon,
+  redeemPoints,
+  type RedeemOutcome,
+  type Shop,
+} from '@/lib/shops'
 
-type State = { kind: 'idle' } | { kind: 'checking' } | { kind: 'done'; out: RedeemOutcome }
+type State =
+  | { kind: 'idle' }
+  | { kind: 'checking' }
+  /** 포인트 코드를 받았다 — 금액은 사장님이 넣는다 */
+  | { kind: 'amount'; code: string }
+  /** points가 있으면 포인트 사용이다 — 결과 화면의 문구가 갈린다 */
+  | { kind: 'done'; out: RedeemOutcome; points?: number }
 
 function ShopVerifyInner() {
   const params = useSearchParams()
@@ -37,6 +51,8 @@ function ShopVerifyInner() {
   const [manual, setManual] = useState('')
   const [scan, setScan] = useState(false)
   const [state, setState] = useState<State>({ kind: 'idle' })
+  /** 포인트로 깎을 금액 — 1p = 1원이라 그대로 포인트 수다 */
+  const [amount, setAmount] = useState('')
 
   // 로그인 상자
   const [loginId, setLoginId] = useState('')
@@ -75,6 +91,17 @@ function ShopVerifyInner() {
     async (code: string) => {
       if (!shop || !profile?.uid) return
       setScan(false)
+
+      /*
+        포인트 코드는 곧바로 태우지 않는다. 얼마를 쓸지가 이 자리에서
+        정해지는 값이라 금액 칸을 먼저 띄운다 — 쿠폰처럼 액면이 정해져
+        있었다면 이 단계가 없었을 것이다.
+      */
+      if (parsePointCode(code)) {
+        setState({ kind: 'amount', code: code.trim().toUpperCase() })
+        return
+      }
+
       setState({ kind: 'checking' })
       const out = await redeemCoupon({
         code,
@@ -82,8 +109,27 @@ function ShopVerifyInner() {
         shopGroup: shop.group,
         byUid: profile.uid,
         via: 'staff',
+        // 가게 기기는 자기 문서를 읽을 수 있다 — 충당률을 그 자리에서 찍고
+        // 월 상한도 잰다. 참여자가 직접 찍는 주 경로는 둘 다 못 한다
+        shop,
       })
       setState({ kind: 'done', out })
+    },
+    [shop, profile?.uid]
+  )
+
+  /** 사장님이 넣은 금액으로 포인트를 태운다 */
+  const applyAmount = useCallback(
+    async (code: string, amountWon: number) => {
+      if (!shop || !profile?.uid) return
+      setState({ kind: 'checking' })
+      const out = await redeemPoints({
+        code,
+        amountWon,
+        shop,
+        byUid: profile.uid,
+      })
+      setState({ kind: 'done', out, points: amountWon })
     },
     [shop, profile?.uid]
   )
@@ -200,6 +246,7 @@ function ShopVerifyInner() {
 
   // ── 확인 ────────────────────────────────────────────────
   const out = state.kind === 'done' ? state.out : null
+  const usedPoints = state.kind === 'done' ? state.points : undefined
 
   return (
     <Frame>
@@ -231,7 +278,7 @@ function ShopVerifyInner() {
             value={manual}
             onChange={(e) => setManual(e.target.value.toUpperCase())}
             onKeyDown={submitOnEnter(() => void verify(manual), Boolean(manual.trim()))}
-            placeholder="BH1-CP1-XXXXXX-XXXX"
+            placeholder="BH1-CP1-XXXXXX-XXXX / PT1-…"
             autoCapitalize="characters"
             className="mt-4 w-full rounded-xl border border-line bg-paper px-4 py-3 text-center font-mono-retro text-[15px] tracking-[0.08em] text-ink"
           />
@@ -241,6 +288,72 @@ function ShopVerifyInner() {
             className="mt-2 w-full rounded-xl border border-line bg-paper py-3 text-[13px] font-bold text-ink disabled:opacity-40"
           >
             코드로 확인하기
+          </button>
+        </>
+      )}
+
+      {/*
+        포인트 — 금액 넣기.
+
+        손님 화면에는 이 칸이 없다. 사장님이 확인하지 않은 숫자가 그대로
+        기록이 되면 안 되고, 실제 계산대에서도 "얼마 쓸까요"는 카운터에서
+        정해지는 이야기다.
+      */}
+      {state.kind === 'amount' && (
+        <>
+          <div className="mt-4 rounded-xl border border-teal/50 bg-teal/5 px-3 py-2.5 text-center">
+            <p className="font-mono-retro text-[10px] tracking-[0.15em] text-teal-dk">
+              봉황 포인트
+            </p>
+            <p className="mt-1 font-mono-retro text-[12px] text-ink">{state.code}</p>
+          </div>
+          <p className="mt-4 text-center text-[12.5px] leading-relaxed text-ink-60">
+            결제 금액에서 <b className="text-ink">깎아드릴 금액</b>을 넣어주세요.
+            <br />
+            손님 화면의 남은 포인트를 넘지 않게 해주세요.
+          </p>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            onKeyDown={submitOnEnter(
+              () => void applyAmount(state.code, Number(amount)),
+              Number(amount) > 0
+            )}
+            placeholder="0"
+            className="mt-3 w-full rounded-xl border border-line bg-paper px-4 py-3 text-center font-display text-[24px] text-ink"
+          />
+          <p className="mt-1 text-center font-mono-retro text-[11px] text-ink-60">
+            {(Number(amount) || 0).toLocaleString()}원 · 1P = 1원
+          </p>
+          {/* 자주 쓰는 액수는 눌러서 — 계산대에서 숫자를 치는 시간이 아깝다 */}
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {[1000, 2000, 3000, 5000].map((v) => (
+              <button
+                key={v}
+                onClick={() => setAmount(String(v))}
+                className="rounded-lg border border-line bg-paper py-2 font-mono-retro text-[12px] text-ink"
+              >
+                {v.toLocaleString()}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => void applyAmount(state.code, Number(amount))}
+            disabled={!(Number(amount) > 0)}
+            className="btn-teal mt-4 w-full text-center disabled:opacity-40"
+          >
+            이 금액으로 사용 처리
+          </button>
+          <button
+            onClick={() => {
+              setAmount('')
+              setState({ kind: 'idle' })
+            }}
+            className="mt-2 w-full rounded-xl border border-line bg-paper py-3 text-[13px] font-bold text-ink"
+          >
+            취소
           </button>
         </>
       )}
@@ -257,7 +370,13 @@ function ShopVerifyInner() {
           </p>
           <p className="mt-4 font-display text-[26px] text-teal-dk">사용 가능</p>
           <p className="mt-3 text-[16px] font-bold text-ink">{shop.name}</p>
-          <p className="mt-1 text-[17px] font-bold text-ink">{shop.benefit}</p>
+          {usedPoints ? (
+            <p className="mt-1 text-[19px] font-bold text-ink">
+              {usedPoints.toLocaleString()}원 할인
+            </p>
+          ) : (
+            <p className="mt-1 text-[17px] font-bold text-ink">{shop.benefit}</p>
+          )}
           <p className="mt-4 font-mono-retro text-[11px] text-ink-60">
             방금 사용 처리했습니다 · 재사용 불가
           </p>
@@ -281,6 +400,25 @@ function ShopVerifyInner() {
         <Bad mark="?" title="확인할 수 없음">
           {out.reason}
         </Bad>
+      )}
+
+      {/*
+        월 충당 상한에 닿았다.
+
+        손님께 보여드리는 문구는 여기서도 같다 — 이 화면은 카운터에서
+        손님 쪽으로 돌려 보여주는 자리라, 사장님께만 하는 말을 적으면
+        그대로 손님이 읽는다. 얼마가 남았는지는 사용 내역 화면에서 본다.
+      */}
+      {out?.kind === 'capped' && (
+        <div className="mt-8 rounded-2xl border-2 border-sunset-yellow bg-sunset-yellow/15 px-5 py-10 text-center">
+          <p className="text-[44px] leading-none" aria-hidden>
+            🗓️
+          </p>
+          <p className="mt-4 font-display text-[20px] text-ink">이번 달 혜택 마감</p>
+          <p className="mt-3 text-[13px] leading-relaxed text-ink-60">
+            {CAP_CLOSED_MESSAGE}
+          </p>
+        </div>
       )}
 
       {/*
@@ -319,10 +457,11 @@ function ShopVerifyInner() {
         </div>
       )}
 
-      {state.kind !== 'idle' && (
+      {state.kind === 'done' && (
         <button
           onClick={() => {
             setManual('')
+            setAmount('')
             setState({ kind: 'idle' })
           }}
           className="mt-5 w-full rounded-xl border border-line bg-paper py-3 text-[13px] font-bold text-ink"

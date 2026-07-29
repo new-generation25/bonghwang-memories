@@ -318,3 +318,44 @@ export function parseCouponCode(raw: string): ParsedCoupon | null {
 export function couponQrPayload(code: string, origin: string): string {
   return `${origin}/shop/verify?c=${encodeURIComponent(code)}`
 }
+
+// ---------------------------------------------------------------------------
+// 포인트 사용 코드
+// ---------------------------------------------------------------------------
+
+/**
+ * 포인트를 쓸 때의 코드 — `PT1-K3M9QF-237A`.
+ *
+ * 쿠폰과 머리를 갈라 둔 이유가 있다. 쿠폰은 액면이 정해져 있어 참여자가
+ * 혼자 태울 수 있지만, 포인트는 **얼마를 쓸지가 카운터에서 정해진다.**
+ * 그래서 이 코드는 가게 기기가 읽고, 금액은 사장님이 넣는다 — 그 편이
+ * 실제 계산대 흐름과도 같다.
+ *
+ * 갈라 두면 얻는 것이 하나 더 있다. 충당률은 참여자에게 보이면 안 되는
+ * 값인데, 사용 기록에는 그 값이 스냅샷으로 들어가야 한다. 쓰는 쪽이 가게
+ * 기기이므로 **참여자 기기는 충당률을 알 필요도, 알 방법도 없다.**
+ * 참여자가 가게 문서를 읽을 수 있게 열면 스티커 토큰이 함께 샌다.
+ *
+ * 쿠폰 코드와 절대 겹치지 않는다 — parseCouponCode는 BH1만 받는다.
+ */
+export const POINT_CODE_PREFIX = 'PT1'
+
+export function makePointCode(uid: string, serial: number): string {
+  return `${POINT_CODE_PREFIX}-${userTag(uid)}-${serialTag(serial)}${checksum('pt', uid, serial)}`
+}
+
+export interface ParsedPointCode {
+  userTag: string
+  serial: string
+}
+
+export function parsePointCode(raw: string): ParsedPointCode | null {
+  const m = raw.trim().toUpperCase().match(/^PT1-([2-9A-Z]{6})-([2-9A-Z]{4})$/)
+  if (!m) return null
+  return { userTag: m[1], serial: m[2].slice(0, 2) }
+}
+
+/** 포인트 코드 QR — 쿠폰과 같은 확인 화면으로 보낸다 */
+export function pointQrPayload(code: string, origin: string): string {
+  return `${origin}/shop/verify?c=${encodeURIComponent(code)}`
+}

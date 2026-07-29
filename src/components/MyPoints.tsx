@@ -18,12 +18,12 @@ import {
   PointReason,
   REASON_LABEL,
   POINTS_EVENT,
-  MIN_REDEEM_POINTS,
-  POINT_EXPIRY_MONTHS,
+  POINT_RULES,
   fetchPointHistory,
   localPointHistory,
   pointWallet,
 } from '@/lib/points'
+import PointRedeemSheet from '@/components/PointRedeemSheet'
 
 const ORDER: PointReason[] = [
   'mainMission',
@@ -40,6 +40,7 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
   const { profile } = useAuth()
   const [entries, setEntries] = useState<PointEntry[]>([])
   const [open, setOpen] = useState(false)
+  const [redeeming, setRedeeming] = useState(false)
 
   const load = useCallback(async () => {
     const local = localPointHistory()
@@ -122,14 +123,33 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
         */}
         <div className="mt-3 rounded-lg border border-sunset-yellow bg-cream-base/60 p-3">
           {wallet.redeemable ? (
-            <p className="text-[12.5px] leading-snug text-ink">
-              제휴 가맹점에서{' '}
-              <b className="text-rec">{wallet.won.toLocaleString()}원</b>처럼
-              쓸 수 있어요
-              <span className="mt-0.5 block text-[11px] text-ink-60">
-                결제할 때 이 화면을 보여주세요 · 1P = 1원
-              </span>
-            </p>
+            <>
+              <p className="text-[12.5px] leading-snug text-ink">
+                제휴 가맹점에서{' '}
+                <b className="text-rec">{wallet.won.toLocaleString()}원</b>처럼
+                쓸 수 있어요
+                <span className="mt-0.5 block text-[11px] text-ink-60">
+                  가게 카운터의 스티커를 찍으면 결제 금액에서 빠져요 · 1P = 1원
+                </span>
+              </p>
+              {/*
+                쓰는 길을 화면에 둔다. 예전에는 "쓸 수 있어요"라고만 적혀
+                있어서, 정작 카운터 앞에 선 사람이 무엇을 눌러야 하는지
+                알 수 없었다 — 쿠폰은 지갑에 QR이 있는데 포인트는 없었다.
+              */}
+              <button
+                onClick={() => setRedeeming(true)}
+                disabled={!profile?.uid}
+                className="btn-teal mt-2.5 w-full text-center text-[13px] disabled:opacity-40"
+              >
+                가게에서 사용하기
+              </button>
+              {!profile?.uid && (
+                <p className="mt-1.5 text-center text-[10.5px] text-ink-60">
+                  로그인해야 사용 기록이 남아요
+                </p>
+              )}
+            </>
           ) : (
             <>
               <p className="text-[12.5px] leading-snug text-ink-60">
@@ -143,12 +163,12 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
                 <div
                   className="h-2 rounded-full bg-sunset transition-all duration-500"
                   style={{
-                    width: `${Math.min(100, (total / MIN_REDEEM_POINTS) * 100)}%`,
+                    width: `${Math.min(100, (total / POINT_RULES.minRedeem) * 100)}%`,
                   }}
                 />
               </div>
               <p className="mt-1 font-mono-retro text-[10px] text-ink-60">
-                {total.toLocaleString()} / {MIN_REDEEM_POINTS.toLocaleString()}P
+                {total.toLocaleString()} / {POINT_RULES.minRedeem.toLocaleString()}P
               </p>
             </>
           )}
@@ -157,7 +177,14 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
         {/* 소멸은 미리 알려야 한다 — 사라진 뒤에 알면 이월도 못 한다 */}
         {expiryText && (
           <p className="mt-2 font-mono-retro text-[10px] text-ink-60">
-            적립일부터 {POINT_EXPIRY_MONTHS}개월 · 가장 이른 소멸 {expiryText}
+            적립일부터 {POINT_RULES.expiryMonths}개월 · 가장 이른 소멸 {expiryText}
+          </p>
+        )}
+
+        {/* 쓴 몫은 따로 적는다 — 합계만 줄어 있으면 "왜 줄었지"가 된다 */}
+        {wallet.spent > 0 && (
+          <p className="mt-1 font-mono-retro text-[10px] text-ink-60">
+            지금까지 가게에서 사용 {wallet.spent.toLocaleString()}P
           </p>
         )}
 
@@ -167,7 +194,10 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
               onClick={() => setOpen((v) => !v)}
               className="mt-3 w-full text-left font-mono-retro text-[10.5px] text-ink-60"
             >
-              적립 내역 {open ? '접기 ▲' : `보기 ▼ (${entries.length}건)`}
+              적립 내역{' '}
+              {open
+                ? '접기 ▲'
+                : `보기 ▼ (${byReason.reduce((n, r) => n + r.count, 0)}건)`}
             </button>
             {open && (
               <ul className="mt-2 space-y-1.5">
@@ -196,6 +226,18 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
           </p>
         )}
       </div>
+
+      {redeeming && profile?.uid && (
+        <PointRedeemSheet
+          uid={profile.uid}
+          available={total}
+          onClose={() => setRedeeming(false)}
+          onRedeemed={() => {
+            setEntries(localPointHistory())
+            void load()
+          }}
+        />
+      )}
     </div>
   )
 }
