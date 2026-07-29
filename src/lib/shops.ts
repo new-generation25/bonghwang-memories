@@ -44,7 +44,6 @@ import { COUPONS, parseCouponCode, parsePointCode } from './coupons'
 import {
   DEFAULT_SETTLEMENT,
   graceEndsAt,
-  monthKey,
   splitCoverage,
   type ContractState,
   type MerchantLike,
@@ -372,24 +371,6 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
 // ---------------------------------------------------------------------------
 // 포인트 사용 — 쿠폰과 같은 통화, 같은 기록, 같은 정산
 // ---------------------------------------------------------------------------
-
-/**
- * 이번 달 이 가게에 쌓인 부담액.
- *
- * 가게 기기만 부를 수 있다(규칙이 couponUses 목록을 그 가게 직원에게만
- * 연다). 참여자 기기가 상한을 확인할 길은 없으므로 주 경로에서 상한을
- * 넘겨 찍히는 일이 생길 수 있는데, 그 몫은 정산에서 운영사가 진다
- * (coverage.ts의 `coveredWon`).
- */
-export async function monthUsage(
-  shopId: string,
-  month = monthKey()
-): Promise<number> {
-  const uses = await fetchShopUses(shopId, 500)
-  return uses
-    .filter((u) => u.usedAt && monthKey(u.usedAt) === month)
-    .reduce((n, u) => n + u.shopWon, 0)
-}
 
 interface RedeemPointsOptions {
   /** 참여자가 띄운 `PT1-…` 코드 — 문서 id가 된다 */

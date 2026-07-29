@@ -31,6 +31,7 @@ import {
   reconcilePointSpends,
   trackPointCode,
 } from '@/lib/points'
+import { isCouponUsed } from '@/lib/shops'
 
 /** 코드가 쓰였는지 되묻는 간격. 카운터에서 기다리는 시간이라 짧게 잡는다 */
 const POLL_MS = 3000
@@ -54,10 +55,32 @@ export default function PointRedeemSheet({
   const [qr, setQr] = useState<string | null>(null)
   const [done, setDone] = useState(false)
 
-  // 코드는 열 때 한 번만 만든다. 그리는 중에 만들면 폴링이 돌 때마다
-  // 새 코드가 나와, 사장님이 방금 찍은 것과 화면의 것이 달라진다
+  /*
+    코드는 열 때 한 번만 만든다. 그리는 중에 만들면 폴링이 돌 때마다 새
+    코드가 나와, 사장님이 방금 찍은 것과 화면의 것이 달라진다.
+
+    다만 **저장된 순번이 이미 쓰인 것일 수 있다.** 결제가 끝나면 사람은
+    폰을 주머니에 넣지, 화면이 바뀌는 것을 지켜보지 않는다 — 그러면 순번을
+    올리는 자리(check)를 지나가지 못한 채 닫힌다. 그대로 두면 다음에 이
+    화면을 열었을 때 이미 쓴 코드가 뜨고, 사장님이 찍으면 '이미 사용됨'이
+    된다. 손님은 왜 안 되는지 알 수 없다.
+
+    그래서 열 때 서버에 물어보고, 쓰인 코드면 다음 번호로 넘긴다. 몇 번만
+    본다 — 더 밀렸다면 통신이 이상한 것이라 확인 자체가 안 될 상황이다.
+  */
   useEffect(() => {
-    setCode(makePointCode(uid, couponSerial('pt', uid)))
+    let alive = true
+    void (async () => {
+      let serial = couponSerial('pt', uid)
+      for (let i = 0; i < 3; i++) {
+        if (!(await isCouponUsed(makePointCode(uid, serial)).catch(() => false))) break
+        serial = reissueCoupon('pt', uid)
+      }
+      if (alive) setCode(makePointCode(uid, serial))
+    })()
+    return () => {
+      alive = false
+    }
   }, [uid])
 
   useEffect(() => {
