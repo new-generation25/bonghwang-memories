@@ -610,3 +610,153 @@ test.describe('커뮤니티 — 소영의 친구들', () => {
     await expect(page.getByText(/기록자 랭킹/)).toBeVisible()
   })
 })
+
+/*
+  혜택 사용 — 카운터 앞까지.
+
+  실제로 태우는 마지막 한 걸음(Firestore 쓰기)은 여기서 밟지 않는다.
+  운영 데이터베이스에 시험 기록을 남기게 되고, 가게 계정 로그인이
+  필요해 헤드리스에서 재현되지 않는다. 대신 **그 앞까지의 모든 갈림길**을
+  본다 — 참여자가 카운터에 서기까지 무엇을 보고 무엇을 누르는가.
+
+  여기서 지키려는 것 하나: **참여자 화면 어디에도 충당률이 없다.**
+*/
+test.describe('혜택 사용 — 쿠폰과 포인트', () => {
+  /** 로컬 원장에 적립을 심는다 — 지갑 계산은 이 원장에서 나온다 */
+  async function seedPoints(page, entries) {
+    await page.addInitScript((list) => {
+      window.localStorage.setItem('bh_points_ledger_v1', JSON.stringify(list))
+    }, entries)
+  }
+
+  const earn = (refId, points, daysAgo = 1) => ({
+    refId,
+    reason: 'mainMission',
+    points,
+    createdAt: Date.now() - daysAgo * 86400000,
+  })
+
+  const DONE_STATE = {
+    ...BASE_STATE,
+    phase: 'act2',
+    tracksCompleted: [1, 2, 3, 4, 5],
+    speechMode: 'casual',
+    bingo: { unlocked: true, cellsDone: ['bunsik', 'b02'], lines: 1 },
+  }
+
+  /*
+    쿠폰은 주 경로(참여자가 스티커를 찍기)에 **로그인이 필요하다.**
+    규칙이 사용 기록의 uid를 요청 계정과 대조하기 때문이다 — 로그인 없이
+    만든 요청은 그 대조를 통과할 수 없다. 그래서 로그인 전에는 QR과 코드만
+    띄우고 사장님이 대신 처리하는 길로 보낸다.
+
+    포인트는 반대다. 어차피 가게 기기가 태우므로 참여자 로그인이 필요 없다.
+  */
+  test('쿠폰 — 로그인 전에는 사장님께 보여줄 코드가 뜬다', async ({ page }) => {
+    await seedTour(page, { ...DONE_STATE, coupons: ['cp1'] })
+    await page.goto('/me?e2e=1')
+
+    await expect(page.getByText('🎟 받은 쿠폰')).toBeVisible({ timeout: 15000 })
+    await page.getByRole('button', { name: '열기' }).first().click()
+
+    await expect(page.getByText(/쿠폰을 직접 쓰려면 로그인이 필요해요/)).toBeVisible({
+      timeout: 10000,
+    })
+    // 로그인 전이라도 쓸 길은 남아야 한다 — 사장님이 이 QR을 찍는다
+    await expect(page.getByAltText(/쿠폰 QR/)).toBeVisible({ timeout: 10000 })
+    // 여는 것만으로는 아무것도 소모되지 않는다
+    await expect(page.getByRole('button', { name: '접기' })).toBeVisible()
+  })
+
+  test('포인트 — 문턱 아래에서는 남은 거리만 보인다', async ({ page }) => {
+    await seedTour(page, DONE_STATE)
+    await seedPoints(page, [earn('m1', 1800)])
+    await page.goto('/me?e2e=1')
+
+    await expect(page.getByText(/1,200P/).first()).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText(/더 모으면/)).toBeVisible()
+    // 아직 쓸 수 없으므로 쓰는 버튼도 없어야 한다
+    await expect(
+      page.getByRole('button', { name: '가게에서 사용하기' })
+    ).toHaveCount(0)
+  })
+
+  test('포인트 — 문턱을 넘으면 코드가 뜬다', async ({ page }) => {
+    await seedTour(page, DONE_STATE)
+    await seedPoints(page, [earn('m1', 2000), earn('m2', 1500)])
+    await page.goto('/me?e2e=1')
+
+    // 1p = 1원이라 환산을 나란히 둔다 — 참여자가 계산하지 않게
+    await expect(page.getByText('= 3,500원').first()).toBeVisible({
+      timeout: 15000,
+    })
+
+    await page.getByRole('button', { name: '가게에서 사용하기' }).click()
+
+    /*
+      금액 칸은 참여자 화면에 없다. 얼마를 쓸지는 카운터에서 정해지는
+      값이고, 사장님이 확인하지 않은 숫자가 그대로 기록이 되면 안 된다.
+    */
+    await expect(page.getByText(/쓸 금액은 사장님이 넣습니다/)).toBeVisible({
+      timeout: 10000,
+    })
+    await expect(page.getByRole('spinbutton')).toHaveCount(0)
+
+    // 코드는 PT1로 시작한다 — 쿠폰 코드(BH1)와 섞이지 않는다
+    await expect(page.getByText(/^PT1-[2-9A-Z]{6}-[2-9A-Z]{4}$/)).toBeVisible({
+      timeout: 10000,
+    })
+    await expect(page.getByAltText('포인트 사용 코드')).toBeVisible({
+      timeout: 10000,
+    })
+  })
+
+  test('포인트 — FIFO로 깎이고, 쓴 몫이 따로 적힌다', async ({ page }) => {
+    await seedTour(page, DONE_STATE)
+    /*
+      5개월 전 1,000P(곧 만료) + 어제 3,000P, 그중 1,000P를 이미 썼다.
+      먼저 받은 것부터 깎이므로 남는 것은 어제 받은 3,000P다.
+    */
+    await seedPoints(page, [
+      earn('old', 1000, 150),
+      earn('new', 3000, 1),
+      {
+        refId: 'redeem-PT1-AAAAAA-2222',
+        reason: 'redeem',
+        points: -1000,
+        createdAt: Date.now() - 3600000,
+      },
+    ])
+    await page.goto('/me?e2e=1')
+
+    await expect(page.getByText('= 3,000원').first()).toBeVisible({
+      timeout: 15000,
+    })
+    // 합계만 줄어 있으면 "왜 줄었지"가 된다 — 쓴 몫을 따로 적는다
+    await expect(page.getByText(/가게에서 사용 1,000P/)).toBeVisible()
+  })
+
+  test('참여자 화면에는 충당률이 없다', async ({ page }) => {
+    await seedTour(page, { ...DONE_STATE, coupons: ['cp1'] })
+    await seedPoints(page, [earn('m1', 3500)])
+    await page.goto('/me?e2e=1')
+    await expect(page.getByText('🎟 받은 쿠폰')).toBeVisible({ timeout: 15000 })
+
+    /*
+      충당률은 백엔드 정산 로직이다. 화면에 안 그리는 것만으로는 부족해
+      참여자 기기가 가게 문서를 읽지 못하게 규칙으로 막았는데, 그 원칙이
+      화면에서도 지켜지는지 여기서 본다.
+    */
+    const body = await page.locator('body').innerText()
+    expect(body).not.toMatch(/충당/)
+    expect(body).not.toMatch(/운영사 부담/)
+    expect(body).not.toMatch(/가게 부담/)
+  })
+
+  test('가게 확인 화면은 로그인 없이 열리지 않는다', async ({ page }) => {
+    // 이 한 줄이 '참여자가 자기 폰에서 스스로 태우는' 구멍을 닫는다
+    await page.goto('/shop/verify?c=PT1-AAAAAA-2222')
+    await expect(page.getByText('가게 로그인')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('spinbutton')).toHaveCount(0)
+  })
+})

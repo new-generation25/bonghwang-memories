@@ -24,7 +24,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { signIn } from '@/lib/auth'
 import { submitOnEnter } from '@/lib/submitOnEnter'
 import { parsePointCode } from '@/lib/coupons'
-import { CAP_CLOSED_MESSAGE } from '@/lib/coverage'
 import {
   fetchMyShops,
   redeemCoupon,
@@ -402,24 +401,6 @@ function ShopVerifyInner() {
         </Bad>
       )}
 
-      {/*
-        월 충당 상한에 닿았다.
-
-        손님께 보여드리는 문구는 여기서도 같다 — 이 화면은 카운터에서
-        손님 쪽으로 돌려 보여주는 자리라, 사장님께만 하는 말을 적으면
-        그대로 손님이 읽는다. 얼마가 남았는지는 사용 내역 화면에서 본다.
-      */}
-      {out?.kind === 'capped' && (
-        <div className="mt-8 rounded-2xl border-2 border-sunset-yellow bg-sunset-yellow/15 px-5 py-10 text-center">
-          <p className="text-[44px] leading-none" aria-hidden>
-            🗓️
-          </p>
-          <p className="mt-4 font-display text-[20px] text-ink">이번 달 혜택 마감</p>
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-60">
-            {CAP_CLOSED_MESSAGE}
-          </p>
-        </div>
-      )}
 
       {/*
         시험용 코드. 만에 하나 손님이 이 코드를 들고 왔을 때

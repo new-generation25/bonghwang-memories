@@ -959,11 +959,12 @@ export default function AdminPage() {
             <p className="mt-3 text-[11px] leading-relaxed text-ink-60">
               분담액은 <b className="text-ink">사용 시점에 굳은 값</b>입니다 —
               지금 등급을 다시 곱하지 않으므로, 등급을 바꿔도 지난 정산은
-              움직이지 않습니다. &lsquo;가게&rsquo; 칸의 붉은{' '}
-              <b className="text-rec">↑</b>는 월 상한을 넘겨 찍힌 몫으로, 청구에서
-              빼고 <b className="text-ink">운영사가 부담</b>합니다(참여자 기기는
-              그 가게의 상한을 알 수 없어 주 경로에서 막지 못합니다).
-              충당액 대비 매출 유입은 사장님 화면에서 함께 보입니다.
+              움직이지 않습니다. 상한에 닿아도{' '}
+              <b className="text-ink">사용을 막지 않습니다</b> — 그만큼 쓴 손님은
+              그만큼 자주 온 손님입니다. &lsquo;가게&rsquo; 칸의 붉은{' '}
+              <b className="text-rec">↑</b>는 상한을 넘긴 몫으로, 청구에서 빼고
+              운영사가 부담합니다. 충당액 대비 매출 유입은 사장님 화면에서 함께
+              보입니다.
             </p>
 
             {/* ── 운영사 예산 ── */}

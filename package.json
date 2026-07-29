@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "check:forbidden": "node scripts/check-forbidden.js",
+    "check:settlement": "node scripts/check-settlement.mjs",
     "update-sw-version": "node scripts/update-sw-version.js",
     "gen:audio": "node scripts/generate-audio.mjs",
     "script:check": "node scripts/script.mjs apply --dry-run",

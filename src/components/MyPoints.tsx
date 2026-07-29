@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTourState } from '@/hooks/useTourState'
 import {
   PointEntry,
   PointReason,
@@ -38,9 +39,23 @@ const ORDER: PointReason[] = [
 
 export default function MyPoints({ compact = false }: { compact?: boolean }) {
   const { profile } = useAuth()
+  const tour = useTourState()
   const [entries, setEntries] = useState<PointEntry[]>([])
   const [open, setOpen] = useState(false)
   const [redeeming, setRedeeming] = useState(false)
+
+  /*
+    로그인 전에도 쓸 수 있어야 한다 — 쿠폰이 그렇기 때문이다.
+
+    한쪽만 로그인을 요구하면 카운터에서 "쿠폰은 되는데 포인트는 왜
+    안 되냐"가 된다. 그리고 애초에 코스를 결제하지 않고 보너스 미션만
+    하는 인근 주민의 동선을 막지 않기로 했는데, 그 사람에게 쓰는 자리에서
+    로그인을 요구하면 결국 막는 것과 같다.
+
+    로그인 전에는 기기의 투어 시작 시각으로 코드를 만든다(쿠폰과 같은 값).
+    적립도 사용도 이 기기의 원장에만 남고, 로그인하면 한꺼번에 올라간다.
+  */
+  const pointUid = profile?.uid ?? `local-${tour.startTime ?? 0}`
 
   const load = useCallback(async () => {
     const local = localPointHistory()
@@ -139,14 +154,13 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
               */}
               <button
                 onClick={() => setRedeeming(true)}
-                disabled={!profile?.uid}
-                className="btn-teal mt-2.5 w-full text-center text-[13px] disabled:opacity-40"
+                className="btn-teal mt-2.5 w-full text-center text-[13px]"
               >
                 가게에서 사용하기
               </button>
               {!profile?.uid && (
                 <p className="mt-1.5 text-center text-[10.5px] text-ink-60">
-                  로그인해야 사용 기록이 남아요
+                  로그인하면 다른 기기에서도 이어집니다
                 </p>
               )}
             </>
@@ -227,9 +241,9 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
         )}
       </div>
 
-      {redeeming && profile?.uid && (
+      {redeeming && (
         <PointRedeemSheet
-          uid={profile.uid}
+          uid={pointUid}
           available={total}
           onClose={() => setRedeeming(false)}
           onRedeemed={() => {

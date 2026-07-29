@@ -42,13 +42,10 @@ import { logEvent } from './analytics'
 import { db } from './firebase'
 import { COUPONS, parseCouponCode, parsePointCode } from './coupons'
 import {
-  CAP_CLOSED_MESSAGE,
   DEFAULT_SETTLEMENT,
-  capStatus,
   graceEndsAt,
   monthKey,
   splitCoverage,
-  wouldExceedCap,
   type ContractState,
   type MerchantLike,
   type MerchantTier,
@@ -224,14 +221,6 @@ export type RedeemOutcome =
   | { kind: 'used'; at: string }
   /** 규칙이 거절했거나 애초에 맞지 않는 쿠폰 — 통신 문제가 아니다 */
   | { kind: 'denied'; reason: string }
-  /**
-   * 그 가게의 이번 달 혜택이 마감됐다.
-   *
-   * denied와 갈라 두는 이유는 문구다. 참여자에게는 가게 사정도 충당률도
-   * 말하지 않고 다른 가게로 보내야 하는데, 거절 사유를 그대로 보여주는
-   * 자리에 섞이면 "이 가게가 안 받아준다"로 읽힌다.
-   */
-  | { kind: 'capped' }
   /** 슈퍼관리자 시험용 코드 — 기록을 남기지 않는다 */
   | { kind: 'test' }
   /** 서버에 못 닿았다. 통과시키지 않는다 */
@@ -335,17 +324,6 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
   try {
     const seen = await already()
     if (seen) return seen
-
-    // 보조 경로는 상한을 그 자리에서 잴 수 있다. 주 경로는 재지 못하고,
-    // 넘겨 찍힌 몫은 정산에서 운영사가 진다(coverage.ts의 coveredWon).
-    if (opts.shop && 'shopWon' in snapshot) {
-      const m = toMerchant(opts.shop, cfg)
-      const used = await monthUsage(opts.shopId)
-      const cap = capStatus(used, m.monthlyCapWon, cfg.capAlertPercent)
-      if (cap.state === 'closed' || wouldExceedCap(cap, snapshot.shopWon as number)) {
-        return { kind: 'capped' }
-      }
-    }
 
     await setDoc(ref, {
       code: key,
@@ -473,13 +451,12 @@ export async function redeemPoints(
       return { kind: 'used', at: at ? at.toLocaleString('ko-KR') : '기록 있음' }
     }
 
-    // 상한은 쓰기 직전에 잰다. 화면을 열어둔 사이 다른 손님이 채울 수 있다
-    const used = await monthUsage(opts.shop.shopId)
-    const cap = capStatus(used, m.monthlyCapWon, cfg.capAlertPercent)
-    if (cap.state === 'closed' || wouldExceedCap(cap, split.shopWon)) {
-      return { kind: 'capped' }
-    }
-
+    /*
+      상한에 닿았는지는 재지 않는다. 상한은 청구를 자르는 장치이지
+      사용을 막는 장치가 아니다 — 그만큼 쓴 손님은 그만큼 자주 온
+      손님이고, 카운터에서 돌려보내면 그 손님을 잃는다. 넘은 몫은
+      정산에서 운영사가 진다(coverage.ts의 coveredWon).
+    */
     await setDoc(ref, {
       code: key,
       couponId: 'pt',
@@ -513,9 +490,6 @@ export async function redeemPoints(
     return { kind: 'offline' }
   }
 }
-
-/** 상한이 닫혔을 때 참여자·사장님 화면이 함께 쓰는 문구 */
-export { CAP_CLOSED_MESSAGE }
 
 /**
  * 이 계정이 맡은 가게들.

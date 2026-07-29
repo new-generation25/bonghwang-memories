@@ -218,17 +218,24 @@ export default function ShopHistoryPage() {
                   80%를 넘으면 알린다. 다 쓴 뒤에 알면 손님을 돌려보낸 다음이라
                   늦다 — 미리 알아야 상한을 올릴지 이야기할 수 있다.
                 */}
+                {/*
+                  손님을 돌려보내라고 하지 않는다. 상한은 청구를 자르는
+                  장치이지 사용을 막는 장치가 아니다 — 넘겨 쓰셔도 가게가
+                  더 내는 일은 없다. 그래도 알리는 이유는, 상한이 실제
+                  수요보다 낮게 잡혀 있다는 신호이기 때문이다.
+                */}
                 {sum.cap.state === 'alert' && (
                   <p className="mt-2 text-[11.5px] leading-snug text-ink">
-                    상한의 {sum.cap.percent}%를 쓰셨습니다. 다 차면 이번 달 남은
-                    기간 동안 이 가게에서는 쿠폰·포인트를 쓸 수 없어요.
-                    <b className="text-ink"> 상한을 올리시려면 운영사에 알려주세요.</b>
+                    상한의 {sum.cap.percent}%까지 왔습니다. 손님은 계속 쓰실 수
+                    있고, <b className="text-ink">넘는 몫은 운영사가 부담합니다.</b>{' '}
+                    상한을 올리시려면 알려주세요.
                   </p>
                 )}
                 {sum.cap.state === 'closed' && (
-                  <p className="mt-2 text-[11.5px] leading-snug text-rec">
-                    이번 달 상한을 다 쓰셨습니다. 다음 달 1일에 다시 열립니다 —
-                    그때까지 손님께는 다른 제휴 매장을 안내해 주세요.
+                  <p className="mt-2 text-[11.5px] leading-snug text-ink">
+                    이번 달 상한을 채우셨습니다.{' '}
+                    <b className="text-ink">손님은 그대로 쓰실 수 있고</b>, 여기서
+                    넘는 몫은 청구에서 빠집니다 — 이번 달 청구는 상한까지입니다.
                   </p>
                 )}
               </div>

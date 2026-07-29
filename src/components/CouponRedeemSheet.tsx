@@ -20,7 +20,6 @@ import { useCallback, useState } from 'react'
 import QRScanner from '@/components/QRScanner'
 import { submitOnEnter } from '@/lib/submitOnEnter'
 import type { CouponSpec } from '@/lib/coupons'
-import { CAP_CLOSED_MESSAGE } from '@/lib/coverage'
 import { parseShopQr, redeemCoupon, type RedeemOutcome } from '@/lib/shops'
 
 interface Props {
@@ -121,17 +120,6 @@ export default function CouponRedeemSheet({
         {result.kind === 'denied' && (
           <Bad title="사용할 수 없어요" mark="!">
             {result.reason}
-          </Bad>
-        )}
-
-        {/*
-          그 가게의 이번 달 혜택이 마감됐다. 가게 사정도, 누가 얼마를
-          부담하는지도 말하지 않는다 — 그렇게 적으면 사장님이 인색해
-          보이고 다음에 그 가게를 피하게 된다.
-        */}
-        {result.kind === 'capped' && (
-          <Bad title="이번 달 혜택 마감" mark="🗓️">
-            {CAP_CLOSED_MESSAGE}
           </Bad>
         )}
 

@@ -85,8 +85,17 @@ export interface SettlementConfig {
   completePoints: number
 }
 
+/**
+ * 2026 시범운영 — **전 등급 충당률 0%.**
+ *
+ * 협의된 값은 기본 협력 60% · 프리미엄 85%지만, 올해는 가게에 부담을
+ * 지우지 않는다. 아직 이 판이 무엇인지 보여드리지 못한 채로 청구서부터
+ * 보내면 다음 해에 남을 가게가 없다. 시범운영이 끝나면 설정 화면에서
+ * 등급별 값을 넣고, 가게마다 등급을 눌러 반영한다 — 그 시점 **이후**
+ * 사용분부터 새 율이 찍히고 지난 기록은 움직이지 않는다.
+ */
 export const DEFAULT_SETTLEMENT: SettlementConfig = {
-  coverage: { new: 0, basic: 60, premium: 85 },
+  coverage: { new: 0, basic: 0, premium: 0 },
   graceMonths: 3,
   monthlyFee: { new: 10000, basic: 10000, premium: 30000 },
   monthlyCap: { new: 30000, basic: 30000, premium: 60000 },
@@ -279,26 +288,20 @@ export function capStatus(
 }
 
 /**
- * 이 사용이 상한을 넘기는가.
+ * 상한은 **청구를 자르는 장치이지 사용을 막는 장치가 아니다.**
  *
- * 부분 사용(상한까지만 깎아주기)은 두지 않는다. 카운터에서 "4,500원짜린데
- * 1,200원만 됩니다"를 설명해야 하고, 그 자리에서 참여자가 손해를 보는
- * 것으로 읽힌다. 넘으면 그 달은 통째로 닫고 다른 가게로 보낸다.
- */
-export function wouldExceedCap(status: CapStatus, shopWon: number): boolean {
-  if (status.capWon <= 0) return false
-  return status.usedWon + shopWon > status.capWon
-}
-
-/**
- * 상한이 닫혔을 때 참여자에게 보이는 문구.
+ * 명세는 상한에 닿으면 그 달의 사용을 차단하라고 했는데, 그렇게 하지
+ * 않는다. 상한에 닿을 만큼 쓴 참여자는 그만큼 자주 온 손님이라는 뜻이고,
+ * 카운터에서 돌려보내면 그 손님을 잃는다. 문턱·상한 같은 숫자는 예산을
+ * 가정해 본 값이지 손님에게 들이밀 규칙이 아니다.
  *
- * **가게 사정도 충당률도 설명하지 않는다.** "이 가게가 한도를 다 썼다"로
- * 읽히면 사장님이 인색해 보이고, 다음에 그 가게를 피하게 된다. 우리 쪽
- * 사정으로 닫힌 것처럼 말하고 다른 가게를 가리킨다.
+ * 가게는 여전히 보호된다 — 넘은 몫은 청구에서 빠지고 운영사가 진다
+ * (`settleMonth`의 `coveredWon`·`overCapWon`). 막지 않아도 가게가 더
+ * 내는 일은 없다.
+ *
+ * 그래서 이 파일에는 '막는' 함수가 없다. `capStatus()`는 사장님 화면의
+ * 게이지와 80% 알림, 그리고 청구액을 자르는 데만 쓴다.
  */
-export const CAP_CLOSED_MESSAGE =
-  '이 매장은 이번 달 혜택이 마감되었습니다. 다른 제휴 매장에서 사용해 주세요.'
 
 // ---------------------------------------------------------------------------
 // 정산 집계
