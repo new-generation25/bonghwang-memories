@@ -73,8 +73,6 @@ export default function CouponRedeemSheet({
           형식만 통과시키고, '협력 가게가 맞는가'는 규칙이 맡아야 한다.
         */
         shopGroup: spec.group,
-        byUid: uid,
-        via: 'guest',
         uid,
         token: t,
       })

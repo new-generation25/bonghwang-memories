@@ -366,7 +366,6 @@ export {
   TIER_LABEL,
   capStatus,
   coverageReport,
-  graceExpired,
   monthKey,
   settleMonth,
   settlementDueAt,

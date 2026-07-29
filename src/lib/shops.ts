@@ -43,7 +43,6 @@ import { db } from './firebase'
 import { COUPONS, parseCouponCode, parsePointCode } from './coupons'
 import {
   DEFAULT_SETTLEMENT,
-  graceEndsAt,
   splitCoverage,
   type ContractState,
   type MerchantLike,
@@ -75,8 +74,6 @@ export interface Shop {
   coverageRate?: number
   /** 가입일 */
   joinedAt?: Date | null
-  /** 신규 유예가 끝나는 날 — 지나면 관리자 화면이 등급 올리기를 권한다 */
-  graceUntil?: Date | null
   /** 이 가게의 월 충당 상한(원) */
   monthlyCapWon?: number
   /** 월 회비(원) */
@@ -150,18 +147,13 @@ export function toMerchant(
   shop: Shop,
   cfg: SettlementConfig = DEFAULT_SETTLEMENT
 ): MerchantLike {
-  const tier: MerchantTier = shop.tier ?? 'new'
+  const tier: MerchantTier = shop.tier ?? 'free'
   const joinedAt = shop.joinedAt ? shop.joinedAt.getTime() : null
   return {
     shopId: shop.shopId,
     tier,
     coverageRate: numOr(shop.coverageRate, cfg.coverage[tier]),
     joinedAt,
-    graceUntil: shop.graceUntil
-      ? shop.graceUntil.getTime()
-      : joinedAt !== null
-        ? graceEndsAt(joinedAt, cfg.graceMonths)
-        : null,
     monthlyCapWon: numOr(shop.monthlyCapWon, cfg.monthlyCap[tier]),
     contract: shop.contract ?? 'active',
     active: shop.active !== false,
@@ -179,13 +171,12 @@ export function toMerchant(
 function coverageDefaults(cfg: SettlementConfig = DEFAULT_SETTLEMENT) {
   const now = Date.now()
   return {
-    tier: 'new' as MerchantTier,
-    coverageRate: cfg.coverage.new,
-    monthlyCapWon: cfg.monthlyCap.new,
-    monthlyFeeWon: cfg.monthlyFee.new,
+    tier: 'free' as MerchantTier,
+    coverageRate: cfg.coverage.free,
+    monthlyCapWon: cfg.monthlyCap.free,
+    monthlyFeeWon: cfg.monthlyFee.free,
     contract: 'active' as ContractState,
     joinedAt: Timestamp.fromMillis(now),
-    graceUntil: Timestamp.fromMillis(graceEndsAt(now, cfg.graceMonths)),
     rateSince: Timestamp.fromMillis(now),
   }
 }
@@ -195,7 +186,6 @@ function shopFromDoc(v: Record<string, unknown>): Shop {
   return {
     ...(v as unknown as Shop),
     joinedAt: toDate(v.joinedAt),
-    graceUntil: toDate(v.graceUntil),
     rateSince: toDate(v.rateSince),
   }
 }
@@ -226,27 +216,16 @@ export type RedeemOutcome =
   | { kind: 'offline' }
 
 interface RedeemOptions {
-  /** 참여자 쿠폰 코드 — 문서 id가 된다 */
+  /** 손님 쿠폰 코드 — 문서 id가 된다 */
   code: string
-  /** 어느 가게에서 쓰는가 */
+  /** 어느 가게에서 쓰는가 — 찍은 스티커가 말해준다 */
   shopId: string
   /** 그 가게가 든 협력 무리 — 공용 할인권을 받으려면 있어야 한다 */
   shopGroup?: string
-  /** 이 요청을 만든 계정. 규칙이 byUid로 대조한다 */
-  byUid: string
-  via: 'guest' | 'staff'
-  /** 주 경로에서 쿠폰 주인의 uid */
-  uid?: string
-  /** 주 경로에서 스티커의 토큰 */
-  token?: string
-  /**
-   * 보조 경로에서 그 가게 문서.
-   *
-   * 있으면 충당률을 그 자리에서 찍는다. 주 경로에는 올 수 없는 값이다 —
-   * 참여자는 가게 문서를 읽지 못한다(읽히면 스티커 토큰이 샌다).
-   */
-  shop?: Shop
-  cfg?: SettlementConfig
+  /** 쿠폰 주인이자 이 요청을 만든 계정. 규칙이 둘이 같은지 본다 */
+  uid: string
+  /** 스티커에 박힌 토큰 — 그 앞에 서 봤다는 증거 */
+  token: string
 }
 
 /**
@@ -306,19 +285,11 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
   }
 
   /*
-    할인 액면은 참여자 기기도 안다 — 카탈로그에 적혀 있다. 반면 충당률은
-    가게 문서에만 있어 주 경로에서는 비워 둔다. 그 기록은 나중에
-    stampPending()이 채운다.
+    할인 액면은 손님 기기도 안다 — 카탈로그에 적혀 있다. 반면 충당률은
+    가게 문서에만 있고 손님은 그 문서를 읽을 수 없으므로 비워 둔다.
+    그 칸은 나중에 stampPending()이 채운다.
   */
-  const cfg = opts.cfg ?? DEFAULT_SETTLEMENT
   const amountWon = parsed.spec.unitWon
-  const snapshot = opts.shop
-    ? (() => {
-        const m = toMerchant(opts.shop as Shop, cfg)
-        const s = splitCoverage(amountWon, m.coverageRate)
-        return { coverageRate: s.coverageRate, shopWon: s.shopWon, opsWon: s.opsWon }
-      })()
-    : {}
 
   try {
     const seen = await already()
@@ -329,21 +300,15 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
       couponId: parsed.couponId,
       shopId: opts.shopId,
       userTag: parsed.userTag,
-      uid: opts.uid ?? '',
-      via: opts.via,
-      byUid: opts.byUid,
-      token: opts.token ?? '',
+      uid: opts.uid,
+      via: 'guest',
+      byUid: opts.uid,
+      token: opts.token,
       kind: 'coupon',
       amountWon,
-      ...snapshot,
       usedAt: serverTimestamp(),
     })
-    // §11 계측 — 주 경로는 참여자 계정으로, 보조 경로는 가게 계정으로 남는다
-    logEvent('coupon_used', {
-      id: parsed.couponId,
-      shopId: opts.shopId,
-      via: opts.via,
-    })
+    logEvent('coupon_used', { id: parsed.couponId, shopId: opts.shopId })
     return { kind: 'ok' }
   } catch (err) {
     const code = (err as { code?: string })?.code ?? ''
@@ -373,31 +338,31 @@ export async function redeemCoupon(opts: RedeemOptions): Promise<RedeemOutcome> 
 // ---------------------------------------------------------------------------
 
 interface RedeemPointsOptions {
-  /** 참여자가 띄운 `PT1-…` 코드 — 문서 id가 된다 */
+  /** 손님이 만든 `PT1-…` 코드 — 문서 id가 된다 */
   code: string
-  /** 사장님이 카운터에서 넣은 금액. 1p = 1원이라 그대로 포인트 수다 */
+  /** 얼마를 쓸지. 1p = 1원이라 그대로 포인트 수다 */
   amountWon: number
-  /** 가게 문서 — 율과 상한이 여기 있다 */
-  shop: Shop
-  /** 이 요청을 만든 가게 계정 */
-  byUid: string
-  cfg?: SettlementConfig
+  /** 어느 가게에서 쓰는가 — 찍은 스티커가 말해준다 */
+  shopId: string
+  /** 포인트 주인이자 이 요청을 만든 계정 */
+  uid: string
+  /** 스티커에 박힌 토큰 */
+  token: string
 }
 
 /**
- * 포인트를 사용 처리한다 — `redeemCoupon()`과 짝이 되는 쓰기 경로.
+ * 포인트를 사용 처리한다 — `redeemCoupon()`과 같은 길, 같은 기록.
  *
  * 가게 입장에서 2,000원 쿠폰과 2,000p 포인트는 같은 형태로 쓰인다. 그래서
  * 같은 컬렉션(`couponUses`)에 같은 모양으로 남긴다 — 정산이 두 갈래를
  * 따로 세면 어느 쪽이 빠졌는지 알 수 없다.
  *
- * **가게 기기만 이 함수를 부른다.** 금액이 카운터에서 정해지는 값이고,
- * 무엇보다 충당률이 참여자에게 닿으면 안 되기 때문이다. 참여자 기기는
- * 자기가 만든 코드로 이 문서를 나중에 읽어 원장을 맞춘다(points.ts).
+ * 쿠폰과 다른 점은 둘뿐이다. 액면이 코드에 없어 **금액을 손님이 넣고**,
+ * '어디서 쓰는 것'이라는 표시가 없어 어느 가게든 받는다.
  *
- * 참여자 지갑에 그만큼이 남아 있는지는 여기서 확인하지 못한다 — 남의
- * 적립 내역은 규칙이 막는다. 그 검사는 참여자 화면이 하고, 여기서는
- * 사장님이 본 잔액을 믿는다. 쿠폰의 체크값과 같은 무게의 방어다.
+ * 잔액이 그만큼 남아 있는지는 부르는 화면이 본다. 서버에서 다시 재지 못하는
+ * 것은 지갑이 기기의 원장이기 때문인데, 그 대신 사장님이 완료 화면의 금액을
+ * 눈으로 확인한다 — 쿠폰의 체크값과 같은 무게의 방어다.
  */
 export async function redeemPoints(
   opts: RedeemPointsOptions
@@ -407,18 +372,10 @@ export async function redeemPoints(
     return { kind: 'denied', reason: '포인트 사용 코드가 아닙니다.' }
   }
 
-  const amount = Math.round(opts.amountWon)
-  if (!Number.isInteger(amount) || amount <= 0) {
-    return { kind: 'denied', reason: '금액을 넣어주세요.' }
+  const amountWon = Math.round(opts.amountWon)
+  if (!Number.isInteger(amountWon) || amountWon <= 0) {
+    return { kind: 'denied', reason: '쓸 금액을 넣어주세요.' }
   }
-
-  const cfg = opts.cfg ?? DEFAULT_SETTLEMENT
-  const m = toMerchant(opts.shop, cfg)
-  if (!m.active || m.contract !== 'active') {
-    return { kind: 'denied', reason: '지금은 이 가게에서 사용할 수 없습니다.' }
-  }
-
-  const split = splitCoverage(amount, m.coverageRate)
 
   if (!db) return { kind: 'offline' }
 
@@ -433,31 +390,24 @@ export async function redeemPoints(
     }
 
     /*
-      상한에 닿았는지는 재지 않는다. 상한은 청구를 자르는 장치이지
-      사용을 막는 장치가 아니다 — 그만큼 쓴 손님은 그만큼 자주 온
-      손님이고, 카운터에서 돌려보내면 그 손님을 잃는다. 넘은 몫은
-      정산에서 운영사가 진다(coverage.ts의 coveredWon).
+      충당률은 여기서도 비워 둔다 — 손님 기기는 가게 문서를 읽지 못한다.
+      stampPending()이 나중에 채운다. 상한에 닿았는지도 재지 않는다:
+      상한은 청구를 자르는 장치이지 사용을 막는 장치가 아니다.
     */
     await setDoc(ref, {
       code: key,
       couponId: 'pt',
-      shopId: opts.shop.shopId,
+      shopId: opts.shopId,
       userTag: parsed.userTag,
-      uid: '',
-      via: 'staff',
-      byUid: opts.byUid,
-      token: '',
+      uid: opts.uid,
+      via: 'guest',
+      byUid: opts.uid,
+      token: opts.token,
       kind: 'points',
-      amountWon: split.amountWon,
-      coverageRate: split.coverageRate,
-      shopWon: split.shopWon,
-      opsWon: split.opsWon,
+      amountWon,
       usedAt: serverTimestamp(),
     })
-    logEvent('points_used', {
-      shopId: opts.shop.shopId,
-      amount: split.amountWon,
-    })
+    logEvent('points_used', { shopId: opts.shopId, amount: amountWon })
     return { kind: 'ok' }
   } catch (err) {
     const code = (err as { code?: string })?.code ?? ''
@@ -467,7 +417,7 @@ export async function redeemPoints(
         reason: '확인되지 않는 요청입니다. 코드를 다시 찍어주세요.',
       }
     }
-    console.error('[포인트 사용 실패]', { code, key, shopId: opts.shop.shopId })
+    console.error('[포인트 사용 실패]', { code, key, shopId: opts.shopId })
     return { kind: 'offline' }
   }
 }

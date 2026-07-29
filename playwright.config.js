@@ -6,6 +6,9 @@ const { defineConfig, devices } = require('@playwright/test');
  */
 module.exports = defineConfig({
   testDir: './tests',
+  // 규칙 시험(tests/rules.test.mjs)은 에뮬레이터에서 node --test로 돈다.
+  // 이 한 줄이 없으면 playwright가 그것까지 집어와 브라우저를 띄우려 한다
+  testMatch: '**/*.spec.js',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

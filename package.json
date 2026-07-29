@@ -9,6 +9,7 @@
     "lint": "next lint",
     "check:forbidden": "node scripts/check-forbidden.js",
     "check:settlement": "node scripts/check-settlement.mjs",
+    "test:rules": "node scripts/run-rules-test.mjs",
     "update-sw-version": "node scripts/update-sw-version.js",
     "gen:audio": "node scripts/generate-audio.mjs",
     "script:check": "node scripts/script.mjs apply --dry-run",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@breezystack/lamejs": "^1.2.7",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@playwright/test": "^1.54.1",
     "@types/node": "^20.10.5",
     "@types/qrcode": "^1.5.6",
@@ -36,6 +38,7 @@
     "autoprefixer": "^10.4.16",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.33",
+    "firebase-tools": "^13.35.1",
     "playwright": "^1.54.1",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",

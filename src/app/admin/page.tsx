@@ -65,7 +65,6 @@ import {
   DEFAULT_SETTLEMENT,
   TIER_LABEL,
   coverageReport,
-  graceExpired,
   issuedFaceValue,
   monthKey,
   settleMonth,
@@ -232,7 +231,7 @@ export default function AdminPage() {
       shops.map((s) => ({
         ...toMerchant(s, cfg),
         name: s.name,
-        feeWon: s.monthlyFeeWon ?? cfg.monthlyFee[s.tier ?? 'new'],
+        feeWon: s.monthlyFeeWon ?? cfg.monthlyFee[s.tier ?? 'free'],
       })),
     [shops, cfg]
   )
@@ -583,7 +582,7 @@ export default function AdminPage() {
                           }}
                           className="rounded border border-line bg-cream px-1.5 py-0.5 text-[11px] text-ink"
                         >
-                          {(['new', 'basic', 'premium'] as const).map((t) => (
+                          {(['free', 'basic', 'premium'] as const).map((t) => (
                             <option key={t} value={t}>
                               {TIER_LABEL[t]} {cfg.coverage[t]}%
                             </option>
@@ -592,11 +591,10 @@ export default function AdminPage() {
                         <span className="ml-1 font-mono-retro text-[10.5px] text-ink-60">
                           {m.coverageRate}%
                         </span>
-                        {graceExpired(m) && (
-                          <span className="ml-1 rounded bg-sunset-yellow/30 px-1 py-0.5 font-mono-retro text-[9.5px] text-ink">
-                            유예 끝 — 올리세요
-                          </span>
-                        )}
+                        {/* 회비는 등급을 따라간다 — 무료는 0원이다 */}
+                        <span className="ml-1 font-mono-retro text-[10.5px] text-ink-60">
+                          · 회비 {won(s.monthlyFeeWon ?? cfg.monthlyFee[m.tier])}
+                        </span>
                       </td>
                       <td className="py-1.5 text-right">
                         <input
@@ -664,10 +662,10 @@ export default function AdminPage() {
         )}
 
         <p className="mt-3 text-[11px] leading-relaxed text-ink-60">
-          <b className="text-ink">신규</b>는 가입일부터 {cfg.graceMonths}개월 —
-          이 기간 할인액은 운영사가 전액 부담합니다. 등급을 바꾸면 그{' '}
-          <b className="text-ink">시점 이후</b> 사용분부터 새 충당률이 적용되고, 이미
-          찍힌 기록은 움직이지 않습니다.
+          지금은 <b className="text-ink">모든 가게가 무료</b>입니다 — 회비도 부담도
+          없습니다. 구독이 시작되면 여기서 등급만 옮기면 되고, 그{' '}
+          <b className="text-ink">시점 이후</b> 사용분부터 새 값이 붙습니다. 이미
+          기록된 것은 움직이지 않습니다.
         </p>
 
         {/* 추가는 접어둔다 — 평소에 보는 것은 위의 목록이다 */}
@@ -1030,7 +1028,7 @@ export default function AdminPage() {
             등급별 충당률 (%)
           </p>
           <div className="mt-1.5 grid grid-cols-3 gap-2">
-            {(['new', 'basic', 'premium'] as const).map((t) => (
+            {(['free', 'basic', 'premium'] as const).map((t) => (
               <NumField
                 key={t}
                 label={TIER_LABEL[t]}
@@ -1046,7 +1044,7 @@ export default function AdminPage() {
             등급별 월 회비 (원)
           </p>
           <div className="mt-1.5 grid grid-cols-3 gap-2">
-            {(['new', 'basic', 'premium'] as const).map((t) => (
+            {(['free', 'basic', 'premium'] as const).map((t) => (
               <NumField
                 key={t}
                 label={TIER_LABEL[t]}
@@ -1065,7 +1063,7 @@ export default function AdminPage() {
             등급별 월 충당 상한 (원)
           </p>
           <div className="mt-1.5 grid grid-cols-3 gap-2">
-            {(['new', 'basic', 'premium'] as const).map((t) => (
+            {(['free', 'basic', 'premium'] as const).map((t) => (
               <NumField
                 key={t}
                 label={TIER_LABEL[t]}
@@ -1084,11 +1082,6 @@ export default function AdminPage() {
             그 밖
           </p>
           <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <NumField
-              label="신규 유예(개월)"
-              value={cfgDraft.graceMonths}
-              onChange={(v) => setCfgDraft({ ...cfgDraft, graceMonths: v })}
-            />
             <NumField
               label="상한 알림(%)"
               value={cfgDraft.capAlertPercent}

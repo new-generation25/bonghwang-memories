@@ -271,20 +271,16 @@ service cloud.firestore {
       }
 
       /*
-        분담액 검산.
+        가게에 걸린 충당률.
 
-        율을 클라이언트가 보내되 **가게 문서의 값과 한 자리도 다르면
-        거절한다.** 그래서 이 값은 '클라이언트가 부르는 값'이 아니라
-        '클라이언트가 옮겨 적는 값'이다. 소수를 안 쓰고 정수 퍼센트로 둔
-        이유가 여기 있다 — 아래 나눗셈이 화면의 계산과 똑같이 떨어져야 한다.
+        만드는 쪽에서는 쓰이지 않는다 — 손님은 이 값을 모르고, 알아서도
+        안 된다. 아래 stampsSnapshot()이 나중에 채울 때만 본다. 그때도
+        클라이언트가 보낸 값을 **가게 문서와 대조**해서, 옮겨 적은 것이지
+        부른 것이 아님을 확인한다. 소수를 안 쓰고 정수 퍼센트로 둔 이유가
+        여기 있다 — 나눗셈이 화면의 계산과 똑같이 떨어져야 한다.
       */
       function shopRate(shopId) {
         return shopData(shopId).get('coverageRate', 0);
-      }
-      function snapshotOk() {
-        return p().get('coverageRate', -1) == shopRate(p().shopId)
-               && p().get('shopWon', -1) == p().amountWon * shopRate(p().shopId) / 100
-               && p().get('opsWon', -1) == p().amountWon - p().get('shopWon', -1);
       }
 
       // cp1 코드를 cp3 가게에서 쓸 수 없다. 문 닫은 가게도 막는다.
@@ -316,12 +312,21 @@ service cloud.firestore {
         return request.auth.uid in shopData(shopId).staffUids;
       }
 
-      // 주 경로 — 참여자가 가게 스티커를 찍었다.
-      // 토큰은 가게 문서에만 있고 아무도 읽을 수 없으므로,
-      // 그 스티커 앞에 서 본 사람만 이 요청을 만들 수 있다.
-      //
-      // **스냅샷 칸을 들고 올 수 없다.** 참여자가 율을 알 방법이 없으니
-      // 들고 왔다면 어디선가 새어 나온 값이다 — 통째로 막는다.
+      /*
+        쓰는 길은 하나다 — 손님이 가게 스티커를 찍는다.
+
+        토큰은 가게 문서에만 있고 아무도 읽을 수 없으므로, 그 스티커 앞에
+        서 본 사람만 이 요청을 만들 수 있다.
+
+        `uid == request.auth.uid`가 **양도를 막는다.** 쿠폰 QR을 캡처해
+        친구에게 보내도 그 쿠폰은 친구 지갑에 없고, 친구 계정으로는 그
+        코드를 만들 수 없다. 예전에는 가게 계정이 임의 코드를 처리하는
+        길이 있어 그리로 넘어갔는데, 그 길을 닫았다.
+
+        **스냅샷 칸을 들고 올 수 없다.** 손님이 충당률을 알 방법이 없으니
+        들고 왔다면 어디선가 새어 나온 값이다 — 통째로 막는다. 그 칸은
+        율을 아는 기기가 아래 update로 나중에 채운다.
+      */
       function guestRedeem() {
         return p().via == 'guest'
                && p().uid == request.auth.uid
@@ -329,26 +334,12 @@ service cloud.firestore {
                && !p().keys().hasAny(snapKeys());
       }
 
-      // 보조 경로 — 가게 계정으로 로그인한 기기만.
-      // 참여자 카메라가 안 되거나 계정이 없을 때의 유일한 길이다.
-      // 이쪽은 가게 문서를 읽을 수 있으니 충당률을 그 자리에서 적어 넣는다.
-      function staffRedeem() {
-        return p().via == 'staff'
-               && isStaffOf(p().shopId)
-               && p().token == ''
-               && p().uid == ''
-               && snapshotOk();
-      }
-
       /*
-        포인트 사용 — 가게 계정만.
+        포인트도 같은 길로 간다.
 
-        참여자가 스스로 사용 처리하는 길을 두지 않았다. 금액이 카운터에서 정해지는
-        값이라 사장님이 확인하지 않은 숫자가 기록이 되면 안 되고, 무엇보다
-        스냅샷에 들어갈 율이 참여자에게 닿으면 안 된다.
-
-        어느 가게든 받는다 — 쿠폰과 달리 포인트에는 '어디서 쓰는 것'이라는
-        표시가 없다. 대신 계약이 살아 있어야 한다.
+        쿠폰과 다른 점은 둘뿐이다 — 액면이 코드에 없어 금액을 손님이 넣고,
+        '어디서 쓰는 것'이라는 표시가 없어 어느 가게든 받는다. 대신 계약이
+        살아 있어야 한다.
       */
       function pointRedeem() {
         return p().kind == 'points'
@@ -356,12 +347,8 @@ service cloud.firestore {
                && shopExists(p().shopId)
                && shopData(p().shopId).active == true
                && shopData(p().shopId).get('contract', 'active') == 'active'
-               && isStaffOf(p().shopId)
-               && p().via == 'staff'
-               && p().token == ''
-               && p().uid == ''
                && p().amountWon > 0
-               && snapshotOk();
+               && guestRedeem();
       }
 
       // 코드를 알아야 문서 id를 만들 수 있다 — 참여자가 자기 쿠폰이
@@ -392,7 +379,7 @@ service cloud.firestore {
                          (p().kind == 'coupon'
                           && matchesCode()
                           && servesShop()
-                          && (guestRedeem() || staffRedeem()))
+                          && guestRedeem())
                          || pointRedeem()
                        );
 

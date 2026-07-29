@@ -17,8 +17,9 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { signIn } from '@/lib/auth'
+import { submitOnEnter } from '@/lib/submitOnEnter'
 import {
   CONTRACT_LABEL,
   DEFAULT_SETTLEMENT,
@@ -39,12 +40,31 @@ import { fetchShopSettlements, type SettlementDoc } from '@/lib/settlement'
 const won = (n: number) => `${n.toLocaleString()}원`
 
 export default function ShopHistoryPage() {
-  const { profile, loading: authLoading } = useAuth()
+  const { profile, loading: authLoading, applyProfile } = useAuth()
   const [shop, setShop] = useState<Shop | null>(null)
   const [uses, setUses] = useState<ShopUse[]>([])
   const [bills, setBills] = useState<SettlementDoc[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
+
+  // 로그인 상자
+  const [loginId, setLoginId] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginErr, setLoginErr] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const doLogin = async () => {
+    if (busy) return
+    setBusy(true)
+    setLoginErr('')
+    try {
+      applyProfile(await signIn(loginId.trim(), password))
+    } catch (e) {
+      setLoginErr(e instanceof Error ? e.message : '로그인하지 못했습니다.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   useEffect(() => {
     if (!profile?.uid) {
@@ -105,7 +125,7 @@ export default function ShopHistoryPage() {
     const m = shop ? toMerchant(shop) : null
     const shopWon = thisMonth.reduce((n, u) => n + u.shopWon, 0)
     const inflow = thisMonth.reduce((n, u) => n + u.amountWon, 0)
-    const feeWon = shop?.monthlyFeeWon ?? DEFAULT_SETTLEMENT.monthlyFee[m?.tier ?? 'new']
+    const feeWon = shop?.monthlyFeeWon ?? DEFAULT_SETTLEMENT.monthlyFee[m?.tier ?? 'free']
 
     return {
       today: dated.filter((u) => sameDay(u.usedAt as Date)).length,
@@ -132,18 +152,54 @@ export default function ShopHistoryPage() {
           <p className="mt-16 text-center font-display text-[18px] text-ink-60">
             불러오는 중…
           </p>
+        ) : !profile?.uid ? (
+          /*
+            로그인 상자가 여기 있는 이유 — 사용 처리 화면을 없애면서 옮겨왔다.
+            가게 계정이 하는 일은 이제 내역과 정산을 보는 것뿐이다.
+          */
+          <>
+            <h1 className="mt-2 text-center font-display text-[20px] text-ink">
+              가게 로그인
+            </h1>
+            <p className="mt-2 text-center text-[12.5px] leading-relaxed text-ink-60">
+              카운터에 붙여드린 아이디로 로그인해 주세요.
+              <br />한 번 로그인하면 계속 유지됩니다.
+            </p>
+            <input
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              placeholder="아이디"
+              autoCapitalize="none"
+              className="mt-5 w-full rounded-xl border border-line bg-paper px-4 py-3 text-[15px] text-ink"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={submitOnEnter(doLogin, Boolean(loginId.trim() && password))}
+              placeholder="비밀번호"
+              className="mt-2 w-full rounded-xl border border-line bg-paper px-4 py-3 text-[15px] text-ink"
+            />
+            {loginErr && <p className="mt-2 text-[12px] text-rec">{loginErr}</p>}
+            <button
+              onClick={doLogin}
+              disabled={busy || !loginId.trim() || !password}
+              className="btn-teal mt-3 w-full text-center disabled:opacity-40"
+            >
+              {busy ? '확인 중…' : '로그인'}
+            </button>
+          </>
         ) : !shop ? (
           <div className="mt-10 rounded-2xl border-2 border-rec bg-rec/10 px-5 py-10 text-center">
             <p className="text-[44px] leading-none" aria-hidden>
               🔒
             </p>
             <p className="mt-4 font-display text-[20px] text-rec">가게 계정이 아닙니다</p>
-            <Link
-              href="/shop/verify"
-              className="mt-4 inline-block text-[13px] text-teal-dk underline underline-offset-2"
-            >
-              가게 로그인으로
-            </Link>
+            <p className="mt-3 text-[13px] leading-relaxed text-ink-60">
+              이 계정에는 맡은 가게가 없습니다.
+              <br />
+              운영사에 문의해 주세요.
+            </p>
           </div>
         ) : (
           <>
@@ -151,7 +207,7 @@ export default function ShopHistoryPage() {
               {shop.name}
             </h1>
             <p className="mt-1 text-center font-mono-retro text-[10.5px] text-ink-60">
-              {TIER_LABEL[sum.merchant?.tier ?? 'new']} · 충당률{' '}
+              {TIER_LABEL[sum.merchant?.tier ?? 'free']} · 충당률{' '}
               {sum.merchant?.coverageRate ?? 0}%
               {sum.merchant && sum.merchant.contract !== 'active' && (
                 <span className="text-rec"> · {CONTRACT_LABEL[sum.merchant.contract]}</span>
@@ -337,12 +393,16 @@ export default function ShopHistoryPage() {
               </ul>
             )}
 
-            <Link
-              href="/shop/verify"
-              className="mt-6 block w-full rounded-xl border border-line bg-paper py-3 text-center text-[13px] font-bold text-ink"
-            >
-              쿠폰·포인트 확인 화면으로
-            </Link>
+            {/*
+              사장님이 하실 일을 마지막에 한 줄로 적는다. 이 화면으로 옮겨온
+              뒤 "그럼 나는 뭘 하지"가 남았다 — 답은 '확인만 하시면 된다'다.
+            */}
+            <p className="mt-6 rounded-xl border border-line bg-cream-dp px-3 py-3 text-center text-[12px] leading-relaxed text-ink-60">
+              손님이 카운터의 스티커를 앱으로 찍으면 처리됩니다.
+              <br />
+              사장님은 손님 화면의 <b className="text-ink">「사용 완료」</b>만
+              확인해 주세요.
+            </p>
           </>
         )}
       </div>

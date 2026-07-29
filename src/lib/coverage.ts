@@ -18,15 +18,19 @@
 /**
  * 가게 등급.
  *
- *  · `new`     가입 후 유예 기간. 할인액을 운영사가 전액 부담한다
- *  · `basic`   유예가 끝난 기본 협력
- *  · `premium` 월 회비를 더 내고 노출을 크게 가져가는 대신 부담도 크다
+ *  · `free`    무료. 회비도 부담도 없다. **지금은 모든 가게가 여기 있다**
+ *  · `basic`   기본 구독 — 월 1만 원
+ *  · `premium` 프리미엄 구독 — 월 3만 원. 노출이 큰 대신 회비도 크다
+ *
+ * 세 칸을 미리 만들어 두는 이유는 나중에 옮길 자리를 지금 정해두기
+ * 위해서다. 구독이 시작되면 가게마다 등급만 눌러 옮기면 되고, 그 시점
+ * **이후** 사용분부터 새 값이 붙는다 — 지난 기록은 움직이지 않는다.
  */
-export type MerchantTier = 'new' | 'basic' | 'premium'
+export type MerchantTier = 'free' | 'basic' | 'premium'
 
 export const TIER_LABEL: Record<MerchantTier, string> = {
-  new: '신규',
-  basic: '기본 협력',
+  free: '무료',
+  basic: '기본',
   premium: '프리미엄',
 }
 
@@ -61,8 +65,6 @@ export interface SettlementConfig {
    * 똑같이 떨어진다.
    */
   coverage: Record<MerchantTier, number>
-  /** 신규 유예 기간(개월). 이 기간 할인액은 운영사가 전액 부담한다 */
-  graceMonths: number
   /** 등급별 월 회비(원) */
   monthlyFee: Record<MerchantTier, number>
   /** 등급별 월 충당 상한(원) — 가게 문서에 값이 없을 때의 기본 */
@@ -93,12 +95,14 @@ export interface SettlementConfig {
  * 보내면 다음 해에 남을 가게가 없다. 시범운영이 끝나면 설정 화면에서
  * 등급별 값을 넣고, 가게마다 등급을 눌러 반영한다 — 그 시점 **이후**
  * 사용분부터 새 충당률이 적용되고 지난 기록은 움직이지 않는다.
+ *
+ * 등급 세 칸과 회비는 그래도 지금 세워 둔다. 구독이 시작되는 날 옮겨
+ * 앉을 자리를 미리 만들어 두는 것이지, 지금 받는 돈이 아니다.
  */
 export const DEFAULT_SETTLEMENT: SettlementConfig = {
-  coverage: { new: 0, basic: 0, premium: 0 },
-  graceMonths: 3,
-  monthlyFee: { new: 10000, basic: 10000, premium: 30000 },
-  monthlyCap: { new: 30000, basic: 30000, premium: 60000 },
+  coverage: { free: 0, basic: 0, premium: 0 },
+  monthlyFee: { free: 0, basic: 10000, premium: 30000 },
+  monthlyCap: { free: 30000, basic: 30000, premium: 60000 },
   capAlertPercent: 80,
   budgetPercent: 3,
   couponFaceWon: 4500,
@@ -130,7 +134,7 @@ export function mergeSettlementConfig(raw: unknown): SettlementConfig {
   ): Record<MerchantTier, number> => {
     const o = (x ?? {}) as Partial<Record<MerchantTier, number>>
     return {
-      new: num(o.new, fallback.new, max),
+      free: num(o.free, fallback.free, max),
       basic: num(o.basic, fallback.basic, max),
       premium: num(o.premium, fallback.premium, max),
     }
@@ -139,7 +143,6 @@ export function mergeSettlementConfig(raw: unknown): SettlementConfig {
   const d = DEFAULT_SETTLEMENT
   return {
     coverage: tierMap(v.coverage, d.coverage, 100),
-    graceMonths: num(v.graceMonths, d.graceMonths, 60),
     monthlyFee: tierMap(v.monthlyFee, d.monthlyFee),
     monthlyCap: tierMap(v.monthlyCap, d.monthlyCap),
     capAlertPercent: num(v.capAlertPercent, d.capAlertPercent, 100),
@@ -198,34 +201,21 @@ export interface MerchantLike {
   coverageRate: number
   /** 가입일(epoch ms) */
   joinedAt: number | null
-  /** 신규 유예가 끝나는 시각(epoch ms) */
-  graceUntil: number | null
   /** 이 가게의 월 충당 상한(원) */
   monthlyCapWon: number
   contract: ContractState
   active: boolean
 }
 
-/** 가입일 + 유예 개월 */
-export function graceEndsAt(joinedAt: number, graceMonths: number): number {
-  const d = new Date(joinedAt)
-  d.setMonth(d.getMonth() + graceMonths)
-  return d.getTime()
-}
+/*
+  '신규 3개월 유예'는 두지 않는다.
 
-/**
- * 신규 유예가 끝났는데 아직 등급이 `new`인 가게.
- *
- * 유예 종료를 자동으로 넘기지 않고 관리자 화면이 짚어주게 둔다. 규칙이
- * 대조하는 값은 가게 문서의 `coverageRate` 하나여야 하는데(시각을 계산하게
- * 하면 규칙이 복잡해지고 검산이 어긋난다), 그 값을 시간이 저 혼자 바꾸면
- * 아무도 언제 바뀌었는지 모른다. 사람이 눌러 올리면 그 시점이 기록에 남고,
- * 그 뒤 사용 건부터 새 율이 스냅샷된다 — 명세의 "등급 변경 시점 이후"가
- * 저절로 지켜진다.
- */
-export function graceExpired(m: MerchantLike, now = Date.now()): boolean {
-  return m.tier === 'new' && m.graceUntil !== null && m.graceUntil <= now
-}
+  명세에는 가입 후 3개월을 0%로 두는 칸이 있었는데, 지금은 **모든 가게가
+  무료 등급**이라 그 칸이 하는 일이 없다. 시간이 저 혼자 등급을 바꾸는
+  장치를 남겨두면, 구독이 시작된 뒤 어느 날 아무도 누르지 않았는데 가게의
+  부담이 늘어난다 — 등급은 사람이 눌러서만 움직인다(`setShopTier`가 그
+  시점을 `rateSince`에 남긴다).
+*/
 
 // ---------------------------------------------------------------------------
 // 월 구간

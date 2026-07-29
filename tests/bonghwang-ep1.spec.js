@@ -645,51 +645,36 @@ test.describe('혜택 사용 — 쿠폰과 포인트', () => {
   }
 
   /*
-    쿠폰은 주 경로(참여자가 스티커를 찍기)에 **로그인이 필요하다.**
-    규칙이 사용 기록의 uid를 요청 계정과 대조하기 때문이다 — 로그인 없이
-    만든 요청은 그 대조를 통과할 수 없다. 그래서 로그인 전에는 QR과 코드만
-    띄우고 사장님이 대신 처리하는 길로 보낸다.
+    쿠폰은 **본인 계정에 묶여 있다.** 규칙이 사용 기록의 uid를 요청 계정과
+    대조하므로, 캡처를 받은 친구는 자기 계정으로 그 코드를 만들 수 없다.
+    로그인 전에는 쓰는 길이 아예 열리지 않는다.
 
-    포인트는 반대다. 어차피 가게 기기가 사용 처리하므로 참여자 로그인이 필요 없다.
+    (그 대조가 실제로 서는지는 규칙 시험에서 본다 — `npm run test:rules`)
   */
-  test('쿠폰 — 로그인 전에는 사장님께 보여줄 코드가 뜬다', async ({ page }) => {
+  test('쿠폰 — 로그인 전에는 쓸 수 없다고 말한다', async ({ page }) => {
     await seedTour(page, { ...DONE_STATE, coupons: ['cp1'] })
     await page.goto('/me?e2e=1')
 
     await expect(page.getByText('🎟 받은 쿠폰')).toBeVisible({ timeout: 15000 })
     await page.getByRole('button', { name: '열기' }).first().click()
 
-    await expect(page.getByText(/쿠폰을 직접 쓰려면 로그인이 필요해요/)).toBeVisible({
+    await expect(page.getByText(/쿠폰을 쓰려면 로그인이 필요해요/)).toBeVisible({
       timeout: 10000,
     })
-    // 로그인 전이라도 쓸 길은 남아야 한다 — 사장님이 이 QR을 찍는다
-    await expect(page.getByAltText(/쿠폰 QR/)).toBeVisible({ timeout: 10000 })
+    // 사장님이 대신 처리하던 길을 닫았으므로 내 QR도 띄우지 않는다
+    await expect(page.getByAltText(/쿠폰 QR/)).toHaveCount(0)
     // 여는 것만으로는 아무것도 소모되지 않는다
     await expect(page.getByRole('button', { name: '접기' })).toBeVisible()
   })
 
-  /*
-    찍었다고 곧바로 사용 처리하지 않는다.
-
-    카메라는 손에 들고 있으면 저 혼자 읽는 물건이라, 스티커 근처에 켜 둔
-    것만으로 쿠폰이 없어졌었다. 되돌리는 길은 새 번호를 뜯는 것뿐이라
-    (사용 기록은 관리자만 지운다) 예방이 유일한 방어다.
-
-    로그인이 필요한 화면이라 여기서는 시트를 직접 세워 확인한다.
-  */
-  test('쿠폰 — 쓰기 전에 무엇을 어디서 쓰는지 묻는다', async ({ page }) => {
-    await seedTour(page, { ...DONE_STATE, coupons: ['cp1'] })
-    await page.goto('/me?e2e=1')
-    await expect(page.getByText('🎟 받은 쿠폰')).toBeVisible({ timeout: 15000 })
-
-    /*
-      쿠폰 코드에서 확인 화면까지의 문구를 본다. 실제 시트는 로그인 뒤에
-      열리므로, 여기서는 그 화면이 보여줄 두 값(가게·혜택)이 카탈로그에서
-      제대로 나오는지를 지갑 카드로 확인한다 — 확인 화면은 같은 값을 쓴다.
-    */
-    await page.getByRole('button', { name: '열기' }).first().click()
-    await expect(page.getByText('봉황1935').first()).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('음료 1,000원 할인').first()).toBeVisible()
+  test('가게 확인 화면은 사라졌다 — 내역으로 보낸다', async ({ page }) => {
+    // 임의 코드를 받던 자리가 캡처 전달의 통로였다
+    await page.goto('/shop/verify?c=BH1-CP1-K3M9QF-237A')
+    await expect(page.getByText(/이제 손님이 직접 사용합니다/)).toBeVisible({
+      timeout: 15000,
+    })
+    await expect(page.getByRole('spinbutton')).toHaveCount(0)
+    await expect(page.getByPlaceholder(/BH1-/)).toHaveCount(0)
   })
 
   test('포인트 — 문턱 아래에서는 남은 거리만 보인다', async ({ page }) => {
@@ -718,21 +703,36 @@ test.describe('혜택 사용 — 쿠폰과 포인트', () => {
     await page.getByRole('button', { name: '가게에서 사용하기' }).click()
 
     /*
-      금액 칸은 참여자 화면에 없다. 얼마를 쓸지는 카운터에서 정해지는
-      값이고, 사장님이 확인하지 않은 숫자가 그대로 기록이 되면 안 된다.
+      쿠폰과 같은 차례를 지난다 — 다른 것은 앞에 금액 칸 하나뿐이다.
+      쿠폰은 액면이 정해져 있지만 포인트는 얼마를 쓸지가 그 자리에서 정해진다.
     */
-    await expect(page.getByText(/쓸 금액은 사장님이 넣습니다/)).toBeVisible({
-      timeout: 10000,
-    })
-    await expect(page.getByRole('spinbutton')).toHaveCount(0)
+    const amount = page.getByRole('spinbutton')
+    await expect(amount).toBeVisible({ timeout: 10000 })
 
-    // 코드는 PT1로 시작한다 — 쿠폰 코드(BH1)와 섞이지 않는다
-    await expect(page.getByText(/^PT1-[2-9A-Z]{6}-[2-9A-Z]{4}$/)).toBeVisible({
-      timeout: 10000,
-    })
-    await expect(page.getByAltText('포인트 사용 코드')).toBeVisible({
-      timeout: 10000,
-    })
+    // 쓸 수 있는 것보다 많이 넣으면 나아가지 못한다
+    await amount.fill('9000')
+    await expect(page.getByText(/쓸 수 있는 포인트.*넘었어요/)).toBeVisible()
+    await expect(page.getByRole('button', { name: '가게 스티커 찍기' })).toBeDisabled()
+
+    await amount.fill('3000')
+    await expect(page.getByRole('button', { name: '가게 스티커 찍기' })).toBeEnabled()
+    await page.getByRole('button', { name: '가게 스티커 찍기' }).click()
+
+    // 그 다음은 쿠폰과 똑같다 — 스티커를 찍는다
+    await expect(page.getByText(/봉황 메모리즈 스티커/)).toBeVisible({ timeout: 10000 })
+    /*
+      카메라를 못 여는 기기를 위한 길이 늘 함께 있어야 한다.
+
+      좌표 클릭 대신 이벤트를 직접 보낸다. 헤드리스에서는 카메라 자리의
+      <video>가 그 위를 덮고 있어 좌표로는 그리로 먹힌다 — 실제 기기에서는
+      미리보기 아래에 이 버튼이 따로 서 있다.
+    */
+    await page
+      .getByRole('button', { name: /카메라가 안 되나요/ })
+      .dispatchEvent('click')
+    await expect(page.getByPlaceholder('XXXXXXXX')).toBeVisible()
+    // 포인트는 어느 가게든 쓸 수 있어 8자리만으로는 가게를 알 수 없다
+    await expect(page.getByRole('combobox')).toBeVisible()
   })
 
   test('포인트 — FIFO로 깎이고, 쓴 몫이 따로 적힌다', async ({ page }) => {
@@ -777,10 +777,4 @@ test.describe('혜택 사용 — 쿠폰과 포인트', () => {
     expect(body).not.toMatch(/가게 부담/)
   })
 
-  test('가게 확인 화면은 로그인 없이 열리지 않는다', async ({ page }) => {
-    // 이 한 줄이 '참여자가 자기 폰에서 스스로 사용 처리하는' 구멍을 닫는다
-    await page.goto('/shop/verify?c=PT1-AAAAAA-2222')
-    await expect(page.getByText('가게 로그인')).toBeVisible({ timeout: 15000 })
-    await expect(page.getByRole('spinbutton')).toHaveCount(0)
-  })
 })

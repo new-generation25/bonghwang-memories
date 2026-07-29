@@ -111,7 +111,12 @@ console.log('\n분담 산식 — 어긋나면 안 되는 것')
 }
 
 console.log('\n시범운영 기본값')
-eq('전 등급 충당률 0%', cov.DEFAULT_SETTLEMENT.coverage, { new: 0, basic: 0, premium: 0 })
+eq('전 등급 충당률 0%', cov.DEFAULT_SETTLEMENT.coverage, { free: 0, basic: 0, premium: 0 })
+// 구독이 시작될 자리는 미리 세워 둔다 — 지금 받는 돈이 아니다
+eq('회비 0 / 1만 / 3만', cov.DEFAULT_SETTLEMENT.monthlyFee, {
+  free: 0, basic: 10000, premium: 30000,
+})
+eq('모든 가게는 무료로 연다', typeof cov.TIER_LABEL.free, 'string')
 
 console.log('\n월 상한 — 청구를 자르되 사용은 막지 않는다')
 eq('막는 함수가 없다', typeof cov.wouldExceedCap, 'undefined')

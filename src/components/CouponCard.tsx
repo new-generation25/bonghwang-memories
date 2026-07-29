@@ -135,60 +135,57 @@ export default function CouponCard({
       {open && !spent && (
         <div className="border-t border-line px-4 py-4 text-center">
           {/*
-            주 경로. 가게 카운터의 스티커를 찍어야 사용 처리가 된다 —
-            아래 QR은 사장님이 대신 처리해 주실 때 쓰는 보조 수단이라
-            이 버튼을 위에 크게 둔다.
+            쓰는 길은 하나다 — 카운터의 스티커를 앱으로 찍는다.
+
+            예전에는 이 아래에 내 QR을 크게 띄웠다. 가게 기기가 그것을 찍어
+            대신 처리하는 길이 있었기 때문인데, 그 길을 닫았다(캡처를 남에게
+            보내면 그대로 쓰였다). 지금 이 QR이 하는 일은 없으므로 뺐다.
           */}
           {spec.scope === 'info' ? (
             /* 안내소 교환권 — 가게 카운터에서 찍을 것이 아니다 */
-            <p className="mb-4 rounded-xl border border-sunset-yellow bg-sunset-yellow/10 px-3 py-2.5 text-[11.5px] leading-relaxed text-ink">
-              <b>안내소에서 교환</b>하는 쿠폰이에요.
-              <br />
-              <span className="text-ink-60">
-                이 화면을 안내소에 보여주세요.
-              </span>
-            </p>
+            <>
+              <p className="rounded-xl border border-sunset-yellow bg-sunset-yellow/10 px-3 py-2.5 text-[11.5px] leading-relaxed text-ink">
+                <b>안내소에서 교환</b>하는 쿠폰이에요.
+                <br />
+                <span className="text-ink-60">이 화면을 안내소에 보여주세요.</span>
+              </p>
+              {qr ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={qr}
+                  alt={`${spec.shop} 쿠폰 QR`}
+                  className="mx-auto mt-4 h-44 w-44 rounded-lg"
+                />
+              ) : (
+                <div className="mx-auto mt-4 flex h-44 w-44 items-center justify-center rounded-lg bg-cream-dp text-[12px] text-ink-60">
+                  QR 만드는 중…
+                </div>
+              )}
+              <p className="mt-3 font-mono-retro text-[13px] tracking-[0.08em] text-ink">
+                {code}
+              </p>
+            </>
           ) : signedIn ? (
-            <button
-              type="button"
-              onClick={() => setSheet(true)}
-              className="btn-teal mb-4 w-full text-center"
-            >
-              🎟 가게에서 사용하기
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setSheet(true)}
+                className="btn-teal w-full text-center"
+              >
+                🎟 가게에서 사용하기
+              </button>
+              <p className="mt-2 text-[11px] leading-snug text-ink-60">
+                카운터의 <b className="text-ink">봉황 메모리즈 스티커</b>를
+                찍으면 됩니다. 한 번만 쓸 수 있어요.
+              </p>
+            </>
           ) : (
-            <p className="mb-4 rounded-xl border border-line bg-cream-dp px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-60">
-              쿠폰을 직접 쓰려면 로그인이 필요해요.
+            <p className="rounded-xl border border-line bg-cream-dp px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-60">
+              쿠폰을 쓰려면 로그인이 필요해요.
               <br />
-              로그인 없이 쓰시려면 사장님께 아래 코드를 보여주세요.
+              본인이 걸어서 받은 쿠폰이라 계정에 묶여 있습니다.
             </p>
           )}
-
-          {qr ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={qr}
-              alt={`${spec.shop} 쿠폰 QR`}
-              className="mx-auto h-44 w-44 rounded-lg"
-            />
-          ) : (
-            <div className="mx-auto flex h-44 w-44 items-center justify-center rounded-lg bg-cream-dp text-[12px] text-ink-60">
-              QR 만드는 중…
-            </div>
-          )}
-
-          {/*
-            코드 글자도 함께 보여준다. 가게 기기가 QR을 못 읽을 때
-            (화면 밝기·필름·구형 기기) 불러서 입력할 수 있어야 한다.
-          */}
-          <p className="mt-3 font-mono-retro text-[13px] tracking-[0.08em] text-ink">
-            {code}
-          </p>
-          <p className="mt-1 text-[10.5px] leading-snug text-ink-60">
-            사장님이 대신 처리하실 때 보여주는 코드입니다.
-            <br />
-            한 번만 사용할 수 있습니다.
-          </p>
 
           {/*
             다시 받기 — 가게에서 실수로 두 번 찍혔거나, 미리 열어보다

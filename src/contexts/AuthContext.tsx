@@ -19,11 +19,7 @@ import {
   startTourSync,
   syncUserStats,
 } from '@/lib/tourSync'
-import {
-  clearLocalPoints,
-  flushPendingPoints,
-  reconcilePointSpends,
-} from '@/lib/points'
+import { clearLocalPoints, flushPendingPoints } from '@/lib/points'
 import { loadPointConfig } from '@/lib/settlement'
 import { flushTelemetry } from '@/lib/telemetry'
 import { markAdminAccount } from '@/lib/admin'
@@ -107,9 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           stopSyncRef.current = startTourSync(user.uid)
           // 로그인 전에 쌓인 적립을 올린다 — 투어 도중 로그인하는 경우가 있다
           await flushPendingPoints(user.uid)
-          // 가게에서 쓴 몫도 맞춘다 — 포인트는 가게 기기가 사용 처리하므로
-          // 참여자 기기는 나중에 확인해야 원장이 맞는다
-          await reconcilePointSpends()
           // 로그인 전에 쌓인 계측도 같은 결로 올린다
           await flushTelemetry(user.uid)
           await syncUserStats(user.uid)

@@ -204,7 +204,7 @@ const toDoc = (v: Record<string, unknown>): SettlementDoc => ({
   shopId: String(v.shopId ?? ''),
   name: String(v.name ?? ''),
   month: String(v.month ?? ''),
-  tier: String(v.tier ?? 'new'),
+  tier: String(v.tier ?? 'free'),
   feeWon: Number(v.feeWon) || 0,
   coveredWon: Number(v.coveredWon) || 0,
   shopWon: Number(v.shopWon) || 0,
