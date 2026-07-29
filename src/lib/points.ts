@@ -32,17 +32,26 @@ import { auth, db, isFirebaseReady } from './firebase'
 // 포인트 표 — 여기만 고치면 전체에 반영된다
 // ---------------------------------------------------------------------------
 
+/**
+ * 포인트 표 (2026-07-29 혜택 체계).
+ *
+ * **1p = 1원이다.** 별도 화폐를 두지 않고 쿠폰 체계에 흡수시킨다 — 참여자가
+ * 환산을 하지 않아도 되고, 가맹점은 쿠폰과 같은 방식으로 결제 금액에서
+ * 뺀다. 그래서 여기 적는 숫자는 곧 원가다. 배점을 올리면 그만큼 돈이 나간다.
+ */
 export const POINT_TABLE = {
-  /** 다섯 소원 각 거점 완주 */
-  mainMission: 300,
-  /** 골목 빙고 칸 하나 */
-  bonusMission: 50,
+  /** 미션 칸 하나 — 메인·보너스 공통. 칸은 칸이라 값이 갈리지 않는다 */
+  mainMission: 100,
+  /** 골목 빙고 칸 하나 — 메인과 같은 값 */
+  bonusMission: 100,
   /** B면 편지 잠금 해제 등 특별 성취 */
   specialMission: 100,
   /** 커뮤니티에 기록 공유 */
   shareRecord: 100,
   /** 빙고 한 줄 완성 */
   treasureLine: 500,
+  /** 코스 완주 — 다섯 소원을 다 이루고 피날레까지 */
+  courseComplete: 200,
   /** 완주 설문 응답 */
   survey: 200,
   /**
@@ -73,6 +82,7 @@ export const REASON_LABEL: Record<PointReason, string> = {
   specialMission: '스페셜미션',
   shareRecord: '나의 기록 공유',
   treasureLine: '빙고 한 줄',
+  courseComplete: '코스 완주',
   survey: '완주 설문',
   campaign: '한정 보너스미션',
   gacha: '뽑기 당첨',
@@ -126,8 +136,14 @@ export function localPointHistory(): PointEntry[] {
   return readList(LEDGER_KEY).sort((a, b) => b.createdAt - a.createdAt)
 }
 
+/**
+ * 이 기기의 쓸 수 있는 합계.
+ *
+ * 원장을 그대로 더하지 않는다 — 유효기간(6개월)이 지난 적립은 소멸하고
+ * 이월하지 않으므로, 합계에 넣으면 쓸 수 없는 점수를 보여주게 된다.
+ */
 export function localPointTotal(): number {
-  return readList(LEDGER_KEY).reduce((a, p) => a + p.points, 0)
+  return pointWallet(readList(LEDGER_KEY)).total
 }
 
 /** 원장에 없으면 추가하고 true — 이미 있으면 false(중복 적립 차단) */
@@ -332,42 +348,78 @@ export function pendingPointTotal(): number {
 }
 
 // ---------------------------------------------------------------------------
-// EP.2 할인
+// 포인트 사용 규칙
 // ---------------------------------------------------------------------------
 
 /**
- * 모은 포인트를 EP.2 예약 할인으로 돌려준다.
+ * 1p = 1원.
  *
- * 포인트 사용(상점 결제)은 아직 만들지 않기로 했으므로, 지금 단계에서 포인트가
- * 실제로 무언가로 바뀌는 유일한 통로다. 이게 없으면 적립이 숫자놀이로 끝난다.
- *
- * 기준선을 1,000P로 잡은 이유: 메인미션 다섯 곳(1,500P)만 걸어도 닿는다.
- * 완주한 사람은 예외 없이 할인을 받고, 빙고·공유·설문까지 한 사람은 한 단계
- * 더 간다. 티켓 15,000원 대비 20~40% 선이라 EP.2 재구매 유인으로 충분하다.
+ * 별도 화폐를 두지 않는다. 예전에는 모은 점수를 EP.2 예약 할인 사다리
+ * (1,000P→3,000원 / 1,800P→4,500원 / 2,500P→6,000원)로 돌려줬는데, 그 표는
+ * 포인트마다 값이 달라 참여자가 환산을 해야 했고 1p=1원과 정면으로 어긋난다
+ * (2,500p가 6,000원이면 2.4배다). 쿠폰 체계에 흡수시켜 값을 하나로 만든다.
  */
-export const EP2_DISCOUNT_TIERS = [
-  { min: 2500, discount: 6000, label: '완주 + 골목 탐험' },
-  { min: 1800, discount: 4500, label: '완주 + 기록 공유' },
-  { min: 1000, discount: 3000, label: '완주' },
-] as const
+export const POINT_TO_WON = 1
 
-export interface Ep2Discount {
-  discount: number
-  label: string
-  /** 다음 단계까지 남은 포인트 — 최고 단계면 null */
-  toNext: number | null
-  nextDiscount: number | null
+/** 이 값을 넘겨야 쓸 수 있다. 2회 방문 누적을 전제로 잡은 문턱이다 */
+export const MIN_REDEEM_POINTS = 3000
+
+/** 발급일 기준 유효기간. 경과분은 소멸하고 **이월하지 않는다** */
+export const POINT_EXPIRY_MONTHS = 6
+
+/** 적립 한 건이 소멸하는 시각 */
+export function expiresAt(entry: PointEntry): number {
+  const d = new Date(entry.createdAt)
+  d.setMonth(d.getMonth() + POINT_EXPIRY_MONTHS)
+  return d.getTime()
 }
 
-export function ep2Discount(points: number): Ep2Discount {
-  const tier = EP2_DISCOUNT_TIERS.find((t) => points >= t.min)
-  const idx = tier ? EP2_DISCOUNT_TIERS.indexOf(tier) : EP2_DISCOUNT_TIERS.length
-  const next = idx > 0 ? EP2_DISCOUNT_TIERS[idx - 1] : null
+export interface PointWallet {
+  /** 아직 살아 있는 포인트 — 화면에 띄우는 값은 늘 이것이다 */
+  total: number
+  /** 원으로 환산한 값 */
+  won: number
+  /** 기간이 지나 사라진 몫. 부채로 잡지 않으므로 참고용이다 */
+  expired: number
+  /** 지금 쓸 수 있는가 */
+  redeemable: boolean
+  /** 문턱까지 남은 포인트 — 이미 넘었으면 0 */
+  toThreshold: number
+  /** 가장 먼저 소멸할 시각 — 살아 있는 적립이 없으면 null */
+  nextExpiry: number | null
+}
+
+/**
+ * 원장을 유효기간으로 걸러 지금 쓸 수 있는 상태를 낸다.
+ *
+ * 만료를 원장에서 지우지 않고 **읽을 때마다 판정한다.** 지우면 왜 줄었는지
+ * 물어볼 때 답할 근거가 없어지고, 기기마다 지운 시점이 달라 서버와 합칠 때
+ * 어긋난다. 소멸분은 부채로 잡지 않으므로 회계상 지울 이유도 없다.
+ */
+export function pointWallet(
+  entries: PointEntry[],
+  now = Date.now()
+): PointWallet {
+  let total = 0
+  let expired = 0
+  let nextExpiry: number | null = null
+
+  for (const e of entries) {
+    const at = expiresAt(e)
+    if (at <= now) {
+      expired += e.points
+      continue
+    }
+    total += e.points
+    if (nextExpiry === null || at < nextExpiry) nextExpiry = at
+  }
 
   return {
-    discount: tier?.discount ?? 0,
-    label: tier?.label ?? '',
-    toNext: next ? next.min - points : null,
-    nextDiscount: next ? next.discount : null,
+    total,
+    won: total * POINT_TO_WON,
+    expired,
+    redeemable: total >= MIN_REDEEM_POINTS,
+    toThreshold: Math.max(0, MIN_REDEEM_POINTS - total),
+    nextExpiry,
   }
 }

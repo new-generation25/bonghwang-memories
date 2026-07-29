@@ -18,9 +18,11 @@ import {
   PointReason,
   REASON_LABEL,
   POINTS_EVENT,
-  ep2Discount,
+  MIN_REDEEM_POINTS,
+  POINT_EXPIRY_MONTHS,
   fetchPointHistory,
   localPointHistory,
+  pointWallet,
 } from '@/lib/points'
 
 const ORDER: PointReason[] = [
@@ -46,9 +48,16 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
     if (!profile?.uid) return
     try {
       const remote = await fetchPointHistory(profile.uid)
-      const localSum = local.reduce((a, p) => a + p.points, 0)
-      const remoteSum = remote.reduce((a, p) => a + p.points, 0)
-      if (remoteSum >= localSum) setEntries(remote)
+      /*
+        견줄 때도 **살아 있는 점수만** 센다.
+
+        원장을 통째로 더하면 소멸한 적립이 로컬 쪽 무게를 부풀려, 서버에
+        더 많은 기록이 있어도 로컬을 고른다. 오래 쉬었다 돌아온 사람일수록
+        죽은 점수가 많아 이 실수가 커진다.
+      */
+      if (pointWallet(remote).total >= pointWallet(local).total) {
+        setEntries(remote)
+      }
     } catch {
       /* 서버를 못 읽으면 로컬 그대로 둔다 */
     }
@@ -63,13 +72,20 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
 
   // localStorage를 렌더 중에 읽으면 서버(0)와 클라이언트(실제 점수)가 달라져
   // 히드레이션이 깨진다. 값은 반드시 useEffect로 들어온 state에서만 읽는다.
-  const total = entries.reduce((a, p) => a + p.points, 0)
+  const wallet = pointWallet(entries)
+  const total = wallet.total
   const byReason = ORDER.map((reason) => {
     const list = entries.filter((e) => e.reason === reason)
     return { reason, count: list.length, sum: list.reduce((a, p) => a + p.points, 0) }
   }).filter((r) => r.count > 0)
 
-  const ep2 = ep2Discount(total)
+  const expiryText = wallet.nextExpiry
+    ? new Date(wallet.nextExpiry).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : null
 
   return (
     <div className="card-paper mb-5 overflow-hidden shadow-lg">
@@ -86,33 +102,64 @@ export default function MyPoints({ compact = false }: { compact?: boolean }) {
                 : '로그인하면 다른 기기에서도 이어집니다'}
             </p>
           </div>
-          <span className="font-display text-[30px] leading-none text-teal">
-            {total.toLocaleString()}
-            <span className="ml-0.5 text-[14px]">P</span>
-          </span>
+          {/* 1p = 1원이라 환산을 나란히 둔다 — 참여자가 계산하지 않게 */}
+          <div className="text-right">
+            <span className="block font-display text-[30px] leading-none text-teal">
+              {total.toLocaleString()}
+              <span className="ml-0.5 text-[14px]">P</span>
+            </span>
+            <span className="mt-0.5 block font-mono-retro text-[10.5px] text-ink-60">
+              = {wallet.won.toLocaleString()}원
+            </span>
+          </div>
         </div>
 
-        {/* EP.2 할인 — 지금 단계에서 포인트가 실제로 바뀌는 유일한 통로 */}
+        {/*
+          쓸 수 있는지부터 말한다.
+
+          문턱(3,000P)을 넘기 전에는 얼마가 모자란지가 유일하게 쓸모 있는
+          정보다. 넘은 뒤에는 어디서 쓰는지가 그렇다.
+        */}
         <div className="mt-3 rounded-lg border border-sunset-yellow bg-cream-base/60 p-3">
-          {ep2.discount > 0 ? (
+          {wallet.redeemable ? (
             <p className="text-[12.5px] leading-snug text-ink">
-              EP.2 예약 시{' '}
-              <b className="text-rec">{ep2.discount.toLocaleString()}원 할인</b>{' '}
-              적용돼요
-              {ep2.toNext !== null && (
-                <span className="mt-0.5 block text-[11px] text-ink-60">
-                  {ep2.toNext.toLocaleString()}P 더 모으면{' '}
-                  {ep2.nextDiscount?.toLocaleString()}원 할인
-                </span>
-              )}
+              제휴 가맹점에서{' '}
+              <b className="text-rec">{wallet.won.toLocaleString()}원</b>처럼
+              쓸 수 있어요
+              <span className="mt-0.5 block text-[11px] text-ink-60">
+                결제할 때 이 화면을 보여주세요 · 1P = 1원
+              </span>
             </p>
           ) : (
-            <p className="text-[12.5px] leading-snug text-ink-60">
-              {ep2.toNext?.toLocaleString()}P 더 모으면 EP.2 예약{' '}
-              <b className="text-ink">{ep2.nextDiscount?.toLocaleString()}원 할인</b>
-            </p>
+            <>
+              <p className="text-[12.5px] leading-snug text-ink-60">
+                <b className="text-ink">
+                  {wallet.toThreshold.toLocaleString()}P
+                </b>{' '}
+                더 모으면 제휴 가맹점에서 쓸 수 있어요
+              </p>
+              {/* 남은 거리를 눈으로 — 숫자만으로는 얼마나 왔는지 모른다 */}
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-cream-dp">
+                <div
+                  className="h-2 rounded-full bg-sunset transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, (total / MIN_REDEEM_POINTS) * 100)}%`,
+                  }}
+                />
+              </div>
+              <p className="mt-1 font-mono-retro text-[10px] text-ink-60">
+                {total.toLocaleString()} / {MIN_REDEEM_POINTS.toLocaleString()}P
+              </p>
+            </>
           )}
         </div>
+
+        {/* 소멸은 미리 알려야 한다 — 사라진 뒤에 알면 이월도 못 한다 */}
+        {expiryText && (
+          <p className="mt-2 font-mono-retro text-[10px] text-ink-60">
+            적립일부터 {POINT_EXPIRY_MONTHS}개월 · 가장 이른 소멸 {expiryText}
+          </p>
+        )}
 
         {!compact && byReason.length > 0 && (
           <>

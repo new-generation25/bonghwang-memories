@@ -14,7 +14,7 @@ import Cassette, { CASSETTE_SCALE } from '@/components/Cassette'
 import CuePlayer from '@/components/cue/CuePlayer'
 import SurveyLink from '@/components/SurveyLink'
 import MyPoints from '@/components/MyPoints'
-import { ep2Discount, localPointTotal, POINTS_EVENT } from '@/lib/points'
+import { award } from '@/lib/points'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
 import { getBlobUrl } from '@/lib/blobStore'
@@ -31,22 +31,24 @@ export default function FinalePage() {
   const router = useRouter()
   const [photoUrls, setPhotoUrls] = useState<{ track: number; url: string }[]>([])
   const [bsideVoiceUrl, setBsideVoiceUrl] = useState<string | null>(null)
-  const [points, setPoints] = useState(0)
   const [saving, setSaving] = useState(false)
-  const ep2 = ep2Discount(points)
-
-  // 설문에 응답하면 그 자리에서 200P가 붙는다 — 할인 문구도 같이 올라가야 한다
-  useEffect(() => {
-    const sync = () => setPoints(localPointTotal())
-    sync()
-    window.addEventListener(POINTS_EVENT, sync)
-    return () => window.removeEventListener(POINTS_EVENT, sync)
-  }, [])
+  /*
+    점수는 아래 <MyPoints />가 그린다 — 쓸 수 있는 문턱과 소멸일까지
+    한 카드가 말한다. 여기서 따로 합계를 들고 있으면 두 곳이 어긋난다.
+  */
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
-  // 완주 기록
+  /*
+    완주 기록 + 코스 완주 보너스.
+
+    적립을 phase 전환과 같은 자리에서 낸다 — 완주를 두 번 기록할 수 없으니
+    보너스도 한 번뿐이다. refId가 고정이라 다시 들어와도 겹치지 않는다.
+  */
   useEffect(() => {
     if (tour.phase === 'act2') mutateTour({ phase: 'done' })
+    if (tour.phase === 'act2' || tour.phase === 'done') {
+      void award('course-complete', 'courseComplete')
+    }
   }, [tour.phase])
 
   // 앨범 사진 로드 (IndexedDB → object URL)
@@ -251,11 +253,12 @@ export default function FinalePage() {
           className="mt-2 w-full rounded-xl border border-line bg-paper py-3 text-[13.5px] text-ink"
         >
           {S40_TEXT.ep2Button}
-          <span className="block text-[11px] text-ink-60">
-            {ep2.discount > 0
-              ? `오늘 모은 ${points.toLocaleString()}P로 ${ep2.discount.toLocaleString()}원 할인`
-              : S40_TEXT.ep2Note}
-          </span>
+          {/*
+            여기에 "모은 P로 얼마 할인"을 적지 않는다. 포인트는 EP.2 예약이
+            아니라 제휴 가맹점에서 1P=1원으로 쓴다 — 두 곳에서 쓰는 것처럼
+            적으면 같은 점수를 두 번 약속하게 된다.
+          */}
+          <span className="block text-[11px] text-ink-60">{S40_TEXT.ep2Note}</span>
         </button>
         <button
           onClick={() => router.push('/community')}
