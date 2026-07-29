@@ -15,7 +15,13 @@ import CuePlayer from '@/components/cue/CuePlayer'
 import Navigation from '@/components/Navigation'
 import { useCue } from '@/hooks/useCue'
 import { useTourState } from '@/hooks/useTourState'
-import { BoardCell, buildBoard, countLines } from '@/lib/bingoCells'
+import {
+  ACT2_TOTAL,
+  BoardCell,
+  buildBoard,
+  countAct2Done,
+  countLines,
+} from '@/lib/bingoCells'
 import { bingoOpen, useSuperAdmin } from '@/lib/superAdmin'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
 import { dispatchAction, dispatchTap, unlockAudio } from '@/lib/cueEngine'
@@ -215,7 +221,8 @@ export default function BingoPage() {
   }
 
   // ---------- 빙고 보드 ----------
-  const act2Done = tour.bingo.cellsDone.length
+  const act2Total = ACT2_TOTAL
+  const act2Done = countAct2Done(tour.bingo.cellsDone)
 
   const handleCellTap = (cell: BoardCell) => {
     if (cell.kind === 'main') return
@@ -257,7 +264,7 @@ export default function BingoPage() {
             <h1 className="appbar-title text-[19px]">골목 빙고</h1>
             {/* 발견 수는 앱바로 — 다른 탭의 'N / 5'와 같은 자리다 */}
             <span className="shrink-0 rounded-full bg-cream/20 px-3 py-1 font-mono-retro text-[11px] font-bold">
-              {act2Done} / 20
+              {act2Done} / {act2Total}
             </span>
           </div>
         </div>
@@ -280,16 +287,16 @@ export default function BingoPage() {
           <div className="tape-prog mt-2">
             <div
               className="reel spin"
-              style={{ '--fill': 1 - act2Done / 20 } as React.CSSProperties}
+              style={{ '--fill': 1 - act2Done / act2Total } as React.CSSProperties}
             >
               <span className="hub" />
             </div>
             <div className="bar">
-              <i style={{ width: `${(act2Done / 20) * 100}%` }} />
+              <i style={{ width: `${(act2Done / act2Total) * 100}%` }} />
             </div>
             <div
               className="reel spin"
-              style={{ '--fill': act2Done / 20 } as React.CSSProperties}
+              style={{ '--fill': act2Done / act2Total } as React.CSSProperties}
             >
               <span className="hub" />
             </div>
@@ -400,10 +407,23 @@ export default function BingoPage() {
             골목을 걷다가 마음에 드는 곳을 발견하면 칸을 눌러 기록하세요.
             가로·세로·대각선 5칸을 이으면 빙고.
           </p>
-          <p className="mt-2 font-mono-retro text-[11px] text-teal">
-            칸 하나 +{POINT_TABLE.bonusMission}P · 빙고 한 줄 +
-            {POINT_TABLE.treasureLine}P · 뽑기 한판
-          </p>
+          {/*
+            가운뎃점으로만 이으면 셋이 나란한 항목으로 읽혀, 빙고 한 줄에
+            **둘을 함께** 준다는 것이 드러나지 않는다. 줄을 갈라 '무엇을
+            하면 → 무엇을 받는지'로 짝지었다.
+          */}
+          <div className="mt-2 space-y-1 font-mono-retro text-[11px] text-teal">
+            <p>
+              칸 하나 <span className="text-ink-60">→</span> +
+              {POINT_TABLE.bonusMission}P
+            </p>
+            <p>
+              빙고 한 줄 <span className="text-ink-60">→</span> +
+              {POINT_TABLE.treasureLine}P
+              <span className="mx-1 font-bold text-sunset">＋</span>
+              🎟 뽑기 한판
+            </p>
+          </div>
         </div>
 
         {/* 투어 마치기 */}
@@ -490,6 +510,7 @@ export default function BingoPage() {
           key={seed}
           seed={seed}
           drawn={tour.gachaDrawn}
+          ticketsLeft={drawsLeft}
           onDrawn={handleDrawn}
           onClose={() => setGachaOpen(false)}
         />
@@ -542,7 +563,7 @@ export default function BingoPage() {
               골목 빙고는 나중에 다시 이어서 채울 수 있어요.
             </p>
             <p className="mt-2 font-mono-retro text-[11px] text-teal">
-              발견 {act2Done} / 20 · 빙고 {lines}줄
+              발견 {act2Done} / {act2Total} · 빙고 {lines}줄
             </p>
             <div className="mt-4 flex gap-2">
               <button

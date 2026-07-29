@@ -462,11 +462,14 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
     await open.click()
 
     // 참여자가 칸을 직접 고른다 — 기계가 뽑아주지 않는다
-    await page.getByRole('button', { name: '23번 칸' }).click()
-    // 여는 연출 뒤에 결과가 선다
-    await expect(page.getByRole('button', { name: '받기' })).toBeVisible({
-      timeout: 15000,
-    })
+    await page.getByRole('button', { name: '23번 칸', exact: true }).click()
+    /*
+      여는 연출 뒤에 결과가 선다. 이용권이 남아 있으므로 '받기'가 아니라
+      '한 판 더'다 — 한 장 쓸 때마다 판을 닫으면 남은 장수를 참여자가 센다.
+    */
+    const again = page.getByRole('button', { name: /한 판 더/ })
+    await expect(again).toBeVisible({ timeout: 15000 })
+    await expect(again).toContainText('1장 남음')
 
     const drawn = await page.evaluate(
       () => JSON.parse(window.localStorage.getItem('bh_tour_v2')).gachaDrawn
@@ -474,8 +477,16 @@ test.describe('골목 뽑기 — 추가 빙고 한 줄에 한 번', () => {
     // 고른 칸이 그대로 열려야 한다(0-based라 23번 칸 = 22)
     expect(drawn).toEqual([22])
 
-    // 한 장을 쓰면 한 장이 남는다
-    await page.getByRole('button', { name: '받기' }).click()
+    // 한 판 더 → 판이 그대로 열려 있고, 방금 연 칸은 '뽑음'으로 남는다
+    await again.click()
+    await expect(
+      page.getByRole('button', { name: '23번 칸 — 이미 열었어요' })
+    ).toBeDisabled()
+    // 남은 이용권은 판 위에서 바로 읽힌다
+    await expect(page.getByText(/🎟 이용권 1장/)).toBeVisible()
+
+    // 닫으면 빙고판으로 — 한 장을 썼으니 한 장이 남는다
+    await page.getByRole('button', { name: '닫기' }).click()
     await expect(
       page.getByRole('button', { name: /뽑기 한판 1장 있어요/ })
     ).toBeVisible({ timeout: 10000 })
