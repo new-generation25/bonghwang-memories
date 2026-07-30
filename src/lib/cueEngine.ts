@@ -32,7 +32,7 @@ import {
   setCurrentTrack,
 } from './tourState'
 import { timingsFor } from './audioTimings'
-import { STATIONS } from './tracks'
+import { STATIONS, TRACK_MISSIONS } from './tracks'
 import { award } from './points'
 import { playCassetteFlip } from './sfx'
 import { logEvent } from './analytics'
@@ -51,7 +51,18 @@ import { logEvent } from './analytics'
 export const WISH_EVENT = 'bh:wish'
 
 const BASE_PATH = '/audio'
-const EXTENSIONS = ['m4a', 'mp3'] as const
+/*
+  확장자 탐색 순서 — **있는 것을 먼저 본다.**
+
+  probe()가 HEAD로 하나씩 두드리므로, 없는 확장자를 앞에 두면 큐마다
+  404가 한 번씩 난다. 지금 구워둔 28개가 전부 .mp3라 m4a를 앞에 두면
+  헛왕복이 28번 생기는데, 그것이 하필 **목소리가 나오기 직전**에 끼어든다 —
+  신호가 약한 골목에서 참여자가 기다리는 그 순간이다.
+
+  m4a를 지우지 않는 이유는 나중에 그쪽으로 다시 구울 수 있어서다. 그때는
+  이 순서를 바꾼다.
+*/
+const EXTENSIONS = ['mp3', 'm4a'] as const
 
 // -----------------------------------------------------------------------------
 // 재생 상태
@@ -171,6 +182,14 @@ let chainDueAt = 0
  */
 let clockStartedAt = 0
 let clockAccum = 0
+/**
+ * 잠금 해제용 무음 — 44바이트 WAV.
+ *
+ * 서비스워커 사전 캐시 목록(public/sw.js)에도 들어가야 한다. 신호가 없는
+ * 골목에서 이 파일을 못 받으면 그 뒤 큐가 통째로 조용해진다.
+ */
+const SILENCE_SRC = '/audio/sfx/silence.wav'
+
 let unlocked = false
 
 /** E2E 테스트 배속 (`?e2e=1` → 10배속). 실사용에는 영향 없음 */
@@ -234,14 +253,25 @@ export function unlockAudio() {
 
       여기서 푼 요소를 playCue가 그대로 쓴다. 그래서 발신음이 끝나는
       타이머 안에서 시작하는 통화도 막히지 않는다.
+
+      **파일로 둔다.** 예전에는 이 자리에 `data:audio/wav;base64,…`를 박아
+      뒀는데, CSP의 `media-src 'self' blob:`이 data:를 막아서 재생이 아예
+      시작되지 않았다. 아래 catch가 그것을 삼키고 `unlocked = true`로
+      넘어가므로, **잠금이 안 풀렸는데 풀린 줄로 알고** 다음 큐를 틀었다 —
+      아이폰에서 소리가 안 나는 자리가 여기다.
+
+      self 원본의 파일이면 CSP를 넓히지 않아도 되고, 서비스워커가 함께
+      캐시해 신호가 없는 골목에서도 잠금이 풀린다.
     */
     const el = audioElement()
-    el.src =
-      'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+    el.src = SILENCE_SRC
     void el
       .play()
       .then(() => el.pause())
-      .catch(() => {})
+      .catch((err) => {
+        // 잠금이 안 풀렸으면 다음 큐가 조용히 실패한다 — 이유를 남긴다
+        console.warn('[오디오 잠금 해제 실패]', err?.name ?? err)
+      })
     unlocked = true
   } catch {
     /* 치명적이지 않음 */
@@ -687,6 +717,29 @@ export function dispatchAction(action: ActionId): boolean {
     // F-7 스키마 — 랭킹 부문1이 mission_enter→mission_correct 간격을 잰다
     logEvent('mission_correct', { id: action })
   }
+
+  /*
+    거점 쿠폰 지급 — 그 미션을 끝낸 자리에서.
+
+    한동안 이 쿠폰들이 어디서도 나오지 않았다. 예전에는 골목 빙고 첫 줄이
+    완성되면 다섯 장을 한꺼번에 줬는데(cues.ts의 B5_F 주석에 그 흔적이
+    남아 있다), 보상 자리가 둘로 갈려 흐려진다는 이유로 그 일괄 지급을
+    없앴다 — 그러면서 대신 줄 자리를 만들지 않았다. 다섯 거점을 다 걸어도
+    지갑이 비어 있었다.
+
+    미션 정의가 이미 `reward.coupon`으로 무엇을 줄지 말하고 있으므로
+    그 값을 그대로 쓴다. 여기 한 곳에 두는 이유는 미션 화면이 여섯 갈래
+    (개수·사진·AR·퀴즈·녹음·해제)인데 완료 신호는 이 함수 하나로 모이기
+    때문이다 — 화면마다 지급을 붙이면 새 미션에서 빠뜨린다.
+
+    addCoupon()이 이미 든 쿠폰을 무시하므로 다시듣기(D9)로 액션이 다시
+    와도 두 장이 되지 않는다.
+  */
+  const earned = Object.values(TRACK_MISSIONS).find(
+    (m) => m.onCompleteAction === action && m.reward?.coupon
+  )
+  if (earned?.reward?.coupon) addCoupon(earned.reward.coupon)
+
   const cue = findCueByAction(action)
   if (!cue) return false
   startCueSoon(cue.id)

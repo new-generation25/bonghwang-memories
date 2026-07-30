@@ -1,6 +1,6 @@
 // 캐시하는 파일(오디오 포함)을 교체할 때는 반드시 이 버전을 올려야 한다.
 // 버전이 같으면 기존 기기가 옛 캐시를 계속 쓴다.
-const CACHE_NAME = 'bonghwang-memories-v1.0.1785254962219';
+const CACHE_NAME = 'bonghwang-memories-v1.0.1785379701432';
 const urlsToCache = [
   '/manifest.json',
   '/icon-192x192.png',
@@ -14,10 +14,14 @@ const urlsToCache = [
   10MB를 기다리면 새 버전으로 갈아타는 것도 그만큼 늦어진다.
 */
 const assetsToCache = [
-  // SFX (선택 — 없으면 조용히 생략)
-  '/audio/sfx/tape_hiss.mp3',
-  '/audio/sfx/tape_stop.mp3',
-  '/audio/sfx/call_ring.mp3',
+  /*
+    오디오 잠금 해제용 무음 — 44바이트.
+
+    이것이 캐시에 없으면 신호가 없는 골목에서 잠금이 풀리지 않고, 그 뒤
+    번들이 통째로 조용해진다. 목록의 다른 것들과 달리 '있으면 좋은' 것이
+    아니라 없으면 이야기가 안 들리는 파일이다(cueEngine의 unlockAudio).
+  */
+  '/audio/sfx/silence.wav',
   // 데크 키음 — 오프라인에서도 버튼 피드백이 있어야 한다
   '/audio/sfx/deck-key.wav',
   // M3 능소화 정적 프레임 (D11 폴백)
@@ -119,7 +123,10 @@ self.addEventListener('message', (event) => {
     event.waitUntil(
       caches.open(CACHE_NAME).then(async (cache) => {
         for (const name of event.data.names) {
-          for (const ext of ['m4a', 'mp3']) {
+          // 있는 확장자를 먼저 본다 — 순서가 뒤바뀌면 파일마다 404가 한 번씩
+          // 나고, 그것이 신호 약한 골목에서 선다운로드를 그만큼 늦춘다.
+          // cueEngine의 EXTENSIONS와 같은 순서여야 한다.
+          for (const ext of ['mp3', 'm4a']) {
             const url = `/audio/${name}.${ext}`;
             if (await cache.match(url)) break;
             try {
