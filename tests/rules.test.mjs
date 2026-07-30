@@ -69,6 +69,15 @@ function use(over = {}) {
 }
 
 before(async () => {
+  /*
+    프로젝트 이름을 앱이 쓰는 것과 갈라 둔다.
+
+    에뮬레이터 하나에 여러 프로젝트가 따로 산다. 앱을 붙여 시험하는 쪽
+    (scripts/seed-emulator.mjs · check-redeem)과 같은 이름을 쓰면 서로의
+    가게 문서와 사용 기록을 밟는다 — 한쪽이 심은 쿠폰 사용 기록 때문에
+    다른 쪽의 '두 번은 안 된다'가 엉뚱하게 통과하거나 실패한다.
+    (firebase.json에서 singleProjectMode를 켜면 이 분리가 깨진다.)
+  */
   env = await initializeTestEnvironment({
     projectId: 'bonghwang-rules-test',
     firestore: {
@@ -78,6 +87,14 @@ before(async () => {
       port: 8681,
     },
   })
+
+  /*
+    지난 실행이 남긴 것을 비운다.
+
+    사용 기록은 문서 id가 쿠폰 코드라 지우지 않으면 '두 번은 안 된다'가
+    첫 번째부터 걸린다. 에뮬레이터를 띄운 채 여러 번 돌릴 수 있어야 한다.
+  */
+  await env.clearFirestore()
 
   // 가게 문서는 규칙을 끄고 심는다 — 관리자만 쓸 수 있는 문서다
   await env.withSecurityRulesDisabled(async (ctx) => {

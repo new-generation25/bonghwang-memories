@@ -24,6 +24,7 @@ import {
   setShopActive,
   setShopCap,
   setShopContract,
+  repairShops,
   setShopTier,
   stampPending,
   toMerchant,
@@ -116,6 +117,8 @@ export default function AdminPage() {
   const [closed, setClosed] = useState<SettlementDoc[]>([])
   const [settleMsg, setSettleMsg] = useState('')
   const [settleBusy, setSettleBusy] = useState(false)
+  const [shopFixMsg, setShopFixMsg] = useState('')
+  const [shopFixBusy, setShopFixBusy] = useState(false)
 
   const loadShops = useCallback(async () => {
     try {
@@ -660,6 +663,53 @@ export default function AdminPage() {
             </table>
           </div>
         )}
+
+        {/*
+          보수 — 시드된 문서에 빠진 칸을 메운다.
+
+          다시 심기와 갈라 둔 이유가 있다. 그쪽은 shops.json을 붙여넣어야
+          하는데 그 파일은 외장하드를 따라다녀 자리를 옮기면 없고, 문서를
+          세우는 도구라 등급과 가입일을 되돌릴 수 있다. 이 버튼은 이미
+          서버에 있는 것을 보고 빈 칸만 채운다.
+        */}
+        <div className="mt-4">
+          <button
+            disabled={shopFixBusy}
+            onClick={async () => {
+              setShopFixBusy(true)
+              setShopFixMsg('')
+              try {
+                const r = await repairShops(cfg)
+                setShopFixMsg(
+                  (r.fixed.length
+                    ? `채웠습니다 — ${r.fixed.join(' / ')}`
+                    : '빠진 칸이 없습니다.') +
+                    (r.noToken.length
+                      ? ` · 스티커 토큰이 없는 가게: ${r.noToken.join(', ')} — 토큰은 만들지 않습니다(이미 붙은 스티커가 죽습니다). scripts/make-shop-qr.mjs로 다시 뽑아 「가게 문서 심기」로 넣으세요.`
+                      : '')
+                )
+                void loadShops()
+              } catch (e) {
+                setShopFixMsg(e instanceof Error ? e.message : '보수하지 못했습니다.')
+              } finally {
+                setShopFixBusy(false)
+              }
+            }}
+            className="rounded-xl border border-sunset-yellow bg-sunset-yellow/20 px-3 py-2 text-[12px] font-bold text-ink disabled:opacity-40"
+          >
+            {shopFixBusy ? '보수하는 중…' : '🔧 빠진 칸 채우기'}
+          </button>
+          <p className="mt-1.5 text-[10.5px] leading-relaxed text-ink-60">
+            그룹·뽑기 쿠폰이 받는 칸(<code>accepts</code>·<code>groupCoupons</code>)과
+            등급 칸을 메웁니다. <b className="text-ink">있는 값은 건드리지
+            않습니다.</b>
+          </p>
+          {shopFixMsg && (
+            <p className="mt-2 break-all text-[11.5px] leading-relaxed text-ink">
+              {shopFixMsg}
+            </p>
+          )}
+        </div>
 
         <p className="mt-3 text-[11px] leading-relaxed text-ink-60">
           지금은 <b className="text-ink">모든 가게가 무료</b>입니다 — 회비도 부담도

@@ -70,3 +70,6 @@ firestore-debug.log
 ui-debug.log
 firebase-debug.log
 /.firebase/
+
+# 검증 스크립트가 앱 코드를 구워두는 자리 — 끝나면 스스로 지운다
+/.check-redeem/

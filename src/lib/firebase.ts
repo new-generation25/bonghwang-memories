@@ -1,6 +1,6 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
-import { getFirestore, Firestore } from 'firebase/firestore'
-import { getAuth, Auth } from 'firebase/auth'
+import { connectFirestoreEmulator, getFirestore, Firestore } from 'firebase/firestore'
+import { connectAuthEmulator, getAuth, Auth } from 'firebase/auth'
 import { getStorage, FirebaseStorage } from 'firebase/storage'
 
 // Firebase 설정이 완전한지 확인하는 함수
@@ -44,6 +44,26 @@ if (isFirebaseConfigComplete()) {
     */
     storage.maxUploadRetryTime = 15000
     storage.maxOperationRetryTime = 15000
+
+    /*
+      에뮬레이터로 돌리기 — `NEXT_PUBLIC_USE_EMULATOR=1`일 때만.
+
+      쿠폰·포인트 사용은 마지막 한 걸음이 서버 쓰기라, 그것을 밟지 않으면
+      규칙이 무엇을 통과시키는지 확인할 수 없다. 그렇다고 운영 데이터베이스에
+      시험 기록을 남길 수는 없다 — 정산에 그대로 섞인다.
+
+      켤 자리를 코드에 두는 이유는 .env.local이 저장소에 없어서다(외장하드를
+      따라다닌다). 환경변수 하나로 갈리게 해두면 자리를 옮겨도 같은 방법으로
+      켠다. **운영 빌드에서 이 값이 켜지면 앱이 빈 서버를 보게 되므로**,
+      개발 서버에서만 쓴다.
+
+      포트는 firebase.json의 emulators와 같아야 한다.
+    */
+    if (process.env.NEXT_PUBLIC_USE_EMULATOR === '1') {
+      connectFirestoreEmulator(db, '127.0.0.1', 8681)
+      connectAuthEmulator(auth, 'http://127.0.0.1:9399', { disableWarnings: true })
+      console.log('🧪 에뮬레이터에 붙었습니다 — 이 화면의 기록은 운영에 남지 않습니다')
+    }
 
     console.log('✅ Firebase 초기화 완료 (Auth · Firestore · Storage)')
   } catch (error) {

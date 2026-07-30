@@ -4,18 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
+    "dev:emulator": "node scripts/dev-emulator.mjs",
     "build": "node scripts/update-sw-version.js && npm run check:forbidden && next build",
     "start": "next start",
     "lint": "next lint",
     "check:forbidden": "node scripts/check-forbidden.js",
     "check:settlement": "node scripts/check-settlement.mjs",
     "test:rules": "node scripts/run-rules-test.mjs",
+    "seed:emulator": "node scripts/seed-emulator.mjs",
     "update-sw-version": "node scripts/update-sw-version.js",
     "gen:audio": "node scripts/generate-audio.mjs",
     "script:check": "node scripts/script.mjs apply --dry-run",
     "script:apply": "node scripts/script.mjs apply && node scripts/check-forbidden.js",
     "script:dump": "node scripts/script.mjs dump",
-    "script:bake": "npm run script:apply && node scripts/generate-audio.mjs && node scripts/fix-durations.mjs && node scripts/update-sw-version.js"
+    "script:bake": "npm run script:apply && node scripts/generate-audio.mjs && node scripts/fix-durations.mjs && node scripts/update-sw-version.js",
+    "check:redeem": "node scripts/check-redeem.mjs"
   },
   "dependencies": {
     "canvas": "^3.1.2",

@@ -623,6 +623,69 @@ export async function setShopActive(shopId: string, active: boolean): Promise<vo
 }
 
 /**
+ * 빠진 칸만 채운다 — 「가게 문서 보수」.
+ *
+ * 시드된 문서에 `accepts`·`groupCoupons`가 없어 그룹·뽑기 쿠폰이 교환
+ * 시점에 거절되고, 등급 칸이 없어 정산이 신규로 읽던 것을 한 번에 잇는다.
+ *
+ * **있는 값은 건드리지 않는다.** 다시 심기(seedShops)는 문서를 세우는
+ * 도구라 등급과 가입일을 되돌릴 수 있고, 무엇보다 관리자가 shops.json을
+ * 찾아 붙여넣어야 한다 — 그 파일은 외장하드를 따라다녀서 자리를 옮기면
+ * 없다. 여기서는 이미 서버에 있는 문서를 보고 빈 칸만 메운다.
+ *
+ * 카탈로그가 말해줄 수 있는 것만 채운다. 스티커 토큰은 만들지 않는다 —
+ * 없다면 인쇄물과 짝이 맞지 않는다는 뜻이고, 새로 만들면 이미 붙어 있는
+ * 스티커가 죽는다.
+ */
+export async function repairShops(
+  cfg: SettlementConfig = DEFAULT_SETTLEMENT
+): Promise<{ fixed: string[]; noToken: string[] }> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+
+  const fixed: string[] = []
+  const noToken: string[] = []
+
+  for (const shop of await fetchAllShops()) {
+    const patch: Record<string, unknown> = {}
+
+    // 그 가게에서 더 받는 쿠폰 — 카탈로그가 shopId로 가리키는 것들
+    const accepts = Object.values(COUPONS)
+      .filter((c) => c.scope === 'shop' && c.shopId === shop.shopId && c.id !== shop.couponId)
+      .map((c) => c.id)
+    if (accepts.length && !(shop.accepts ?? []).length) patch.accepts = accepts
+
+    // 공용 할인권 — 그 가게가 든 무리의 것
+    if (shop.group) {
+      const groupCoupons = Object.values(COUPONS)
+        .filter((c) => c.scope === 'group' && c.group === shop.group)
+        .map((c) => c.id)
+      if (groupCoupons.length && !(shop.groupCoupons ?? []).length) {
+        patch.groupCoupons = groupCoupons
+      }
+    }
+
+    if (!shop.tier) {
+      const now = Date.now()
+      patch.tier = 'free'
+      patch.coverageRate = cfg.coverage.free
+      patch.monthlyCapWon = cfg.monthlyCap.free
+      patch.monthlyFeeWon = cfg.monthlyFee.free
+      patch.contract = shop.contract ?? 'active'
+      patch.joinedAt = shop.joinedAt ?? Timestamp.fromMillis(now)
+      patch.rateSince = shop.rateSince ?? Timestamp.fromMillis(now)
+    }
+
+    if (!shop.postToken) noToken.push(`${shop.shopId} ${shop.name ?? ''}`)
+    if (Object.keys(patch).length === 0) continue
+
+    await updateDoc(doc(db, 'shops', shop.shopId), patch)
+    fixed.push(`${shop.shopId} — ${Object.keys(patch).join('·')}`)
+  }
+
+  return { fixed, noToken }
+}
+
+/**
  * 등급을 바꾼다 — 율·회비·상한이 함께 움직인다.
  *
  * `rateSince`를 지금으로 찍는 것이 이 함수의 핵심이다. 이 값이 없으면
