@@ -20,6 +20,7 @@ import { Mission, LocationData } from '@/lib/types'
 import Map from '@/components/Map'
 import Navigation from '@/components/Navigation'
 import { useTourState } from '@/hooks/useTourState'
+import { ALL_CELLS } from '@/lib/bingoCells'
 import { dispatchQr, unlockAudio } from '@/lib/cueEngine'
 import { Station, missionsForTrack, stationByTrack, TRACK_STATIONS } from '@/lib/tracks'
 
@@ -27,6 +28,8 @@ export default function GuideMapPage() {
   const router = useRouter()
   const [userLocation, setUserLocation] = useState<LocationData | null>(null)
   const [selected, setSelected] = useState<Station | null>(null)
+  /** 보너스 미션 목록 펼침 — 다섯 소원을 다 이룬 뒤에만 쓰인다 */
+  const [showBonus, setShowBonus] = useState(false)
   const tour = useTourState()
 
   useEffect(() => {
@@ -61,6 +64,9 @@ export default function GuideMapPage() {
   const handleMissionSelect = (mission: Mission) => {
     setSelected(TRACK_STATIONS.find((s) => mission.title.includes(s.name)) ?? null)
   }
+
+  /** 오늘 문 닫은 가게의 칸 — 빙고판이 채워 둔 값을 그대로 쓴다 */
+  const closedCells = tour.bingo.closedCells ?? []
 
   const done = selected ? tour.tracksCompleted.includes(selected.track) : false
   /** 잠금 — 다음 차례이거나 이미 다녀온 곳만 연다 */
@@ -115,11 +121,67 @@ export default function GuideMapPage() {
           />
         </div>
 
+        {/*
+          보너스 미션 — 다섯 소원을 다 이룬 뒤에만 보인다.
+
+          1막을 걷는 동안 이것까지 지도에 얹으면 다음에 갈 곳이 흐려진다.
+          다섯을 끝내면 그때부터는 골목을 돌아다니는 놀이라 함께 보여준다.
+
+          아직 **핀으로 찍지는 않는다** — 칸마다 좌표가 없다. 어느 가게에
+          걸렸는지는 관리자가 이어두므로, 여기서는 그 가게 이름과 함께
+          목록으로 보여주고 좌표가 생기면 핀으로 옮긴다.
+        */}
+        {tour.tracksCompleted.length >= 5 && (
+          <div className="card-paper mt-4 p-4 shadow-lg">
+            <button
+              onClick={() => setShowBonus((v) => !v)}
+              className="flex w-full items-center gap-2 text-left"
+            >
+              <span className="text-[13.5px] font-bold text-ink">🎯 보너스 미션</span>
+              <span className="text-[11.5px] text-ink-60">
+                골목 빙고 {tour.bingo.cellsDone.length}칸 채움
+              </span>
+              <span className="grow" />
+              <span className="font-mono-retro text-[11px] text-teal">
+                {showBonus ? '접기 ▲' : '펼치기 ▼'}
+              </span>
+            </button>
+
+            {showBonus && (
+              <div className="mt-3 space-y-1.5">
+                {ALL_CELLS.filter((c) => !closedCells.includes(c.id)).map((c) => {
+                  const done = tour.bingo.cellsDone.includes(c.id)
+                  return (
+                    <div
+                      key={c.id}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[12.5px] ${
+                        done
+                          ? 'border-teal/40 bg-teal/5 text-ink-60'
+                          : 'border-line bg-cream-base text-ink'
+                      }`}
+                    >
+                      <span>{c.emoji}</span>
+                      <span className="grow">{c.title}</span>
+                      {done && <span className="text-[11px] text-teal">채움</span>}
+                    </div>
+                  )
+                })}
+                <button
+                  onClick={() => router.push('/treasure')}
+                  className="btn-teal mt-2 w-full text-center text-[13px]"
+                >
+                  🎟 빙고판에서 채우기
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {selected && (
           <div className="story-card mt-4 px-3 py-3">
             <div className="flex items-center gap-2">
               <span className="font-mono-retro text-[9px] text-rec">
-                A{selected.track} · STATION
+                {selected.track}번 거점 · STATION
               </span>
               {done && (
                 <span className="rounded bg-teal/15 px-1.5 py-0.5 text-[10px] text-teal">

@@ -202,7 +202,7 @@ export const CUES: Record<CueId, Cue> = {
     audioFile: 'b0_tape',
     // 실제 파일 길이 57.4초 — 줄별로 구워 이어붙인 값이다.
     // 자막은 오디오 타임라인에 맞춰 넘어가므로 이 값이 어긋나면 자막이 밀린다.
-    durationSec: 59,
+    durationSec: 61,
     subtitleLines: [
       { text: '…잘 돌아가나, 이거. 흠..' },
       { text: '아빠다.<br>곧 나온다더라. 이름은 정해놨다.' },
@@ -233,7 +233,7 @@ export const CUES: Record<CueId, Cue> = {
     audioFile: 'b0_call',
     // 기존 준비 음성(개정본)을 첫 통화 번들로 활용
     audioAliases: ['intro-soyoung'],
-    durationSec: 79,
+    durationSec: 96,
     subtitleLines: [
       { text: '여보세요? 아, 혹시 메모를 보시고 연락 주셨나요?' },
       { text: '갑자기 이상한 부탁이라 놀라셨죠.<br>저는 강소영이라고 해요.' },
@@ -342,7 +342,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'action_event', ref: 'M1_photo_done' },
     audioFile: 'b1_b',
-    durationSec: 21,
+    durationSec: 22,
     subtitleLines: [
       { text: '…아버지가 그런 말을 했다고요?<br>상상이 안 돼요, 진짜.' },
       { text: "저한텐 평생 '밥 먹었나' 라는 말밖에 안 하셨는데." },
@@ -363,7 +363,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'user_tap', ref: 'SPEECH_YES' },
     audioFile: 'b1_yes',
-    durationSec: 15,
+    durationSec: 12,
     subtitleLines: [
       { text: '…고마워. 이제 말 놓을게.' },
       { text: '첫 번째, 방금 같이 이뤘어. 진짜 고마워.' },
@@ -390,7 +390,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'user_tap', ref: 'SPEECH_NO' },
     audioFile: 'b1_no',
-    durationSec: 23,
+    durationSec: 19,
     subtitleLines: [
       { text: '아… 네. 그럴 수도 있죠, 갑자기 그러면.' },
       { text: '그래도 친구가 되어주면 좋겠는데.<br>…말 편하게 하자. 응?' },
@@ -422,7 +422,7 @@ export const CUES: Record<CueId, Cue> = {
     trigger: { type: 'auto_chain', ref: 'B1_YES' },
     audioFile: 'b1_walk',
     // 아직 굽지 않았다 — 구우면 fix-durations.mjs가 실제 길이로 다시 적는다
-    durationSec: 32,
+    durationSec: 38,
     subtitleLines: [
       { text: '조금 가다 보면 큰 나무가 하나 있을 거야.' },
       { text: '나 어릴 때 저기서 살다시피 했어.<br>여름이면 그 그늘이 동네에서 제일 시원했거든.' },
@@ -443,7 +443,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'qr', ref: 't2' },
     audioFile: 'b2_a',
-    durationSec: 43,
+    durationSec: 35,
     subtitleLines: [
       { text: '…아직도 있구나, 그 가게.<br>두 번째 소원이 목욕탕에서 서로 등 밀어주기잖아.' },
       { text: '아들인 줄 알고 정해둔 소원이었는데, 태어난 건 딸이라…<br>결국 한 번도 같이 못 갔대.' },
@@ -463,7 +463,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'action_event', ref: 'M2_photo_done' },
     audioFile: 'b2_b',
-    durationSec: 28,
+    durationSec: 34,
     subtitleLines: [
       { text: '사진 봤어. 그 단지우유<br> 백자 달항아리 모양을 따라 만든거라던데, 하나도 안 변했네.' },
       { text: '아빠는 나에게 말로 사랑한다고 한 적이 없어.<br>근데 이런 걸로 다 표현 했던 거였네.' },
@@ -486,7 +486,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'qr', ref: 't3' },
     audioFile: 'b3_a',
-    durationSec: 29,
+    durationSec: 31,
     subtitleLines: [
       { text: '능소화야. 아빠가 세상에서 제일 좋아하던 꽃.' },
       { text: "꽃말이 뭔 줄 알아?<br>'영원한 사랑', 그리고 '잊지 않겠다는 약속'이래." },
@@ -506,7 +506,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'action_event', ref: 'M3_photo_done' },
     audioFile: 'b3_b',
-    durationSec: 42,
+    durationSec: 35,
     subtitleLines: [
       { text: '…와, 예쁘다. 진짜 피었네.' },
       { text: '아빠, 봤어요? 우리가 여기서 사진 찍었어요.<br>늦었지만… 약속 지켰어요.' },
@@ -547,7 +547,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: 'young',
     trigger: { type: 'user_tap', ref: 'RESUME' },
     audioFile: 'b4_radio',
-    durationSec: 39,
+    durationSec: 43,
     subtitleLines: [
       { text: '다음은... 오늘도 사연을 보내주셨네요.' },
       { text: '…딸아이가 여섯 살입니다.<br>아들을 바랐는데, 딸이 나왔네요.<br> 그래도 세상에서 제일 예쁜 아이입니다.' },
@@ -568,7 +568,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'auto_chain', ref: 'B4_RADIO' },
     audioFile: 'b4_b',
-    durationSec: 26,
+    durationSec: 24,
     subtitleLines: [
       { text: '…네 번째 소원, 방금 이뤘다.<br>같이 들었으니까. 삼십팔 년 걸렸네.' },
       { text: '나는 아직 얼굴 보고는 못 들었는데.' },
@@ -589,7 +589,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'action_event', ref: 'M4_done' },
     audioFile: 'b4_c',
-    durationSec: 14,
+    durationSec: 13,
     subtitleLines: [
       { text: '자, 이제 마지막이야. 나온 골목에서 왼쪽으로 조금만 더 가면<br>방하림이라는 가게가 있어.' },
       { text: '마지막 소원이 왜 가족오락관인지는 나도 몰라.<br>아빠가 그 프로를 좋아하긴 했는데.' },
@@ -660,7 +660,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'auto_chain', ref: 'B5_T2' },
     audioFile: 'b5_t3',
-    durationSec: 15,
+    durationSec: 17,
     subtitleLines: [
       { text: '…내가 올 줄 알고 있었어.<br>나는 십구 년 동안 한 번도 안 내려왔는데.' },
       { text: '내가 내려온다는 걸 듣고, 아픈 다리로 미리 준비해 놨던 거야.' },
@@ -680,7 +680,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: 'old',
     trigger: { type: 'user_tap', ref: 'BSIDE' },
     audioFile: 'b5_letter',
-    durationSec: 42,
+    durationSec: 40,
     subtitleLines: [
       { text: '뭔가 내용이 있는거 같다고? …그래 같이 듣자.' },
       { text: '소영아. 이 테이프 뒷면… 네가 찾았구나.<br>다섯 가지 소원, 다 이뤘니?' },
@@ -701,7 +701,7 @@ export const CUES: Record<CueId, Cue> = {
     voiceAge: null,
     trigger: { type: 'auto_chain', ref: 'B5_LETTER' },
     audioFile: 'b5_f',
-    durationSec: 26,
+    durationSec: 31,
     subtitleLines: [
       { text: '…지금까지 네 개 이뤘어요, 아빠.<br>마지막 하나는 남겨둘게요. 그건 아빠 거니까.' },
       { text: '…야. 진짜 고마워.<br>네가 같이 걸어줘서, 여기까지 왔어.<br>나 혼자였으면 첫 골목에서 돌아갔을 거야.' },
