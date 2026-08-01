@@ -347,6 +347,8 @@ function elapsedAtSubtitle(cue: Cue, index: number, duration: number): number {
 // -----------------------------------------------------------------------------
 
 function clearResources() {
+  // 뜸을 기다리던 타이머가 남아 있으면 다음 큐를 멈춰 세운다
+  clearPause()
   if (audio) {
     /*
       멈추기만 하고 요소는 남긴다. src를 비우거나 버리면 다음 큐에서 다시
@@ -371,11 +373,51 @@ export function cancelPendingChain() {
   if (state.pendingAutoChain) emit({ pendingAutoChain: null })
 }
 
+/**
+ * 뜸 — 줄과 줄 사이에서 잠깐 멈춘다.
+ *
+ * 음원에 무음을 굽지 않는다. 구워 넣으면 뜸을 고칠 때마다 그 줄을 다시
+ * 굽고 자막 시각을 통째로 다시 재야 한다. 여기서는 재생만 멈췄다 잇는다 —
+ * `pauseSec` 값만 바꾸면 끝이고, 음원은 그대로다.
+ *
+ * 이미 쉰 자리를 기억해 두는 것은 되감기·다시듣기 때문이다. 기억하지
+ * 않으면 그 지점을 지날 때마다 또 멈춰 선다.
+ */
+let pausedAt: Set<number> = new Set()
+let pauseTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearPause() {
+  if (pauseTimer) clearTimeout(pauseTimer)
+  pauseTimer = null
+  pausedAt = new Set()
+}
+
 function tick(cue: Cue, elapsed: number, duration: number) {
+  const index = subtitleIndexAt(cue, elapsed, duration)
+
+  /*
+    줄이 넘어가는 순간, **앞 줄**에 뜸이 걸려 있으면 거기서 멈춘다.
+    넘어간 뒤에 멈춰야 앞 문장을 끝까지 들려주고 쉬는 것이 된다.
+  */
+  const prev = index - 1
+  const wait = prev >= 0 ? cue.subtitleLines[prev]?.pauseSec ?? 0 : 0
+  if (wait > 0 && !pausedAt.has(prev) && audio && !audio.paused) {
+    pausedAt.add(prev)
+    const el = audio
+    el.pause()
+    emit({ playing: false })
+    pauseTimer = setTimeout(() => {
+      pauseTimer = null
+      // 그 사이 다른 큐로 넘어갔으면 되살리지 않는다
+      if (audio !== el || state.ended) return
+      void el.play().then(() => emit({ playing: true })).catch(() => {})
+    }, wait * 1000)
+  }
+
   emit({
     elapsed,
     duration,
-    subtitleIndex: subtitleIndexAt(cue, elapsed, duration),
+    subtitleIndex: index,
     skippable: true,
   })
   if (elapsed >= duration) finishCue(cue)
@@ -488,6 +530,8 @@ export async function playCue(id: CueId): Promise<void> {
 }
 
 export function pauseCue() {
+  // 사람이 멈췄으면 뜸 타이머가 제멋대로 되살리면 안 된다
+  if (pauseTimer) { clearTimeout(pauseTimer); pauseTimer = null }
   if (!state.playing) return
   if (audio) {
     audio.pause()

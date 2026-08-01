@@ -85,7 +85,17 @@ function parseDoc(text: string): Doc | null {
   chunks.forEach((chunk, i) => {
     if (i === 0) return
     const rows: string[] = chunk.replace(/\s+$/, '').split('\n')
-    const title = rows[0].trim()
+    /*
+      제목의 거점 번호를 큐와 같은 글자로 맞춘다.
+
+      한동안 제목은 `A4 카페 탱자`, 큐는 `B4_A`였다. 같은 거점을 두 글자로
+      부르니 어느 쪽이 맞는지 매번 세어봐야 했다. 큐 id는 음성 파일 이름과
+      저장된 진행 기록에 박혀 있어 못 바꾸므로, 제목을 그쪽에 맞춘다.
+
+      읽을 때 고쳐두면 저장할 때 그대로 따라간다 — 서버에 있는 옛 제목도
+      한 번 열었다 저장하면 스스로 맞춰진다.
+    */
+    const title = rows[0].trim().replace(/^A(\d)/, 'B$1')
 
     const metaAt = rows.findIndex((r: string) => META.test(r.trim()))
     if (metaAt < 0) {
