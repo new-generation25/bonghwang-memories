@@ -37,6 +37,7 @@ import {
   localPointTotal,
 } from '@/lib/points'
 import { logEvent } from '@/lib/analytics'
+import { closedCellsNow, fetchShopHours } from '@/lib/shops'
 
 /** 자리 바꾸기 값 — 하루 한 번은 공짜, 그 뒤로는 이만큼 */
 const SHUFFLE_COST = 300
@@ -121,6 +122,50 @@ export default function BingoPage() {
     // cellsDone은 로그에 칸 수를 실으려고 읽는다. 줄 수가 늘 때만 안이
     // 도므로 칸이 하나 열릴 때마다 다시 불려도 하는 일이 없다.
   }, [lines, tour.bingo.lines, tour.bingo.cellsDone, tour.bingo.layout])
+
+  /*
+    오늘 문 닫은 가게의 칸을 판에서 내린다.
+
+    참여자에게는 아무 말도 하지 않는다 — 그 칸이 조용히 다른 미션으로 바뀌어
+    있을 뿐이다. 가게 사정을 화면에 적으면 그 가게가 나쁜 곳처럼 읽힌다.
+
+    이미 채운 칸은 내리지 않는다(reshuffleLayout이 지킨다). 한 일을 판에서
+    지우면 진행도가 거꾸로 간다.
+
+    한 번만 돈다 — 걷는 중에 시각이 지나 가게가 닫혀도 판을 다시 깔지 않는다.
+    눈앞에서 칸이 바뀌면 무슨 일이 난 줄 안다.
+  */
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const entries = await fetchShopHours()
+      if (cancelled || entries.length === 0) return
+      const closed = closedCellsNow(entries)
+      const base = tour.bingo.layout ?? defaultLayout()
+      const onBoard = closed.filter(
+        (id) => base.includes(id) && !tour.bingo.cellsDone.includes(id)
+      )
+      if (onBoard.length === 0) return
+      mutateTour((prev) => ({
+        bingo: {
+          ...prev.bingo,
+          closedCells: closed,
+          layout: reshuffleLayout(
+            prev.bingo.layout ?? defaultLayout(),
+            prev.bingo.cellsDone,
+            closed
+          ),
+          shuffles: [...(prev.bingo.shuffles ?? []), { at: Date.now(), why: 'closed' as const }],
+        },
+      }))
+      logEvent('board_shuffled', { cost: 0, closed: onBoard.length })
+    })()
+    return () => {
+      cancelled = true
+    }
+    // 판을 여는 순간 한 번만 본다 — 아래 값들은 그 안에서 최신을 읽는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 받은 이용권 알림은 잠깐만 — 판을 가리지 않는다
   useEffect(() => {

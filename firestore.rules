@@ -160,6 +160,22 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    /*
+      오늘 어느 보너스 칸이 열리는가 — 참여자 기기가 읽어야 하는 값.
+
+      shops 문서는 참여자에게 닫혀 있다(postToken이 샌다). 그래서 **가게를
+      가리키는 것 없이** 칸 id와 시간만 추려 여기 게시한다. 어느 가게가 왜
+      쉬는지는 담지 않는다 — 참여자에게 가게 사정을 말하지 않는다는 원칙과
+      같은 이유이고, 담을 필요도 없다.
+
+      날짜를 굽어 넣지 않고 요일·시각을 그대로 둔다. 그래야 기기가 '오늘'을
+      스스로 판단하고, 하루가 지나도 낡지 않는다.
+    */
+    match /config/shopHours {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
 
     // ───────── 게시글 ─────────
     match /posts/{postId} {

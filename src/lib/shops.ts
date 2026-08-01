@@ -39,7 +39,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { logEvent } from './analytics'
-import { db } from './firebase'
+import { db, isFirebaseReady } from './firebase'
 import { COUPONS, parseCouponCode, parsePointCode } from './coupons'
 import {
   DEFAULT_SETTLEMENT,
@@ -780,6 +780,103 @@ export async function setShopCap(shopId: string, capWon: number): Promise<void> 
   await updateDoc(doc(db, 'shops', shopId), {
     monthlyCapWon: Math.max(0, Math.round(capWon)),
   })
+}
+
+/**
+ * 영업 정보와 보너스 칸 매칭을 넣는다.
+ *
+ * 배포 없이 바뀌어야 하는 값이다 — 가게 사정은 협의로 움직이고, 휴무는
+ * 그날 아침에 정해지기도 한다. 관리자 화면에서 고친다.
+ */
+export async function setShopHours(
+  shopId: string,
+  hours: {
+    closedDays?: number[]
+    closedDates?: string[]
+    openTime?: string
+    closeTime?: string
+    bonusCells?: string[]
+  }
+): Promise<void> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+  const patch: Record<string, unknown> = {}
+  if (hours.closedDays) patch.closedDays = hours.closedDays.filter((d) => d >= 0 && d <= 6)
+  if (hours.closedDates) patch.closedDates = hours.closedDates.filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s))
+  if (hours.openTime !== undefined) patch.openTime = hours.openTime
+  if (hours.closeTime !== undefined) patch.closeTime = hours.closeTime
+  if (hours.bonusCells) patch.bonusCells = hours.bonusCells
+  await updateDoc(doc(db, 'shops', shopId), patch)
+}
+
+/**
+ * 참여자 기기가 읽을 수 있게 영업 정보를 게시한다.
+ *
+ * `shops`는 참여자에게 닫혀 있다 — 읽히면 스티커 토큰이 샌다. 그래서 **가게를
+ * 가리키는 것 없이** 칸 id와 시간만 추려 `config/shopHours`에 올린다.
+ *
+ * 요일·시각을 그대로 둔다. 날짜를 굽어 넣으면 하루만 지나도 낡는데,
+ * 요일이면 기기가 '오늘'을 스스로 판단한다.
+ */
+export async function publishShopHours(shops: Shop[]): Promise<void> {
+  if (!db) throw new Error('서버에 닿지 못했습니다.')
+  const entries = shops
+    .filter((s) => (s.bonusCells?.length ?? 0) > 0)
+    .map((s) => ({
+      cells: s.bonusCells ?? [],
+      closedDays: s.closedDays ?? [],
+      closedDates: s.closedDates ?? [],
+      openTime: s.openTime ?? '',
+      closeTime: s.closeTime ?? '',
+      active: s.active !== false,
+    }))
+  await setDoc(doc(db, 'config', 'shopHours'), { entries, at: serverTimestamp() })
+}
+
+/** 게시된 영업 정보 — 참여자 기기가 읽는다 */
+export interface PublicHours {
+  cells: string[]
+  closedDays: number[]
+  closedDates: string[]
+  openTime: string
+  closeTime: string
+  active: boolean
+}
+
+export async function fetchShopHours(): Promise<PublicHours[]> {
+  if (!isFirebaseReady() || !db) return []
+  try {
+    const snap = await getDoc(doc(db, 'config', 'shopHours'))
+    const data = snap.data() as { entries?: PublicHours[] } | undefined
+    return data?.entries ?? []
+  } catch {
+    // 못 읽으면 전부 열린 것으로 본다 — 판을 비우는 것보다 낫다
+    return []
+  }
+}
+
+/**
+ * 오늘 이 시각에 닫혀 있는 칸들.
+ *
+ * `isOpenNow`와 같은 판단을 게시본에 대고 한다. 두 곳에 있는 것이 마음에
+ * 걸리지만, 한쪽은 가게 문서(관리자)이고 한쪽은 칸 목록(참여자)이라 다루는
+ * 것이 다르다 — 규칙이 그렇게 갈라놓았다.
+ */
+export function closedCellsNow(entries: PublicHours[], now = new Date()): string[] {
+  const shaped: Shop[] = entries.map((e) => ({
+    shopId: '',
+    name: '',
+    couponId: '',
+    benefit: '',
+    unitWon: 0,
+    staffUids: [],
+    active: e.active,
+    closedDays: e.closedDays,
+    closedDates: e.closedDates,
+    openTime: e.openTime || undefined,
+    closeTime: e.closeTime || undefined,
+    bonusCells: e.cells,
+  }))
+  return closedBonusCells(shaped, now)
 }
 
 export async function removeShopStaff(shopId: string, uid: string): Promise<void> {

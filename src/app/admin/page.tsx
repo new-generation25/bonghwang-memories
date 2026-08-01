@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { BINGO_CELLS } from '@/lib/bingoCells'
+import { ALL_CELLS, BINGO_CELLS } from '@/lib/bingoCells'
 import { REASON_LABEL, PointReason } from '@/lib/points'
 import { DEFAULT_SURVEY } from '@/lib/survey'
 import { COUPONS, couponSpec } from '@/lib/coupons'
@@ -23,6 +23,7 @@ import {
   fetchAllShops,
   setShopActive,
   setShopCap,
+  setShopHours,
   setShopContract,
   repairShops,
   setShopTier,
@@ -845,6 +846,34 @@ export default function AdminPage() {
         </div>
       </Section>
 
+      {/*
+        ───── 영업일 · 보너스 미션 ─────
+
+        현장에서 체험이 끊기는 자리가 여기다. 보너스 미션이 걸린 가게가 문을
+        닫았는데 화면이 그대로 시키면 참여자는 닫힌 문 앞에서 멈춘다. 미리
+        넣어두면 그날 그 칸이 판에서 조용히 빠지고 다른 미션이 들어온다.
+
+        가게 표에 칸을 더 붙이지 않고 따로 세운 이유 — 그 표는 정산을 보는
+        자리고 이건 운영을 넣는 자리다. 보는 사람도 고치는 때도 다르다.
+      */}
+      <Section title="영업일 · 보너스 미션" hint="휴무면 그날 그 칸이 판에서 빠집니다">
+        {shops.length === 0 ? (
+          <Empty>가게를 먼저 등록하세요.</Empty>
+        ) : (
+          <div className="space-y-3">
+            {shops.map((s) => (
+              <ShopHoursRow key={s.shopId} shop={s} onSaved={loadShops} />
+            ))}
+          </div>
+        )}
+        <p className="mt-3 text-[11px] leading-relaxed text-ink-60">
+          비워두면 <b className="text-ink">늘 여는 것으로</b> 봅니다 — 정보가 없다고
+          미션을 내리면 아직 시간을 안 넣은 가게가 통째로 사라집니다.
+          참여자에게는 가게 사정을 말하지 않습니다. 그 칸이 조용히 다른 미션으로
+          바뀌어 있을 뿐입니다.
+        </p>
+      </Section>
+
       {/* ───── 골목 가게 정산 ───── */}
       <Section
         title="골목 가게 정산"
@@ -1444,6 +1473,120 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-line bg-paper p-3">
       <p className="text-[10.5px] text-ink-60">{label}</p>
       <p className="mt-0.5 font-display text-[15px] text-ink">{value}</p>
+    </div>
+  )
+}
+
+/** 요일 표기 — 0(일)부터 */
+const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
+
+/**
+ * 한 가게의 영업일·시각·보너스 칸.
+ *
+ * 저장은 「저장」을 눌러야 간다. 요일 체크 하나에 한 번씩 서버로 보내면
+ * 다섯 개를 고치는 동안 다섯 번 쓰고, 중간 상태가 그대로 남는다.
+ */
+function ShopHoursRow({ shop, onSaved }: { shop: Shop; onSaved: () => void }) {
+  const [days, setDays] = useState<number[]>(shop.closedDays ?? [])
+  const [openTime, setOpenTime] = useState(shop.openTime ?? '')
+  const [closeTime, setCloseTime] = useState(shop.closeTime ?? '')
+  const [cells, setCells] = useState<string[]>(shop.bonusCells ?? [])
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+
+  const dirty =
+    JSON.stringify(days) !== JSON.stringify(shop.closedDays ?? []) ||
+    openTime !== (shop.openTime ?? '') ||
+    closeTime !== (shop.closeTime ?? '') ||
+    JSON.stringify(cells) !== JSON.stringify(shop.bonusCells ?? [])
+
+  const save = async () => {
+    setBusy(true)
+    setNote('')
+    try {
+      await setShopHours(shop.shopId, {
+        closedDays: days,
+        openTime,
+        closeTime,
+        bonusCells: cells,
+      })
+      setNote('저장됨')
+      onSaved()
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : '저장하지 못했습니다.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-line bg-cream px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        <span className="text-[12.5px] font-bold text-ink">{shop.name}</span>
+        <span className="grow" />
+        {note && <span className="font-mono-retro text-[10.5px] text-teal">{note}</span>}
+        <button
+          onClick={save}
+          disabled={busy || !dirty}
+          className="rounded border border-teal px-2 py-0.5 text-[11px] text-teal disabled:opacity-30"
+        >
+          {busy ? '저장 중…' : '저장'}
+        </button>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1">
+        <span className="mr-1 font-mono-retro text-[10px] text-ink-60">쉬는 날</span>
+        {DAY_LABELS.map((label, d) => (
+          <button
+            key={d}
+            onClick={() =>
+              setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]))
+            }
+            className={`h-6 w-6 rounded text-[11px] ${
+              days.includes(d) ? 'bg-rec text-cream' : 'border border-line text-ink-60'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+        <span className="ml-2 font-mono-retro text-[10px] text-ink-60">영업</span>
+        <input
+          value={openTime}
+          onChange={(e) => setOpenTime(e.target.value)}
+          placeholder="11:00"
+          className="w-[62px] rounded border border-line bg-paper px-1.5 py-0.5 text-center font-mono-retro text-[11px] text-ink"
+        />
+        <span className="text-[11px] text-ink-60">~</span>
+        <input
+          value={closeTime}
+          onChange={(e) => setCloseTime(e.target.value)}
+          placeholder="21:00"
+          className="w-[62px] rounded border border-line bg-paper px-1.5 py-0.5 text-center font-mono-retro text-[11px] text-ink"
+        />
+      </div>
+
+      <div className="mt-2">
+        <span className="font-mono-retro text-[10px] text-ink-60">이 가게의 보너스 칸</span>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {ALL_CELLS.map((c) => (
+            <button
+              key={c.id}
+              onClick={() =>
+                setCells((prev) =>
+                  prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]
+                )
+              }
+              className={`rounded px-1.5 py-0.5 text-[10.5px] ${
+                cells.includes(c.id)
+                  ? 'bg-teal text-cream'
+                  : 'border border-line text-ink-60'
+              }`}
+            >
+              {c.emoji} {c.title}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
