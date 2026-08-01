@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import BrowserNotice from '@/components/BrowserNotice'
 import PointToast from '@/components/PointToast'
 import VersionGate from '@/components/VersionGate'
 import SuperAdminBar from '@/components/SuperAdminBar'
@@ -309,6 +310,8 @@ export default function RootLayout({
           {children}
           <PointToast />
           <VersionGate />
+          {/* 앱 안 브라우저 경고 · 홈 화면 추가 — 어느 화면으로 들어와도 뜬다 */}
+          <BrowserNotice />
           {/* 켜져 있을 때만 그려진다 — 참여자에게는 존재하지 않는 것과 같다 */}
           <SuperAdminBar />
         </AuthProvider>
