@@ -19,6 +19,7 @@ import AuthModal from '@/components/AuthModal'
 import CouponCard from '@/components/CouponCard'
 import JCard from '@/components/JCard'
 import SettingsSheet from '@/components/SettingsSheet'
+import SurveyLink from '@/components/SurveyLink'
 import GachaSheet from '@/components/GachaSheet'
 import { couponSpec } from '@/lib/coupons'
 import { gachaSeed, prizesOf, type GachaPrize } from '@/lib/gacha'
@@ -130,6 +131,19 @@ export default function MyRecordPage() {
       <div className="mx-auto max-w-md px-4 py-5">
         {/* 포인트 — 이 화면의 주인공 */}
         <MyPoints />
+
+        {/*
+          완주했는데 아직 설문에 안 답했으면 여기서 한 번 더 권한다.
+
+          7/30 현장에서 세 팀이 완주했는데 응답이 0건이었다. 안내는 피날레에만
+          있었고, 그 화면은 여운을 보는 자리라 한 번 지나가면 다시 만날 일이
+          없다. 「나의 기록」은 걷고 나서 돌아오는 자리다 — 포인트 바로 아래에
+          두면 200P가 눈에 보이는 채로 읽힌다.
+
+          이미 답했으면 SurveyLink가 감사 문구로 바뀐다. 무시하는 법을
+          배우게 만들지 않는다.
+        */}
+        {tour.phase === 'done' && <SurveyLink />}
 
         {/* 로그인 안내 — 기록이 이 기기에만 있다는 사실을 알린다 */}
         {!profile && !authLoading && (
