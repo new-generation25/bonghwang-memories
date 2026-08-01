@@ -44,13 +44,15 @@ export default function PlayerHomePage() {
   const progress = (completedCount / 5) * 100
 
   /*
-    아직 이루지 않은 소원들 — QR 게이트가 받아주는 거점.
-    순서를 강제하지 않는다. 어느 거점 QR을 찍어도 그 미션이 열린다 —
+    QR 게이트는 **다섯 거점을 모두** 받는다.
+
+    순서를 강제하지 않는다 — 어느 거점 QR을 찍어도 그 미션이 열린다.
     골목에서는 발길이 순서를 앞지르기도 한다.
+
+    한동안 '아직 안 끝낸 거점'만 받았다. 그러면 다 이룬 뒤에는 어느 QR도
+    받지 않아, 눈앞의 종이를 찍어도 아무 일이 일어나지 않는다. 다녀온
+    거점은 도착 큐 대신 다시듣기로 간다(handleStationEnter).
   */
-  const remaining = TRACK_STATIONS.filter(
-    (s) => !tour.tracksCompleted.includes(s.track)
-  )
 
   // 접근 안내(GPS 토스트)용 권장 다음 거점 — 이야기의 순서는 여전히 이쪽이다
   const nextTrack =
@@ -73,7 +75,13 @@ export default function PlayerHomePage() {
       사용자 조작 안에서 시작되므로 iOS도 막지 않는다.
     */
     router.push(`/track/${station.track}`)
-    dispatchQr(station.id)
+    /*
+      이미 끝낸 거점이면 도착 큐를 다시 틀지 않는다.
+
+      다시 틀면 끝낸 미션이 또 떠서, 다시 듣기가 아니라 되돌리기가 된다.
+      그 화면은 다녀온 거점에 대해 대목별 다시듣기를 내준다.
+    */
+    if (!tour.tracksCompleted.includes(station.track)) dispatchQr(station.id)
   }
 
   // pb-32 — 하단 탭바(84px)와 안전영역을 덮는 여백. 탭바를 쓰는 화면 공통값
@@ -120,7 +128,18 @@ export default function PlayerHomePage() {
       <div className="mx-auto mt-4 w-full max-w-[380px] px-4">
         <JCard />
 
-        {completedCount < 5 && (
+        {/*
+          다섯을 다 이룬 뒤에도 이 버튼을 남긴다.
+
+          예전에는 숨겼다 — 더 이룰 소원이 없으니 찍을 QR도 없다고 봤다.
+          지금은 다르다. 다녀온 거점으로 돌아가 이야기를 다시 들을 수 있고
+          (D9), 지도에서도 들어갈 수 있다. 그런데 골목에 서 있는 사람에게
+          가장 가까운 입구는 **눈앞의 QR**이다. 그것을 쓰려고 지도를 거치게
+          하면 한 단계를 더 걷게 만드는 셈이다.
+
+          하는 일이 달라졌으니 이름도 바꾼다.
+        */}
+        {(
           <div className="cta-band mt-4">
             <button
               onClick={() => setShowScanner(true)}
@@ -135,7 +154,9 @@ export default function PlayerHomePage() {
             >
               <QrIcon />
               <span className="font-display text-[15px]">
-                거점 QR 찍고 소원 이루기
+                {completedCount < 5
+                  ? '거점 QR 찍고 소원 이루기'
+                  : '거점 QR 찍고 다시 듣기'}
               </span>
             </button>
           </div>
@@ -175,9 +196,10 @@ export default function PlayerHomePage() {
         </div>
       )}
 
-      {showScanner && remaining.length > 0 && (
+      {/* 다녀온 거점도 받는다 — 그쪽은 도착 큐 대신 다시듣기로 간다 */}
+      {showScanner && (
         <QRGate
-          allowedStations={remaining.map((s) => s.id)}
+          allowedStations={TRACK_STATIONS.map((s) => s.id)}
           onSuccess={handleStationEnter}
           onClose={() => setShowScanner(false)}
         />
