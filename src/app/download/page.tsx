@@ -17,7 +17,14 @@ import { mutateTour } from '@/lib/tourState'
 import { useTourHydrated, useTourState } from '@/hooks/useTourState'
 import { logEvent } from '@/lib/analytics'
 
-const EXTENSIONS = ['m4a', 'mp3'] as const
+/**
+ * 굽는 것이 전부 mp3라 mp3를 먼저 두드린다.
+ *
+ * **`cueEngine.ts`·`sw.js`와 같은 순서여야 한다.** 세 곳이 어긋나면 한쪽은
+ * 받아둔 파일을 다른 쪽이 못 찾아 다시 받는다. 실제로 여기만 m4a가 앞에
+ * 남아 있어서, 선다운로드가 스물여덟 번을 404로 헛걸음했다.
+ */
+const EXTENSIONS = ['mp3', 'm4a'] as const
 
 /**
  * 여기까지만 받으면 시작할 수 있다 — 인트로 두 개.
@@ -47,9 +54,9 @@ function audioNames(): string[] {
 /**
  * 한 이름의 오디오를 받는다.
  *
- * m4a를 먼저 찾고 없으면 mp3를 쓴다. 예전에는 둘 다 HEAD로 물어보고
- * 다시 GET을 했는데, m4a가 하나도 없는 지금은 그 절반이 404를 맞는
- * 헛걸음이었다. 바로 받아보고 안 되면 다음 확장자로 넘어간다.
+ * 확장자를 순서대로 두드린다. 예전에는 둘 다 HEAD로 물어보고 다시 GET을
+ * 했는데, 그 절반이 404를 맞는 헛걸음이었다. 바로 받아보고 안 되면 다음
+ * 확장자로 넘어간다.
  */
 async function fetchAudio(name: string): Promise<boolean> {
   for (const ext of EXTENSIONS) {
