@@ -124,7 +124,27 @@ function parseDoc(text: string): Doc | null {
       marked.push(MARK.test(raw))
       lines.push(raw.replace(MARK, ''))
     }
-    const tail = rows.slice(lastNum + 1).join('\n').trim()
+    /*
+      마지막 줄 뒤에 남은 것 가르기.
+
+      큐 절 안에서 **번호 없는 맨 문장은 대본 형식이 허용하지 않는다** —
+      `script:apply`가 "번호가 없는 줄을 만났다"로 멈춘다. 실제로 그런 줄이
+      생겼다: 칸 안에서 엔터를 치면 뒷부분이 번호를 잃고 떨어져 나온다.
+
+      인용문(`>`)과 구분선(`---`)은 정당한 꼬리다 — 주의 문구와 절 구분이라
+      그대로 둔다. 그 밖의 맨 문장은 **앞 대사에 이어 붙인다.** 원래
+      한 줄이었던 것이 떨어진 것이므로 되돌리는 셈이다.
+    */
+    const rest = rows.slice(lastNum + 1)
+    const isTailProse = (r: string) => {
+      const v = r.trim()
+      return v !== '' && !v.startsWith('>') && !/^-{3,}$/.test(v)
+    }
+    const strays = rest.filter(isTailProse)
+    if (strays.length && lines.length) {
+      lines[lines.length - 1] = [lines[lines.length - 1], ...strays].join('<br>')
+    }
+    const tail = rest.filter((r) => !isTailProse(r)).join('\n').trim()
 
     parts.push({
       kind: 'cue',
@@ -147,7 +167,18 @@ function serialize(doc: Doc): string {
     out.push(`## ${c.title}`, '')
     if (c.prose) out.push(c.prose, '')
     out.push(`\`${c.id}\` · ${c.speaker} · \`${c.file}\``, '')
-    c.lines.forEach((t, i) => out.push(`${i + 1}. ${c.marked[i] ? '✎ ' : ''}${t}`))
+    /*
+      칸 안의 엔터는 `<br>`로 바꾼다.
+
+      대본은 "1. 내용" 한 줄이 대사 하나다. 칸에서 엔터를 치면 진짜 줄바꿈이
+      들어가고, 그 뒤쪽은 번호 없는 줄이 되어 되쓰기가 멈춘다
+      (`script:apply`가 "번호가 없는 줄을 만났다"로 떨어진다).
+
+      뜻으로도 그게 맞다 — 대사 안에서 줄을 나누는 표기가 `<br>`다.
+    */
+    c.lines.forEach((t, i) =>
+      out.push(`${i + 1}. ${c.marked[i] ? '✎ ' : ''}${t.replace(/\r?\n/g, '<br>')}`)
+    )
     out.push('')
     if (c.tail) out.push(c.tail, '')
   }
@@ -161,6 +192,9 @@ function serialize(doc: Doc): string {
  * 통째로 날아갔다. 고칠 때마다 여기에 적어두면 되돌아와서 이어갈 수 있다.
  */
 const STASH_KEY = 'bh_script_edit_stash'
+
+/** 파일을 쓰는 길은 개발에서만 열린다(`/api/debug/*`는 운영에서 404) */
+const isDev = process.env.NODE_ENV !== 'production'
 
 /**
  * D6·D6b — 빌드를 못 돌리는 자리라 눈으로 볼 수 있게 화면에서 짚는다.
@@ -460,6 +494,76 @@ export default function ScriptEditPage() {
               className="rounded-lg border border-teal px-3 py-1.5 text-[12px] text-teal disabled:opacity-40"
             >
               ↑ 서버 초안으로 올리기
+            </button>
+          )}
+
+          {/*
+            서버 → 파일로 내려받는 다리.
+
+            **여기까지 와야 자막이 바뀐다.** 서버 초안은 다듬는 자리이고,
+            앱이 보여주는 글은 cues.ts에서 온다. 그 사이를 잇는 것이
+            `docs/SCRIPT.md`이므로, 다듬은 판을 그 파일로 내려야
+            `npm run script:apply`가 받아 적을 수 있다.
+
+            저장소가 있는 자리에서만 보인다 — 파일을 쓰는 길이
+            개발에서만 열리기 때문이다.
+          */}
+          {file === SERVER && doc && isDev && (
+            <button
+              onClick={async () => {
+                if (!confirm('docs/SCRIPT.md를 지금 서버 초안으로 덮어씁니다. 계속할까요?')) return
+                setSaving(true)
+                setStatus('파일로 내려받는 중…')
+                try {
+                  /*
+                    **대본 부분만 갈아끼운다.**
+
+                    처음에는 초안을 통째로 써서 SCRIPT.md의 머리말이 날아갔다 —
+                    연표·등장인물·장소·D규칙 해설이 초안의 '검토용' 머리말로
+                    덮였다. 그 산문은 그 파일의 정체이지 초안의 것이 아니다.
+
+                    그래서 대상 파일의 `# 대본` 위쪽은 그대로 두고 아래만 바꾼다.
+                  */
+                  const cur = await fetch('/api/debug/script-file?file=SCRIPT.md')
+                  const curJson = await cur.json()
+                  if (!cur.ok) throw new Error(curJson.error ?? 'SCRIPT.md를 읽지 못했습니다')
+                  const head = (curJson.text as string).split(/^# 대본[ \t]*$/m)[0]
+                  /*
+                    확정본에는 검토 흔적을 남기지 않는다.
+
+                    `✎`는 초안에서 '여기를 고쳤다'는 표시이고, 인용문은 검토
+                    메모다. 그대로 내려보내면 ✎가 자막에 그대로 나오고(실제로
+                    참여자 화면에 26곳이 찍혔다), 인용문·구분선은 `script:apply`가
+                    "번호가 없는 줄"이라며 멈춘다.
+                  */
+                  const body = (serialize(doc).split(/^# 대본[ \t]*$/m)[1] ?? '')
+                    .split('\n')
+                    .filter((l) => !/^>\s/.test(l) && !/^-{3,}\s*$/.test(l))
+                    .join('\n')
+                    .replace(/^(\d+)\.\s*✎\s*/gm, '$1. ')
+                    .replace(/\n{3,}/g, '\n\n')
+                  const merged = `${head}# 대본\n${body}`
+
+                  const res = await fetch('/api/debug/script-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file: 'SCRIPT.md', text: merged }),
+                  })
+                  const j = await res.json()
+                  if (!res.ok) throw new Error(j.error ?? '내려받지 못했습니다')
+                  setStatus(
+                    `✅ docs/SCRIPT.md에 내려받았습니다 — 이제 \`npm run script:apply\`로 자막에 반영하고, 글자가 바뀐 줄은 \`script:bake\`로 굽습니다`
+                  )
+                } catch (e) {
+                  setStatus(`❌ ${e instanceof Error ? e.message : '내려받지 못했습니다'}`)
+                } finally {
+                  setSaving(false)
+                }
+              }}
+              disabled={saving}
+              className="rounded-lg border border-sunset px-3 py-1.5 text-[12px] text-sunset disabled:opacity-40"
+            >
+              ↓ SCRIPT.md로 내려받기
             </button>
           )}
           <button
