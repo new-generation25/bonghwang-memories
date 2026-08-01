@@ -169,7 +169,14 @@ export default function ScriptEditPage() {
   const [origin, setOrigin] = useState<Doc | null>(null)
   const [status, setStatus] = useState<string>('불러오는 중…')
   const [saving, setSaving] = useState(false)
-  const [open, setOpen] = useState<string | null>(null)
+  /**
+   * 펼쳐둔 큐들.
+   *
+   * 하나만 열리던 때는 앞뒤 대사를 견주려면 이쪽을 닫고 저쪽을 열어야 했다.
+   * 대사는 앞줄과의 흐름으로 고치는 것이라 그 왕복이 곧 작업이었다.
+   * 여러 개를 동시에 열어두고, 「모두 펼치기」로 통째로 볼 수도 있게 한다.
+   */
+  const [open, setOpen] = useState<Set<string>>(new Set())
   const [admin, setAdmin] = useState(true)
   /** 저장 안 한 수정이 이 기기에 남아 있을 때 */
   const [stash, setStash] = useState<string | null>(null)
@@ -407,6 +414,17 @@ export default function ScriptEditPage() {
             큐 {cues.length}개 · {totalLines}줄
           </span>
           <span className="grow" />
+          {/* 통째로 훑을 때와 한 큐만 손볼 때가 다르다 — 둘 다 한 번에 */}
+          <button
+            onClick={() =>
+              setOpen((prev) =>
+                prev.size === cues.length ? new Set() : new Set(cues.map((c) => c.id))
+              )
+            }
+            className="rounded-lg border border-line px-3 py-1.5 text-[12px] text-ink-60"
+          >
+            {open.size === cues.length && cues.length > 0 ? '모두 접기' : '모두 펼치기'}
+          </button>
           {/*
             파일 → 서버로 올리는 다리.
 
@@ -512,12 +530,19 @@ export default function ScriptEditPage() {
         {/* ── 큐 ──────────────────────────── */}
         {cues.map((c, ci) => {
           const o = originCues[ci]
-          const isOpen = open === c.id
+          const isOpen = open.has(c.id)
           const cueChanged = diff.find((d) => d.id === c.id)
           return (
             <div key={c.id} className="card-paper mt-3 p-4">
               <button
-                onClick={() => setOpen(isOpen ? null : c.id)}
+                onClick={() =>
+                  setOpen((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(c.id)) next.delete(c.id)
+                    else next.add(c.id)
+                    return next
+                  })
+                }
                 className="flex w-full items-center gap-2 text-left"
               >
                 <span className="font-mono-retro text-[11px] text-teal">{c.id}</span>
