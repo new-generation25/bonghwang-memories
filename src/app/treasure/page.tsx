@@ -88,9 +88,18 @@ export default function BingoPage() {
   */
   useEffect(() => {
     if (lines > tour.bingo.lines) {
+      /*
+        칸 수·판 크기를 줄 번호와 함께 남긴다.
+
+        7/30 기록에서 빙고 진입 인원(5)이 트랙5 인원(4)보다 많아 퍼널이
+        뒤집혔다. 보너스 미션이 열려 있으면 판에 없는 칸까지 세지는 자리가
+        있었고(90d324f), 줄 번호만으로는 그것이 다시 생겨도 알 수 없다.
+        `done/total`을 함께 보면 오버 빙고가 로그에서 바로 드러난다.
+      */
+      const done = countAct2Done(tour.bingo.cellsDone)
       for (let i = tour.bingo.lines + 1; i <= lines; i++) {
         void award(`bingo-line-${i}`, 'treasureLine')
-        logEvent('bingo_line', { n: i })
+        logEvent('bingo_line', { n: i, done, total: ACT2_TOTAL })
       }
       mutateTour((prev) => ({ bingo: { ...prev.bingo, lines } }))
       /*
@@ -101,7 +110,9 @@ export default function BingoPage() {
       // 받은 것이 화면에 뜨지 않으면 쌓이는 줄도 모른 채 지나간다
       setTicketToast(lines)
     }
-  }, [lines, tour.bingo.lines])
+    // cellsDone은 로그에 칸 수를 실으려고 읽는다. 줄 수가 늘 때만 안이
+    // 도므로 칸이 하나 열릴 때마다 다시 불려도 하는 일이 없다.
+  }, [lines, tour.bingo.lines, tour.bingo.cellsDone])
 
   // 받은 이용권 알림은 잠깐만 — 판을 가리지 않는다
   useEffect(() => {
