@@ -167,6 +167,27 @@ export default function TrackPageClient({ n }: { n: number }) {
   const interaction = activeCue ? INTERACTIONS[activeCue] : undefined
 
   /*
+    다녀온 거점의 다시듣기 목록 (D9 — 다시듣기는 무제한이다).
+
+    §10의 재개는 **마지막으로 끝낸 큐**만 되살린다. 그래서 거점 셋을 지나고
+    나서 거점 하나로 돌아오면 재개할 것이 없고, 화면이 "아직 입장 전이에요"로
+    떨어졌다 — 다녀온 곳인데 안 가본 곳처럼 말하고, 이야기를 다시 들을 길도
+    없었다. 현장 모니터링에서 "새로고침하면 재청취 경로가 없다"고 나온 자리다.
+
+    첫 줄을 그대로 이름표로 쓴다. 큐에는 사람이 읽을 제목이 없고, 참여자가
+    기억하는 것은 번호가 아니라 소영이 한 말이기 때문이다.
+  */
+  const revisit =
+    !cueState.cueId && !resumable && tour.tracksCompleted.includes(n)
+      ? (Object.keys(CUES) as CueId[])
+          .filter((id) => CUES[id].track === n && CUES[id].subtitleLines.length)
+          .map((id) => ({
+            id,
+            label: CUES[id].subtitleLines[0].text.replace(/<br>/g, ' ').slice(0, 34),
+          }))
+      : []
+
+  /*
     미션 화면 진입 계측(F-7) — 랭킹 부문1이 여기부터 mission_correct까지를
     잰다(이동 시간 제외). 손 쓰는 미션만 센다: return/bingo는 미션이 아니고,
     resume은 라디오 이어 듣기, unlock은 B면 관문이다.
@@ -401,6 +422,35 @@ export default function TrackPageClient({ n }: { n: number }) {
               className="btn-teal mt-3 w-full text-[14px]"
             >
               ⏪ 마지막 안내 다시 듣기
+            </button>
+          </div>
+        ) : revisit.length ? (
+          <div className="rounded-2xl border border-line bg-paper p-5">
+            <p className="text-center text-[13px] leading-relaxed text-ink-60">
+              여기는 이미 다녀왔어요.
+              <br />
+              다시 듣고 싶은 대목을 골라주세요.
+            </p>
+            <div className="mt-3 space-y-1.5">
+              {revisit.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => {
+                    unlockAudio()
+                    void playCue(r.id)
+                  }}
+                  className="w-full rounded-xl border border-line bg-cream-base px-3 py-2.5 text-left text-[12.5px] leading-snug text-ink"
+                >
+                  <span className="mr-1.5 text-teal">▶</span>
+                  {r.label}…
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => router.push('/play')}
+              className="mt-3 w-full text-center font-mono-retro text-[10.5px] text-ink-60 underline"
+            >
+              플레이어로 돌아가기
             </button>
           </div>
         ) : (
