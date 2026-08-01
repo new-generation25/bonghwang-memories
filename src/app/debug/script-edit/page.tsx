@@ -152,8 +152,14 @@ function serialize(doc: Doc): string {
  */
 const STASH_KEY = 'bh_script_edit_stash'
 
-/** D6·D6b — 빌드를 못 돌리는 자리라 눈으로 볼 수 있게 화면에서 짚는다 */
-const FORBIDDEN = ['치매', '미워', '미움']
+/**
+ * D6·D6b — 빌드를 못 돌리는 자리라 눈으로 볼 수 있게 화면에서 짚는다.
+ *
+ * 목록을 글자 그대로 들고 있어야 하는데, 그러면 check-forbidden이 이 파일을
+ * 잡아 빌드가 멈춘다(실제로 배포가 다섯 번 죽었다). 검사기는 여기가
+ * **검사하는 자리**인지 모르므로 그 줄만 넘기라고 표식을 남긴다.
+ */
+const FORBIDDEN = ['치매', '미워', '미움'] // forbidden-check:allow
 const hitsIn = (s: string) => FORBIDDEN.filter((w) => s.includes(w))
 
 export default function ScriptEditPage() {
