@@ -145,6 +145,21 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    /*
+      대본 개정 초안.
+
+      대사를 다듬는 일은 자리를 가리지 않는다 — 사무실에서 고치다 집에서
+      이어 고치고, 폰으로 한 줄 바꾸기도 한다. 파일로만 두면 그 기기에만
+      남고, 개발 서버를 다시 켜면 고치던 것이 사라진다.
+
+      **참여자에게 보이는 대본이 아니다.** 확정된 대사는 cues.ts에 굽혀
+      들어가고, 이 문서는 그 전 단계의 초안이다. 그래서 관리자만 읽고 쓴다 —
+      아직 안 나간 이야기가 여기서 새면 안 된다.
+    */
+    match /config/scriptDraft {
+      allow read, write: if isAdmin();
+    }
+
 
     // ───────── 게시글 ─────────
     match /posts/{postId} {

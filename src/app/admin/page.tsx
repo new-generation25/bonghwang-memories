@@ -1361,14 +1361,26 @@ function Shell({ children, onRefresh }: { children: React.ReactNode; onRefresh?:
               <h1 className="appbar-title mt-1 text-[19px]">콘트롤 패널</h1>
             </div>
           </div>
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              className="shrink-0 rounded-lg bg-cream/20 px-3 py-1.5 text-[12px] font-bold text-cream"
+          <div className="flex shrink-0 items-center gap-2">
+            {/*
+              대본 고치기는 자리를 가리지 않는 일이라 콘솔에서 바로 연다.
+              초안은 서버에 있어 어느 기기에서 열어도 같은 판이다.
+            */}
+            <Link
+              href="/debug/script-edit"
+              className="rounded-lg bg-cream/20 px-3 py-1.5 text-[12px] font-bold text-cream"
             >
-              새로고침
-            </button>
-          )}
+              ✎ 대본
+            </Link>
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                className="rounded-lg bg-cream/20 px-3 py-1.5 text-[12px] font-bold text-cream"
+              >
+                새로고침
+              </button>
+            )}
+          </div>
         </div>
       </header>
       <div className="mx-auto max-w-2xl px-4 py-4">{children}</div>

@@ -23,10 +23,17 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { isAdminUser } from '@/lib/admin'
+import { loadDraft, saveDraft } from '@/lib/scriptDraft'
 
 /** 고칠 수 있는 파일 — 서버의 목록과 같아야 한다 */
 const FILES = ['SCRIPT.md', 'SCRIPT_v2.md'] as const
 type FileName = (typeof FILES)[number]
+
+/** 서버 초안 — 어느 기기에서 열어도 같은 판이고 서버를 껐다 켜도 남는다 */
+const SERVER = '서버 초안' as const
+type Source = FileName | typeof SERVER
 
 /** 대본 표식 — 이 뒤만 기계가 읽고 쓴다 */
 const BODY_MARK = /^# 대본[ \t]*$/m
@@ -137,30 +144,63 @@ function serialize(doc: Doc): string {
   return out.join('\n').replace(/\n+$/, '\n')
 }
 
+/**
+ * 저장을 누르기 전의 수정을 이 기기에 담아둔다.
+ *
+ * 개발 서버가 다시 컴파일되면 화면이 새로 그려지고, 그때까지 고치던 것이
+ * 통째로 날아갔다. 고칠 때마다 여기에 적어두면 되돌아와서 이어갈 수 있다.
+ */
+const STASH_KEY = 'bh_script_edit_stash'
+
 /** D6·D6b — 빌드를 못 돌리는 자리라 눈으로 볼 수 있게 화면에서 짚는다 */
 const FORBIDDEN = ['치매', '미워', '미움']
 const hitsIn = (s: string) => FORBIDDEN.filter((w) => s.includes(w))
 
 export default function ScriptEditPage() {
-  const [file, setFile] = useState<FileName>('SCRIPT_v2.md')
+  const { profile } = useAuth()
+  const [file, setFile] = useState<Source>(SERVER)
   const [doc, setDoc] = useState<Doc | null>(null)
   const [origin, setOrigin] = useState<Doc | null>(null)
   const [status, setStatus] = useState<string>('불러오는 중…')
   const [saving, setSaving] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
+  const [admin, setAdmin] = useState(true)
+  /** 저장 안 한 수정이 이 기기에 남아 있을 때 */
+  const [stash, setStash] = useState<string | null>(null)
 
-  const load = useCallback(async (name: FileName) => {
+  useEffect(() => setAdmin(isAdminUser()), [profile])
+
+  const load = useCallback(async (name: Source) => {
     setStatus('불러오는 중…')
     setDoc(null)
     try {
-      const res = await fetch(`/api/debug/script-file?file=${encodeURIComponent(name)}`)
-      const j = await res.json()
-      if (!res.ok) throw new Error(j.error ?? '불러오지 못했습니다')
-      const parsed = parseDoc(j.text as string)
+      /*
+        서버 초안이 기본이다 — 파일은 저장소가 있는 자리에서만 열린다.
+        (`/api/debug/*`는 운영에서 404다)
+      */
+      let text: string
+      if (name === SERVER) {
+        const d = await loadDraft()
+        if (!d) throw new Error('서버에 초안이 아직 없습니다. 파일에서 불러와 한 번 저장해주세요.')
+        text = d.text
+      } else {
+        const res = await fetch(`/api/debug/script-file?file=${encodeURIComponent(name)}`)
+        const j = await res.json()
+        if (!res.ok) throw new Error(j.error ?? '불러오지 못했습니다')
+        text = j.text as string
+      }
+      const parsed = parseDoc(text)
       if (!parsed) throw new Error('`# 대본` 표식을 찾지 못했습니다')
       setDoc(parsed)
       setOrigin(JSON.parse(JSON.stringify(parsed)))
       setStatus('')
+      // 저장 못 하고 끊긴 수정이 있으면 되살릴지 묻는다
+      try {
+        const kept = localStorage.getItem(STASH_KEY + ':' + name)
+        setStash(kept && kept !== serialize(parsed) ? kept : null)
+      } catch {
+        setStash(null)
+      }
     } catch (e) {
       setStatus(`❌ ${e instanceof Error ? e.message : '불러오기 실패'}`)
     }
@@ -197,6 +237,16 @@ export default function ScriptEditPage() {
     })
     return changed
   }, [cues, originCues])
+
+  /* 고칠 때마다 이 기기에 적어둔다 — 서버가 다시 컴파일돼도 되돌아올 수 있게 */
+  useEffect(() => {
+    if (!doc) return
+    try {
+      localStorage.setItem(STASH_KEY + ':' + file, serialize(doc))
+    } catch {
+      // 저장이 막힌 브라우저 — 담아두지 못해도 편집은 굴러간다
+    }
+  }, [doc, file])
 
   const totalLines = cues.reduce((n, c) => n + c.lines.length, 0)
   const forbidden = cues.flatMap((c) =>
@@ -271,15 +321,28 @@ export default function ScriptEditPage() {
     setSaving(true)
     setStatus('저장 중…')
     try {
-      const res = await fetch('/api/debug/script-file', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file, text: serialize(doc) }),
-      })
-      const j = await res.json()
-      if (!res.ok) throw new Error(j.error ?? '저장 실패')
+      const text = serialize(doc)
+      if (file === SERVER) {
+        await saveDraft(text, profile?.nickname ?? '관리자')
+        setStatus('✅ 서버 초안에 저장했습니다 — 다른 기기에서도 이어집니다')
+      } else {
+        const res = await fetch('/api/debug/script-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ file, text }),
+        })
+        const j = await res.json()
+        if (!res.ok) throw new Error(j.error ?? '저장 실패')
+        setStatus(`✅ ${j.saved} 저장됨 (${j.bytes.toLocaleString()}바이트) · 직전 판은 ${j.saved}.bak`)
+      }
       setOrigin(JSON.parse(JSON.stringify(doc)))
-      setStatus(`✅ ${j.saved} 저장됨 (${j.bytes.toLocaleString()}바이트) · 직전 판은 ${j.saved}.bak`)
+      // 저장됐으니 이 기기의 임시 보관은 지운다
+      setStash(null)
+      try {
+        localStorage.removeItem(`${STASH_KEY}:${file}`)
+      } catch {
+        // 지우지 못해도 다음 저장 때 덮인다
+      }
     } catch (e) {
       setStatus(`❌ ${e instanceof Error ? e.message : '저장 실패'}`)
     } finally {
@@ -287,11 +350,30 @@ export default function ScriptEditPage() {
     }
   }
 
+  /*
+    관리자만 연다.
+
+    막는 것은 규칙이 이미 한다(config/scriptDraft는 관리자만 읽고 쓴다).
+    여기서 한 번 더 세우는 것은 **왜 안 되는지 말해주기 위해서**다 —
+    안 그러면 빈 화면에 오류 문구만 남는다.
+  */
+  if (!admin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-cream-base px-6">
+        <p className="text-center text-[13px] leading-relaxed text-ink-60">
+          대본 고치기는 관리자만 열 수 있어요.
+          <br />
+          관리자 계정으로 로그인한 뒤 다시 들어와주세요.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-cream-base px-5 py-8">
       <div className="mx-auto w-full max-w-[720px]">
         <p className="font-mono-retro text-[11px] tracking-[0.25em] text-teal">
-          SCRIPT EDIT · 개발용
+          SCRIPT EDIT · 관리자
         </p>
         <h1 className="mt-1 font-display text-[22px] text-ink">대본 고치기</h1>
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-60">
@@ -304,13 +386,14 @@ export default function ScriptEditPage() {
         <div className="card-paper mt-5 flex flex-wrap items-center gap-2 p-4">
           <select
             value={file}
-            onChange={(e) => setFile(e.target.value as FileName)}
+            onChange={(e) => setFile(e.target.value as Source)}
             className="rounded-lg border border-line bg-cream-base px-2 py-1.5 text-[12px] text-ink"
           >
+            <option value={SERVER}>{SERVER} — 어디서나 이어집니다</option>
             {FILES.map((f) => (
               <option key={f} value={f}>
                 {f}
-                {f === 'SCRIPT.md' ? ' — 확정본' : ' — 개정 초안'}
+                {f === 'SCRIPT.md' ? ' — 확정본(이 기기)' : ' — 개정 초안(이 기기)'}
               </option>
             ))}
           </select>
@@ -318,6 +401,33 @@ export default function ScriptEditPage() {
             큐 {cues.length}개 · {totalLines}줄
           </span>
           <span className="grow" />
+          {/*
+            파일 → 서버로 올리는 다리.
+
+            서버 초안은 처음에 비어 있고, 채우는 길이 없으면 영영 못 쓴다.
+            저장소가 있는 자리에서 한 번 올려두면 그다음부터는 어느 기기에서나
+            이어 고칠 수 있다.
+          */}
+          {file !== SERVER && doc && (
+            <button
+              onClick={async () => {
+                setSaving(true)
+                setStatus('서버로 올리는 중…')
+                try {
+                  await saveDraft(serialize(doc), profile?.nickname ?? '관리자')
+                  setStatus(`✅ ${file}의 지금 판을 서버 초안으로 올렸습니다`)
+                } catch (e) {
+                  setStatus(`❌ ${e instanceof Error ? e.message : '올리지 못했습니다'}`)
+                } finally {
+                  setSaving(false)
+                }
+              }}
+              disabled={saving}
+              className="rounded-lg border border-teal px-3 py-1.5 text-[12px] text-teal disabled:opacity-40"
+            >
+              ↑ 서버 초안으로 올리기
+            </button>
+          )}
           <button
             onClick={() => load(file)}
             className="rounded-lg border border-line px-3 py-1.5 text-[12px] text-ink-60"
@@ -335,6 +445,42 @@ export default function ScriptEditPage() {
 
         {status && (
           <p className="mt-2 text-[12px] leading-relaxed text-ink-60">{status}</p>
+        )}
+
+        {/* 저장 전에 끊긴 수정 — 서버가 다시 컴파일돼도 여기서 되살린다 */}
+        {stash && (
+          <div className="mt-3 rounded-lg border border-sunset bg-sunset/10 px-3 py-2.5">
+            <p className="text-[12px] leading-relaxed text-ink">
+              <b>저장하지 않은 수정이 이 기기에 남아 있어요.</b>
+              <br />
+              되살릴까요? 버리면 지금 불러온 판으로 갑니다.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={() => {
+                  const parsed = parseDoc(stash)
+                  if (parsed) setDoc(parsed)
+                  setStash(null)
+                }}
+                className="btn-teal px-3 py-1.5 text-[12px]"
+              >
+                되살리기
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.removeItem(`${STASH_KEY}:${file}`)
+                  } catch {
+                    // 못 지워도 되살리기를 안 누르면 그만이다
+                  }
+                  setStash(null)
+                }}
+                className="rounded-lg border border-line px-3 py-1.5 text-[12px] text-ink-60"
+              >
+                버리기
+              </button>
+            </div>
+          </div>
         )}
 
         {forbidden.length > 0 && (
