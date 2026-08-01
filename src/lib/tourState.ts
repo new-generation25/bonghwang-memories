@@ -51,7 +51,29 @@ export interface TourState {
   speechConsent: 'yes' | 'no' | null
   bsideEntry: BsideEntry | null
   photos: TourPhoto[]
-  bingo: { unlocked: boolean; cellsDone: string[]; lines: number }
+  bingo: {
+    unlocked: boolean
+    cellsDone: string[]
+    lines: number
+    /**
+     * 판 배치 — 2막 스무 칸의 id를 자리 순서대로.
+     *
+     * 판이 사람마다 달라졌다. 오늘 문 닫은 가게의 칸을 내리고 예비로
+     * 채우기도 하고, 참여자가 포인트를 내고 다시 깔기도 한다. 배치를
+     * 값으로 들고 있어야 **지난 기록이 어느 판이었는지** 되짚을 수 있다.
+     * 비어 있으면 기본 배치로 본다.
+     */
+    layout?: string[]
+    /** 다시 깐 기록 — 언제, 왜. 무료 한 번을 셀 때도 쓴다 */
+    shuffles?: Array<{ at: number; why: 'manual' | 'closed' }>
+    /**
+     * 오늘 문 닫은 가게의 칸들 — 판에서 내린 것.
+     *
+     * 가게 문서를 읽어 채운다. 참여자에게는 가게 사정을 말하지 않는다 —
+     * 그 칸이 조용히 다른 미션으로 바뀌어 있을 뿐이다.
+     */
+    closedCells?: string[]
+  }
   coupons: string[]
   /**
    * 골목 뽑기에서 연 칸 번호(0~49). 상품은 칸에서 파생한다(gacha.ts) —

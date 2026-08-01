@@ -109,6 +109,64 @@ export interface Shop {
    * 관리자 화면이 스티커를 다시 뽑을 때 보려고 담아둔다.
    */
   postToken?: string
+  /**
+   * 쉬는 요일 — 0(일)~6(토).
+   *
+   * 현장에서 체험이 끊기는 자리가 여기다. 보너스 미션이 걸린 가게가 문을
+   * 닫았는데 화면은 그대로 시키면, 참여자는 닫힌 문 앞에서 멈춘다.
+   * 미리 넣어두면 그날 그 미션을 아예 내린다.
+   */
+  closedDays?: number[]
+  /** 특정 날짜 휴무 — `'2026-08-15'` 꼴. 명절·개인 사정 */
+  closedDates?: string[]
+  /** 여는 시각·닫는 시각 — `'11:00'`·`'21:00'`. 비면 종일 연 것으로 본다 */
+  openTime?: string
+  closeTime?: string
+  /**
+   * 이 가게에 걸린 보너스 미션(빙고 칸) id들.
+   *
+   * 가게와 칸을 여기서 잇는다 — 칸 쪽(bingoCells)에 가게를 적으면 협력
+   * 가게가 바뀔 때마다 코드를 고쳐야 한다. 가게 문서는 배포 없이 바뀐다.
+   */
+  bonusCells?: string[]
+}
+
+/**
+ * 오늘 이 가게가 문을 여는가.
+ *
+ * 시각까지 보는 이유 — 오후 아홉 시에 닫는 가게의 미션을 열 시에 시키면
+ * 요일로는 '여는 날'이라도 현장에서는 닫힌 문이다.
+ *
+ * 모르는 것은 **열려 있는 쪽으로** 둔다. 정보가 없다고 미션을 내리면
+ * 아직 시간을 안 넣은 가게가 통째로 사라진다.
+ */
+export function isOpenNow(shop: Shop, now = new Date()): boolean {
+  if (shop.active === false) return false
+
+  const ymd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+    now.getDate()
+  ).padStart(2, '0')}`
+  if (shop.closedDates?.includes(ymd)) return false
+  if (shop.closedDays?.includes(now.getDay())) return false
+
+  const mins = now.getHours() * 60 + now.getMinutes()
+  const toMins = (t?: string) => {
+    if (!t) return null
+    const [h, m] = t.split(':').map(Number)
+    return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null
+  }
+  const open = toMins(shop.openTime)
+  const close = toMins(shop.closeTime)
+  if (open !== null && mins < open) return false
+  /* 자정을 넘겨 닫는 가게(예: 02:00)는 close가 open보다 작다 — 그때는 안 막는다 */
+  if (close !== null && open !== null && close > open && mins >= close) return false
+
+  return true
+}
+
+/** 오늘 쉬는 가게에 걸린 보너스 칸들 — 판에서 내릴 대상 */
+export function closedBonusCells(shops: Shop[], now = new Date()): string[] {
+  return shops.filter((s) => !isOpenNow(s, now)).flatMap((s) => s.bonusCells ?? [])
 }
 
 export interface ShopUse {

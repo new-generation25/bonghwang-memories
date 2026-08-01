@@ -32,6 +32,8 @@ export type AnalyticsEventName =
   | 'bside_played'
   | 'act2_entered'
   | 'bingo_line'
+  // 판을 다시 깔았다 — 어느 자리에서 막혔는지, 값을 치렀는지
+  | 'board_shuffled'
   | 'coupon_used'
   // 포인트도 가게에서 쓰이는 값이라 쿠폰과 나란히 센다. 갈라 둔 이유는
   // 액면이 정해진 쿠폰과 달리 금액이 카운터에서 정해져서다 — 한데 묶으면

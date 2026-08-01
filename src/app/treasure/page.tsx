@@ -18,9 +18,11 @@ import { useTourState } from '@/hooks/useTourState'
 import {
   ACT2_TOTAL,
   BoardCell,
-  buildBoard,
+  boardFromLayout,
   countAct2Done,
   countLines,
+  defaultLayout,
+  reshuffleLayout,
 } from '@/lib/bingoCells'
 import { bingoOpen, useSuperAdmin } from '@/lib/superAdmin'
 import { BINGO_LOCKED_MESSAGE } from '@/lib/cues'
@@ -31,9 +33,13 @@ import {
   POINT_TABLE,
   POINTS_EVENT,
   award,
+  awardDynamic,
   localPointTotal,
 } from '@/lib/points'
 import { logEvent } from '@/lib/analytics'
+
+/** 자리 바꾸기 값 — 하루 한 번은 공짜, 그 뒤로는 이만큼 */
+const SHUFFLE_COST = 300
 
 export default function BingoPage() {
   const tour = useTourState()
@@ -47,8 +53,10 @@ export default function BingoPage() {
   const [welcome, setWelcome] = useState(false)
   /** 방금 받은 이용권 장수 — 줄을 채운 순간에만 잠깐 뜬다 */
   const [ticketToast, setTicketToast] = useState<number | null>(null)
+  /** 자리 바꾸기 확인 */
+  const [confirmShuffle, setConfirmShuffle] = useState(false)
 
-  const board = useMemo(() => buildBoard(), [])
+  const board = useMemo(() => boardFromLayout(tour.bingo.layout), [tour.bingo.layout])
 
   // 완료 포지션: 대각선(트랙 완료) + 2막 셀
   const donePositions = useMemo(() => {
@@ -96,7 +104,7 @@ export default function BingoPage() {
         있었고(90d324f), 줄 번호만으로는 그것이 다시 생겨도 알 수 없다.
         `done/total`을 함께 보면 오버 빙고가 로그에서 바로 드러난다.
       */
-      const done = countAct2Done(tour.bingo.cellsDone)
+      const done = countAct2Done(tour.bingo.cellsDone, tour.bingo.layout)
       for (let i = tour.bingo.lines + 1; i <= lines; i++) {
         void award(`bingo-line-${i}`, 'treasureLine')
         logEvent('bingo_line', { n: i, done, total: ACT2_TOTAL })
@@ -112,7 +120,7 @@ export default function BingoPage() {
     }
     // cellsDone은 로그에 칸 수를 실으려고 읽는다. 줄 수가 늘 때만 안이
     // 도므로 칸이 하나 열릴 때마다 다시 불려도 하는 일이 없다.
-  }, [lines, tour.bingo.lines, tour.bingo.cellsDone])
+  }, [lines, tour.bingo.lines, tour.bingo.cellsDone, tour.bingo.layout])
 
   // 받은 이용권 알림은 잠깐만 — 판을 가리지 않는다
   useEffect(() => {
@@ -203,7 +211,40 @@ export default function BingoPage() {
 
   // ---------- 빙고 보드 ----------
   const act2Total = ACT2_TOTAL
-  const act2Done = countAct2Done(tour.bingo.cellsDone)
+  const act2Done = countAct2Done(tour.bingo.cellsDone, tour.bingo.layout)
+
+  /*
+    자리 바꾸기 — 닫힌 칸만 다시 깐다.
+
+    줄 하나가 남았는데 그 자리가 도저히 못 하는 미션이면 판이 거기서 멈춘다.
+    포인트를 내고 남은 자리를 다시 깔 수 있게 한다. **이미 연 칸은 그대로**다 —
+    채운 것이 움직이면 다시 까는 게 아니라 되돌리는 것이다.
+
+    하루 한 번은 공짜다. 문 닫은 가게 때문에 막히는 것은 참여자 잘못이 아니라
+    그날의 사정이고, 그걸로 포인트를 걷으면 벌금처럼 읽힌다.
+  */
+  const shuffles = tour.bingo.shuffles ?? []
+  const today = new Date().toDateString()
+  const usedFreeToday = shuffles.some(
+    (s) => s.why === 'manual' && new Date(s.at).toDateString() === today
+  )
+  const shuffleCost = usedFreeToday ? SHUFFLE_COST : 0
+  const closedCells = tour.bingo.closedCells ?? []
+
+  const doShuffle = () => {
+    const base = tour.bingo.layout ?? defaultLayout()
+    const next = reshuffleLayout(base, tour.bingo.cellsDone, closedCells)
+    mutateTour((prev) => ({
+      bingo: {
+        ...prev.bingo,
+        layout: next,
+        shuffles: [...(prev.bingo.shuffles ?? []), { at: Date.now(), why: 'manual' as const }],
+      },
+    }))
+    if (shuffleCost > 0) void awardDynamic(`shuffle-${Date.now()}`, -shuffleCost, 'gacha')
+    logEvent('board_shuffled', { cost: shuffleCost, done: act2Done })
+    setConfirmShuffle(false)
+  }
 
   const handleCellTap = (cell: BoardCell) => {
     if (cell.kind === 'main') return
@@ -407,6 +448,23 @@ export default function BingoPage() {
           </div>
         </div>
 
+        {/*
+          자리 바꾸기 — 판이 막혔을 때의 숨구멍.
+
+          다 채운 사람에게는 보이지 않는다. 바꿀 자리가 없다.
+        */}
+        {act2Done < act2Total && (
+          <button
+            onClick={() => setConfirmShuffle(true)}
+            className="mb-3 w-full rounded-xl border border-line bg-paper py-3 text-[13px] text-ink"
+          >
+            🔀 자리 바꾸기
+            <span className="ml-1.5 font-mono-retro text-[11px] text-ink-60">
+              {shuffleCost === 0 ? '오늘 한 번 무료' : `${SHUFFLE_COST}P`}
+            </span>
+          </button>
+        )}
+
         {/* 투어 마치기 */}
         <button
           onClick={() => setConfirmFinish(true)}
@@ -485,6 +543,39 @@ export default function BingoPage() {
         </div>
       )}
 
+
+      {/* 자리 바꾸기 확인 — 무엇이 움직이고 무엇이 그대로인지 먼저 말한다 */}
+      {confirmShuffle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-shell/80 px-6">
+          <div className="w-full max-w-[320px] rounded-2xl bg-paper p-6 text-center">
+            <div className="text-4xl">🔀</div>
+            <h3 className="mt-2 font-display text-[17px] text-ink">자리를 바꿀까요?</h3>
+            <p className="mt-2 text-[12.5px] leading-relaxed text-ink-60">
+              아직 채우지 않은 <b className="text-ink">{act2Total - act2Done}칸</b>이 다시
+              깔립니다.
+              <br />
+              이미 채운 <b className="text-ink">{act2Done}칸</b>은 그대로예요.
+            </p>
+            <p className="mt-2 font-mono-retro text-[11px] text-teal">
+              {shuffleCost === 0 ? '오늘 한 번은 무료예요' : `${SHUFFLE_COST}P를 씁니다`}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setConfirmShuffle(false)}
+                className="flex-1 rounded-xl border border-line bg-cream py-3 text-[13px] text-ink"
+              >
+                그대로 둘게요
+              </button>
+              <button
+                onClick={doShuffle}
+                className="flex-1 rounded-xl bg-teal py-3 font-display text-[14px] text-cream"
+              >
+                바꿀게요
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {pendingCell && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-shell/80 px-6">
