@@ -2,7 +2,10 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  EmailAuthProvider,
   GoogleAuthProvider,
+  linkWithCredential,
+  linkWithPopup,
   signOut,
   onAuthStateChanged,
   updateProfile,
@@ -267,6 +270,68 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
   } catch (error) {
     if (error instanceof AuthUnavailableError) throw error
     const code = (error as { code?: string }).code ?? ''
+    throw new Error(toKoreanError(code))
+  }
+}
+
+/**
+ * 지금 계정에 구글을 잇는다.
+ *
+ * 왜 필요한가 — 아이디로 만든 계정과 구글 계정은 서로 다른 사람으로 잡힌다.
+ * 그래서 집에서는 아이디로, 밖에서는 구글로 들어오면 **한 사람이 계정 둘**을
+ * 갖게 되고 걸어온 기록과 포인트가 반씩 갈린다. 여기서 이어두면 다음부터
+ * 어느 쪽으로 들어와도 같은 계정이다.
+ *
+ * 이미 그 구글 계정으로 만든 다른 계정이 있으면 잇지 못한다. 두 쪽에 각각
+ * 기록이 쌓여 있어 하나로 합치는 것은 **자동으로 판단할 수 없다** — 어느
+ * 쪽을 남길지는 사람이 정해야 한다. 그 경우를 구별해서 알려준다.
+ */
+export async function linkGoogle(): Promise<void> {
+  const { auth: a, db: d } = requireAuth()
+  const user = a.currentUser
+  if (!user) throw new Error('먼저 로그인해주세요.')
+
+  try {
+    await linkWithPopup(user, new GoogleAuthProvider())
+    // 프로필에도 남긴다 — 화면이 "이미 이어져 있음"을 알아야 또 권하지 않는다
+    await updateDoc(doc(d, 'users', user.uid), { googleLinked: true })
+  } catch (error) {
+    const code = (error as { code?: string }).code ?? ''
+    if (code === 'auth/credential-already-in-use') {
+      throw new Error(
+        '그 구글 계정으로 이미 만든 기록이 따로 있어요. ' +
+          '두 기록을 합치려면 운영자에게 알려주세요.'
+      )
+    }
+    if (code === 'auth/provider-already-linked') return // 이미 이어져 있으면 할 일 없음
+    throw new Error(toKoreanError(code))
+  }
+}
+
+/**
+ * 지금 계정에 아이디·비밀번호를 잇는다 — 구글로 시작한 사람의 반대편 길.
+ *
+ * 구글 로그인이 막히는 자리(앱 안 브라우저 등)에서도 들어올 수 있게 한다.
+ */
+export async function linkPassword(loginId: string, password: string): Promise<void> {
+  const { auth: a, db: d } = requireAuth()
+  const user = a.currentUser
+  if (!user) throw new Error('먼저 로그인해주세요.')
+
+  const idError = validateLoginId(loginId)
+  if (idError) throw new Error(idError)
+  const pwError = validatePassword(password)
+  if (pwError) throw new Error(pwError)
+
+  try {
+    const credential = EmailAuthProvider.credential(toInternalEmail(loginId), password)
+    await linkWithCredential(user, credential)
+    await updateDoc(doc(d, 'users', user.uid), { loginId: loginId.toLowerCase() })
+  } catch (error) {
+    const code = (error as { code?: string }).code ?? ''
+    if (code === 'auth/email-already-in-use' || code === 'auth/credential-already-in-use') {
+      throw new Error('이미 쓰이고 있는 아이디예요. 다른 아이디로 해주세요.')
+    }
     throw new Error(toKoreanError(code))
   }
 }

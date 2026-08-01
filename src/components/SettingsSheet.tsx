@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { isAdminUser } from '@/lib/admin'
+import { linkGoogle } from '@/lib/auth'
 import { BUILD_COMMIT } from '@/lib/buildVersion'
 import {
   openSuperAdminPanel,
@@ -38,6 +39,29 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
   const [busy, setBusy] = useState(false)
   const [superOn, setSuperOn] = useState(false)
   const [sfxOn, setSfxOn] = useState(true)
+  const [linking, setLinking] = useState(false)
+
+  /*
+    구글 잇기 — 한 사람이 계정 둘을 갖는 것을 막는다.
+
+    아이디로 만든 계정과 구글 계정은 서로 다른 사람으로 잡힌다. 집에서는
+    아이디로, 밖에서는 구글로 들어오면 걸어온 기록과 포인트가 반씩 갈린다.
+    한 번 이어두면 다음부터 어느 쪽으로 들어와도 같은 계정이다.
+  */
+  const canLinkGoogle = Boolean(profile) && profile?.provider === 'password'
+
+  const doLinkGoogle = async () => {
+    setLinking(true)
+    setNote('')
+    try {
+      await linkGoogle()
+      setNote('✅ 구글 계정을 이었어요. 이제 어느 쪽으로 들어와도 같은 기록입니다.')
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : '잇지 못했습니다.')
+    } finally {
+      setLinking(false)
+    }
+  }
 
   // 시트가 열릴 때 저장값을 읽는다 — 첫 그림에 읽으면 서버 렌더와 어긋난다
   useEffect(() => {
@@ -134,6 +158,21 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
                   <span className="text-[13px] font-bold text-ink">닉네임 변경</span>
                   <span className="text-[12px] text-ink-60">
                     {profile.nickname} ›
+                  </span>
+                </button>
+              )}
+
+              {canLinkGoogle && (
+                <button
+                  onClick={doLinkGoogle}
+                  disabled={linking}
+                  className="w-full rounded-xl border border-line bg-cream px-4 py-3 text-left disabled:opacity-50"
+                >
+                  <span className="text-[13px] font-bold text-ink">
+                    {linking ? '잇는 중…' : '구글 계정 잇기'}
+                  </span>
+                  <span className="mt-0.5 block text-[11.5px] leading-snug text-ink-60">
+                    다른 기기·브라우저에서도 같은 기록으로 이어집니다
                   </span>
                 </button>
               )}
