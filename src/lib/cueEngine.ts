@@ -64,6 +64,29 @@ const BASE_PATH = '/audio'
 */
 const EXTENSIONS = ['mp3', 'm4a'] as const
 
+/**
+ * 건너뛰기를 남긴다 — 어디서, 얼마나 듣고, 어떻게 넘겼는지.
+ *
+ * 7/30 현장에서 네 사람이 쉰세 번 건너뛰었다. 미션 완료(33)보다 많은 숫자라
+ * 몰입이 어디서 새는지 보고 싶었는데, 그때 남긴 것은 큐 id와 초뿐이라
+ * **어느 거점에서 몰렸는지도, 얼마나 남기고 넘겼는지도** 알 수 없었다.
+ *
+ *  · track    — 거점별로 묶어 본다. 특정 거점만 길다면 그 대본이 긴 것이다
+ *  · atSec/of — 3초 만에 넘긴 것과 끝나기 직전에 넘긴 것은 다른 이야기다
+ *  · line     — 몇 번째 줄에서 손이 갔는지
+ *  · how      — 번들 통째(FF 길게)냐, 마지막 줄에서 넘어간 것이냐, STOP이냐
+ */
+function logSkip(cue: Cue, how: 'bundle' | 'lastLine' | 'stop') {
+  logEvent('bundle_skipped', {
+    id: cue.id,
+    track: cue.track,
+    atSec: Math.round(state.elapsed),
+    of: cue.durationSec,
+    line: state.subtitleIndex + 1,
+    how,
+  })
+}
+
 // -----------------------------------------------------------------------------
 // 재생 상태
 // -----------------------------------------------------------------------------
@@ -511,7 +534,7 @@ export function replayCue() {
 export function skipCue() {
   if (!state.cueId || state.ended) return
   const cue = CUES[state.cueId]
-  logEvent('bundle_skipped', { id: cue.id, atSec: Math.round(state.elapsed) })
+  logSkip(cue, 'bundle')
   clearResources()
   finishCue(cue)
 }
@@ -530,7 +553,7 @@ export function skipLine() {
 
   // 마지막 줄이면 번들 종료 → 다음 단계
   if (next > last) {
-    logEvent('bundle_skipped', { id: cue.id, atSec: Math.round(state.elapsed) })
+    logSkip(cue, 'lastLine')
     clearResources()
     finishCue(cue)
     return
@@ -571,7 +594,7 @@ export function skipLine() {
 export function endCue() {
   if (!state.cueId || state.ended) return
   const cue = CUES[state.cueId]
-  logEvent('bundle_skipped', { id: cue.id, atSec: Math.round(state.elapsed) })
+  logSkip(cue, 'stop')
   clearResources()
   finishCue(cue)
 }
