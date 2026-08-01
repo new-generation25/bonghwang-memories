@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import {
+  Profile,
   signUp,
   signIn,
   signInWithGoogle,
@@ -12,6 +13,7 @@ import {
   validateNickname,
 } from '@/lib/auth'
 import { useAuth } from '@/contexts/AuthContext'
+import { DeviceAccount, deviceAccount, rememberAccount } from '@/lib/deviceAccount'
 
 interface AuthModalProps {
   isOpen: boolean
@@ -40,6 +42,34 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   // 구글 신규 가입 — 닉네임을 정하기 전까지 프로필 문서를 만들지 않는다
   const [googleUid, setGoogleUid] = useState<string | null>(null)
   const [nickCheck, setNickCheck] = useState<NickCheck>({ state: 'idle' })
+
+  /*
+    이 기기가 쓰던 계정 — 계정이 둘로 갈라지는 것을 막는 장치.
+
+    같은 폰에서 오늘은 아이디로, 내일은 구글로 들어오면 파이어베이스는 둘을
+    남남으로 잡는다. 그러면 걸어온 기록과 포인트가 반씩 갈리고, 갈라진 뒤에는
+    어느 쪽을 남길지 자동으로 정할 수 없다. **갈라지기 전에 막아야 한다.**
+  */
+  const [known, setKnown] = useState<DeviceAccount | null>(null)
+  /** 구글로 새 계정이 만들어지려는 순간 — 이어갈지 새로 갈지 묻는 자리 */
+  const [forkWarning, setForkWarning] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const a = deviceAccount()
+    setKnown(a)
+    // 아이디로 걷던 기기면 그 아이디를 미리 넣어둔다 — 새로 만들 이유를 줄인다
+    if (a?.loginId) setLoginId(a.loginId)
+  }, [isOpen])
+
+  /** 로그인·가입이 끝날 때마다 이 기기의 계정으로 기억한다 */
+  const remember = (p: Profile) =>
+    rememberAccount({
+      uid: p.uid,
+      provider: p.provider === 'google' ? 'google' : 'password',
+      loginId: p.loginId,
+      nickname: p.nickname,
+    })
 
   /**
    * 닉네임 중복 확인 — 입력이 멈춘 뒤에 조회한다.
@@ -93,6 +123,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     try {
       const result = await signInWithGoogle()
       if (result.kind === 'existing') {
+        remember(result.profile)
         applyProfile(result.profile)
         onSuccess?.()
         return
@@ -100,6 +131,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       // 신규 — 구글 실명이 그대로 노출되지 않도록 닉네임부터 정한다
       setGoogleUid(result.uid)
       setNickname(result.suggestedNickname)
+      /*
+        이 기기에 이미 계정이 있는데 구글로 **새** 계정이 만들어지려는 순간이다.
+        그대로 두면 한 사람에게 계정이 둘 생기고 기록이 갈린다. 여기서 한 번 묻는다 —
+        막지는 않되, 무엇이 갈라지는지 알고 고르게 한다.
+      */
+      if (known) {
+        setForkWarning(true)
+        return
+      }
       setMode('google-nickname')
     } catch (err) {
       setError(err instanceof Error ? err.message : '구글 로그인에 실패했습니다.')
@@ -115,7 +155,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setError('')
     setBusy(true)
     try {
-      applyProfile(await completeGoogleSignUp(googleUid, nickname))
+      const made = await completeGoogleSignUp(googleUid, nickname)
+      remember(made)
+      applyProfile(made)
       onSuccess?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : '닉네임 저장에 실패했습니다.')
@@ -148,6 +190,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           ? await signUp(loginId, password, nickname)
           : await signIn(loginId, password)
 
+      remember(profile)
       applyProfile(profile)
       setPassword('')
       onSuccess?.()
@@ -183,8 +226,42 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           </h2>
         </div>
 
+        {/* 계정이 갈라지려는 순간 — 이어갈지 새로 갈지 고르게 한다 */}
+        {forkWarning && known && (
+          <div className="px-5 py-5">
+            <p className="rounded-lg bg-rec/10 px-3 py-2.5 text-[12px] leading-relaxed text-rec">
+              이 기기에서는 <b>{known.nickname}</b>으로 걷고 있었어요.
+              <br />
+              구글로 새로 시작하면 <b>지금까지의 기록과 포인트가 갈라집니다.</b>
+            </p>
+            <p className="mt-3 text-[12px] leading-relaxed text-ink-60">
+              쓰던 계정으로 들어간 뒤 설정에서 「구글 계정 잇기」를 누르면,
+              다음부터는 어느 쪽으로 들어와도 같은 기록입니다.
+            </p>
+            <button
+              onClick={() => {
+                setForkWarning(false)
+                setMode('login')
+                reset()
+              }}
+              className="btn-teal mt-4 w-full text-[14px]"
+            >
+              {known.nickname} 계정으로 이어가기
+            </button>
+            <button
+              onClick={() => {
+                setForkWarning(false)
+                setMode('google-nickname')
+              }}
+              className="mt-2 w-full text-center font-mono-retro text-[10.5px] text-ink-60 underline"
+            >
+              그래도 새로 시작할게요
+            </button>
+          </div>
+        )}
+
         {/* 구글 신규 가입 — 닉네임만 받는다 */}
-        {mode === 'google-nickname' && (
+        {!forkWarning && mode === 'google-nickname' && (
           <form onSubmit={handleGoogleNickname} className="px-5 py-5">
             <p className="mb-4 rounded-lg bg-cream px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-60">
               커뮤니티와 랭킹에는 이 이름만 보입니다. 구글 계정의 실명은
@@ -221,7 +298,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           </form>
         )}
 
-        {mode !== 'google-nickname' && (
+        {!forkWarning && mode !== 'google-nickname' && (
         <form onSubmit={handleSubmit} className="px-5 py-5">
           {!available && (
             <div className="mb-4 rounded-lg border border-rec bg-rec/10 px-3 py-2.5 text-[11px] text-rec">
