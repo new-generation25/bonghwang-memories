@@ -73,3 +73,7 @@ firebase-debug.log
 
 # 검증 스크립트가 앱 코드를 구워두는 자리 — 끝나면 스스로 지운다
 /.check-redeem/
+/.check-signup/
+
+# 대본 고치기 화면이 덮어쓰기 전에 남기는 직전 판
+docs/*.bak
