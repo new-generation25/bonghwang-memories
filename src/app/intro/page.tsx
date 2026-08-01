@@ -80,6 +80,8 @@ export default function IntroPage() {
   const cueState = useCue()
   const [step, setStep] = useState<Step>('discovery')
   const [callButtonVisible, setCallButtonVisible] = useState(false)
+  /** 쪽지를 뒤집었는가 — 번호는 뒤집어야 보인다(D3) */
+  const [noteFlipped, setNoteFlipped] = useState(false)
   // 서버 렌더 결과와 어긋나지 않도록 마운트 후에 번호를 만든다
   const [phoneNumber, setPhoneNumber] = useState('010-••••-••xx')
   const [dots, setDots] = useState('')
@@ -286,21 +288,48 @@ export default function IntroPage() {
             <p className="text-center text-[12px] leading-relaxed text-ink-60">
               테이프가 멈췄습니다.
               <br />
-              쪽지를 뒤집어 보세요.
+              {noteFlipped ? '뒷면에 번호가 있습니다.' : '쪽지를 뒤집어 보세요.'}
             </p>
 
-            {/* 쪽지 뒷면 (D3) — 전화번호. 뒤 2자리는 가린다 */}
-            <div
-              className="note-paper mt-4 rounded-sm border px-5 py-4 text-center shadow-sm"
+            {/*
+              쪽지 — 눌러서 뒤집는다(D3).
+
+              번호를 그냥 보여주지 않는 이유가 있다. 이 이야기에서 전화는
+              **참여자가 스스로 거는 것**이고, 뒤집는 손짓이 그 시작이다.
+              자동으로 보여주면 번호는 화면의 정보가 되고, 뒤집으면 쪽지에
+              적힌 것이 된다.
+            */}
+            <button
+              onClick={() => setNoteFlipped((v) => !v)}
+              aria-label={noteFlipped ? '쪽지 앞면 보기' : '쪽지 뒤집기'}
+              className={`note-flip mt-4 block w-full ${noteFlipped ? 'is-flipped' : ''}`}
               style={{ transform: 'rotate(0.8deg)' }}
             >
-              <p className="font-pen text-[16px] text-ink-60">
-                부탁이 있습니다. — 딸 소영
-              </p>
-              <p className="mt-1 font-mono-retro text-[20px] tracking-[0.15em] text-ink underline decoration-dotted underline-offset-4">
-                {phoneNumber}
-              </p>
-            </div>
+              <div className="note-flip-inner">
+                {/* 앞면 — 소영이 남긴 손글씨 */}
+                <div className="note-face note-paper rounded-sm border px-5 py-4 text-center shadow-sm">
+                  <p className="font-pen text-[15px] leading-relaxed text-ink">
+                    {NOTE_FRONT_LINES[0]}
+                  </p>
+                  <p className="mt-1 font-pen text-[15px] text-ink-60">
+                    {NOTE_FRONT_LINES[NOTE_FRONT_LINES.length - 1]}
+                  </p>
+                  <p className="mt-2 font-mono-retro text-[10px] tracking-[0.18em] text-ink-60">
+                    눌러서 뒤집기
+                  </p>
+                </div>
+
+                {/* 뒷면 — 전화번호 */}
+                <div className="note-face note-face-back note-paper flex flex-col items-center justify-center rounded-sm border px-5 py-4 text-center shadow-sm">
+                  <p className="font-pen text-[16px] text-ink-60">
+                    부탁이 있습니다. — 딸 소영
+                  </p>
+                  <p className="mt-1 font-mono-retro text-[20px] tracking-[0.15em] text-ink underline decoration-dotted underline-offset-4">
+                    {phoneNumber}
+                  </p>
+                </div>
+              </div>
+            </button>
 
             {/* 아이폰식 통화 버튼 */}
             <div className="mt-5 flex flex-col items-center">
