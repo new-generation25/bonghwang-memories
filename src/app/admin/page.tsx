@@ -367,6 +367,28 @@ export default function AdminPage() {
 
   return (
     <Shell onRefresh={load}>
+      {/*
+        ───── 딸린 화면 ─────
+        시뮬레이터는 이 화면의 숫자와 성격이 다르다 — 여기는 지금 일어난
+        일이고 저기는 앞으로의 가정이다. 그래서 섞지 않고 문만 낸다.
+      */}
+      <Link
+        href="/admin/bep"
+        className="mb-4 flex items-center justify-between rounded-xl border border-line bg-paper px-3.5 py-2.5"
+      >
+        <span className="min-w-0">
+          <span className="block text-[12.5px] font-bold text-ink">
+            📈 BEP 시뮬레이터
+          </span>
+          <span className="block text-[11px] text-ink-60">
+            손익분기·가맹점 목표를 따져 보는 곳 — 여기 숫자에는 영향이 없습니다
+          </span>
+        </span>
+        <span className="ml-3 shrink-0 rounded-lg bg-cream-dp px-2.5 py-1 font-mono-retro text-[10.5px] tracking-wider text-ink-60">
+          열기
+        </span>
+      </Link>
+
       {/* ───── 관리자 데이터 제외 ───── */}
       {adminCount > 0 && (
         <button
