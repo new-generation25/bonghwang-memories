@@ -43,7 +43,7 @@ const C = {
 const FONT = {
   display: '"Black Han Sans", sans-serif',
   body: '"Noto Sans KR", sans-serif',
-  pen: '"Nanum Pen Script", cursive',
+  pen: '"Gamja Flower", cursive',
   mono: '"Nanum Gothic Coding", monospace',
 } as const
 

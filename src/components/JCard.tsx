@@ -123,9 +123,17 @@ export default function JCard({ onScan }: Props) {
                 */}
                 <span className="min-w-0 flex-1">
                   <span className="inline-block max-w-full">
-                    {/* 손글씨는 획이 가늘어 작으면 안 읽힌다 — 본문보다 큼직하게 */}
+                    {/*
+                      24px에서 내렸다. 글씨를 줄인 것이 아니라 글꼴이 바뀐
+                      것이다 — 감자꽃은 Nanum Pen Script보다 글자폭이 훨씬
+                      넓어 같은 24px에서는 긴 소원이 두 줄로 깨진다.
+
+                      폭에 따라 둘로 나눈다. 360px 기기에서 가장 긴 첫 줄이
+                      20px일 때 딱 한 글자만큼 넘쳤다 — 거기 맞춰 전부를
+                      작게 두면 넓은 화면이 손해다.
+                    */}
                     <span
-                      className={`block font-pen text-[24px] leading-normal ${
+                      className={`block font-pen text-[19px] leading-normal min-[400px]:text-[21px] ${
                         filled ? 'text-ink' : 'text-ink-60'
                       }`}
                     >
@@ -144,19 +152,6 @@ export default function JCard({ onScan }: Props) {
                     )}
                   </span>
                 </span>
-
-                {/*
-                  이룬 소원의 🖋는 뺐다 — 밑줄이 이미 같은 말을 하고 있어
-                  표식이 둘이었고, 그만큼 소원 글이 밀려 두 줄로 깨졌다.
-
-                  다섯째 줄의 '아버지의 몫'은 남긴다. 그건 상태 표식이 아니라
-                  이 줄이 왜 영영 안 채워지는지를 말하는 문구다(F-1).
-                */}
-                {!fillable && (
-                  <span className="shrink-0 font-mono-retro text-[10px] tracking-wider text-ink-60">
-                    {FIFTH_WISH_RESERVED}
-                  </span>
-                )}
 
                 {/*
                   소원마다 QR. 세로로 세워 폭을 줄였다 — 가로로 눕히면
@@ -184,10 +179,24 @@ export default function JCard({ onScan }: Props) {
                   </button>
                 )}
               </div>
-              {/* 어느 가게의 소원인지 — 속지의 각주처럼 작게 */}
-              <p className="mt-0.5 pl-[26px] font-mono-retro text-[10px] text-ink-60">
-                {station.name}
-              </p>
+              {/*
+                어느 가게의 소원인지 — 속지의 각주처럼 작게.
+
+                '아버지의 몫'도 여기로 내렸다. 소원 줄에 두었더니 다섯째 줄만
+                글자 자리가 좁아, 좁은 기기에서 그 줄이 먼저 두 줄로 깨졌다.
+                뜻은 그대로다 — 잠금 표식이 아니라 이 줄이 왜 영영 안 채워지는지
+                말하는 문구이고(F-1), 각주 자리가 오히려 그 결에 맞는다.
+              */}
+              <div className="mt-0.5 flex items-baseline gap-2 pl-[26px]">
+                <p className="min-w-0 flex-1 font-mono-retro text-[10px] text-ink-60">
+                  {station.name}
+                </p>
+                {!fillable && (
+                  <span className="shrink-0 font-mono-retro text-[10px] tracking-wider text-ink-60">
+                    {FIFTH_WISH_RESERVED}
+                  </span>
+                )}
+              </div>
             </li>
           )
         })}

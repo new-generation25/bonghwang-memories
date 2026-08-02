@@ -300,7 +300,7 @@ export default function RootLayout({
         {/* CSS 강제 로드 */}
         <style dangerouslySetInnerHTML={{
           __html: `
-            @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Serif+KR:wght@600;900&family=Nanum+Gothic+Coding&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gamja+Flower&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Serif+KR:wght@600;900&family=Nanum+Gothic+Coding&display=swap');
             body { font-family: 'Noto Sans KR', sans-serif; }
           `
         }} />

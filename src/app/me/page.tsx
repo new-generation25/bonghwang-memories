@@ -13,6 +13,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import MyPoints from '@/components/MyPoints'
 import AuthModal from '@/components/AuthModal'
@@ -27,6 +28,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import { markGachaDrawn } from '@/lib/tourState'
 import { awardDynamic } from '@/lib/points'
+import { isAdminUser } from '@/lib/admin'
 import { logEvent } from '@/lib/analytics'
 
 export default function MyRecordPage() {
@@ -106,24 +108,46 @@ export default function MyRecordPage() {
           <span className="appbar-badge">BONGHWANG MEMORIES · 나의 기록</span>
           <div className="mt-1 flex items-end justify-between gap-3">
             <h1 className="appbar-title text-[19px]">나의 기록</h1>
-            {!authLoading &&
-              (profile ? (
-                <button
-                  onClick={() => setShowSettings(true)}
-                  aria-label="내 설정 열기"
-                  className="flex shrink-0 items-center gap-1 rounded-full bg-cream/20 px-3 py-1 text-[11px] font-bold"
+            <div className="flex shrink-0 items-center gap-1.5">
+              {/*
+                관리자 문 — 관리자 계정으로 로그인했을 때만 선다.
+
+                주소를 외워 치지 않고 들어갈 자리가 필요했다. 여기에 두는
+                이유는 하단 탭의 '나의 기록'이 어느 화면에서든 한 번에 닿는
+                유일한 자리이기 때문이다.
+
+                화면을 가리는 것이 권한이 아니다 — 실제 방어는 관리자 화면
+                자신과 firestore.rules다. 여기서 감추는 것은 참여자에게
+                쓸모없는 문을 보이지 않게 하려는 것뿐이다.
+              */}
+              {!authLoading && profile && isAdminUser() && (
+                <Link
+                  href="/admin"
+                  aria-label="관리자 화면 열기"
+                  className="rounded-full bg-cream/20 px-2.5 py-1 font-mono-retro text-[10px] font-bold tracking-wider"
                 >
-                  <span aria-hidden>⚙️</span>
-                  {profile.nickname} 기록자
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowAuth(true)}
-                  className="shrink-0 rounded-full bg-cream/20 px-3 py-1 text-[11px] font-bold"
-                >
-                  로그인
-                </button>
-              ))}
+                  ADMIN
+                </Link>
+              )}
+              {!authLoading &&
+                (profile ? (
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    aria-label="내 설정 열기"
+                    className="flex shrink-0 items-center gap-1 rounded-full bg-cream/20 px-3 py-1 text-[11px] font-bold"
+                  >
+                    <span aria-hidden>⚙️</span>
+                    {profile.nickname} 기록자
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowAuth(true)}
+                    className="shrink-0 rounded-full bg-cream/20 px-3 py-1 text-[11px] font-bold"
+                  >
+                    로그인
+                  </button>
+                ))}
+            </div>
           </div>
         </div>
       </header>

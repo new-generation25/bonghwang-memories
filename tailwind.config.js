@@ -49,7 +49,7 @@ module.exports = {
         handwriting: ['Noto Sans KR', 'sans-serif'],
         vintage: ['Noto Serif KR', 'serif'],
         display: ['Black Han Sans', 'sans-serif'],
-        pen: ['Nanum Pen Script', 'cursive'],
+        pen: ['Gamja Flower', 'cursive'],
         retro: ['Nanum Gothic Coding', 'monospace'],
       },
       backgroundImage: {
