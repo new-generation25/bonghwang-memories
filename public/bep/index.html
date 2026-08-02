@@ -705,13 +705,18 @@ function srvUI(err){
  if(!e)return;
  if(!SRV){ if(md)md.textContent=`(이 브라우저에만 저장 · 최대 ${MAX_SLOTS}개)`;
   if(lb)lb.style.display=""; e.innerHTML=""; if(ex)ex.innerHTML=""; return; }
- if(md)md.textContent="(서버 저장 · 기기와 무관)";
+ /* 머리말은 **실제로 어디에 저장되는지**를 말해야 한다. 서버 저장이
+    막힌 채로 "기기와 무관"이라고 적혀 있으면, 다른 기기에서 열면 값이
+    있을 줄 알고 이 브라우저를 지운다. 그 말은 서버가 실제로 답한 뒤에만 낸다. */
  if(!AUTHED){
+  if(md)md.textContent=`(이 브라우저에만 저장 · 최대 ${MAX_SLOTS}개)`;
   e.innerHTML=`<div class="note" style="margin:2px 0 8px">관리자 인증 후 서버 저장을 쓸 수 있습니다. 인증 전에는 아래 로컬 저장만 동작합니다.</div>`;
   if(lb)lb.style.display=""; if(ex)ex.innerHTML=""; return; }
  if(err){
-  e.innerHTML=`<div class="warn" style="margin:2px 0 8px">서버 저장에 연결하지 못했습니다 (${err}). 아래 로컬 저장을 쓰세요.</div>`;
+  if(md)md.textContent=`(이 브라우저에만 저장 · 최대 ${MAX_SLOTS}개)`;
+  e.innerHTML=`<div class="warn" style="margin:2px 0 8px">서버 저장에 연결하지 못했습니다 (${err}). 아래 로컬 저장을 쓰세요 — <b>지금 값은 이 브라우저에만 남습니다.</b></div>`;
   if(lb)lb.style.display=""; if(ex)ex.innerHTML=""; return; }
+ if(md)md.textContent="(서버 저장 · 기기와 무관)";
  // 정상 — 서버 저장이 주가 되고 로컬 슬롯은 접어 둔다
  if(lb)lb.style.display="none";
  e.innerHTML=`<div class="row one" style="margin-bottom:6px"><label>시나리오 이름</label>
