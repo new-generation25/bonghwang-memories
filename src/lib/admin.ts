@@ -24,13 +24,19 @@ import {
 } from 'firebase/firestore'
 import { auth, db, isFirebaseReady } from './firebase'
 import { PointReason } from './points'
+import { ADMIN_EMAILS, isAdminEmail } from './adminEmails'
 
-/** 이 이메일로 로그인한 사람만 관리자 화면을 볼 수 있다 (firestore.rules와 동일) */
-export const ADMIN_EMAILS = ['socialceos@gmail.com']
+/**
+ * 이 이메일로 로그인한 사람만 관리자 화면을 볼 수 있다 (firestore.rules와 동일).
+ *
+ * 목록 자체는 `adminEmails.ts`에 있다 — 서버 라우트도 같은 값을 봐야 하는데
+ * 이 파일은 `'use client'`라 거기서 import할 수 없기 때문이다. 여기서는
+ * 기존 import 경로가 끊기지 않도록 다시 내보내기만 한다.
+ */
+export { ADMIN_EMAILS }
 
 export function isAdminUser(): boolean {
-  const email = auth?.currentUser?.email?.toLowerCase()
-  return Boolean(email && ADMIN_EMAILS.includes(email))
+  return isAdminEmail(auth?.currentUser?.email)
 }
 
 /**

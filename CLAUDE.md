@@ -92,6 +92,9 @@ npm run script:bake     # 되쓰기 → 금지어 → 바뀐 줄만 굽기 → �
 `.env.local`(Firebase 6개 · 네이버 지도 · `TYPECAST_API_KEY`)과 아래는 gitignore라
 **외장하드를 따라다닌다. 클론만으로는 굴러가지 않는다.**
 
+BEP 시뮬레이터의 `FIREBASE_SERVICE_ACCOUNT`·`BEP_EXPORT_TOKEN`은 **없어도 된다** —
+없으면 서버 저장만 꺼지고 브라우저 저장으로 돈다(`docs/BEP_SIMULATOR.md`).
+
 ```
 public/audio/_raw/     원본 녹음 · TTS 후보 · 굽기 결과
 tts-out/               일회성 TTS 산출물
@@ -109,6 +112,7 @@ scripts/voices.json    보이스 설정 (voices.example.json이 템플릿)
 | `docs/HANDOFF_<날짜>-<번호>.md` | **날짜·번호가 가장 큰 것이 현재 상태.** 세션 처음에 읽고 끝에 적는다 |
 | `docs/SCRIPT.md` | **대사의 원본.** 배경·연표·인물 + 대본 전문. 안 정한 칸과 어긋난 곳도 여기 |
 | `docs/FLOW.md` | 랜딩부터 피날레까지 전체 진행 흐름 |
-| `docs/COUPON_FLOW.md` | 쿠폰 발급·사용·정산 한 장 요약 |
+| `docs/COUPON_FLOW.md` | 쿠폰·포인트 제도 한 장 요약 |
+| `docs/BEP_SIMULATOR.md` | `/admin/bep` 손익분기 시뮬레이터 — 값이 어디에 남는가 |
 | `docs/GAME_UPDATE_PLAN.md` | 게임 요소 F-1~F-7 계획. 충돌 해소 방침과 구현 순서 |
 | `docs/HANDOFF_*.md` | 아카이브. "왜 그렇게 했나"를 캘 때만 연다 |
