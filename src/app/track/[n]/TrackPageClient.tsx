@@ -28,7 +28,7 @@ import { useTourState } from '@/hooks/useTourState'
 import { logEvent } from '@/lib/analytics'
 import { CUES, CueId } from '@/lib/cues'
 import { dispatchQr, dispatchTap, playCue, unlockAudio } from '@/lib/cueEngine'
-import { stationByTrack } from '@/lib/tracks'
+import { stationByTrack, TRACK_STATIONS } from '@/lib/tracks'
 import { mutateTour } from '@/lib/tourState'
 
 const NEUNGSOHWA_OVERLAY = '/images/neungsohwa-overlay.png'
@@ -177,15 +177,45 @@ export default function TrackPageClient({ n }: { n: number }) {
     첫 줄을 그대로 이름표로 쓴다. 큐에는 사람이 읽을 제목이 없고, 참여자가
     기억하는 것은 번호가 아니라 소영이 한 말이기 때문이다.
   */
+  const revisitList = (Object.keys(CUES) as CueId[])
+    .filter((id) => CUES[id].track === n && CUES[id].subtitleLines.length)
+    .map((id) => ({
+      id,
+      label: CUES[id].subtitleLines[0].text.replace(/<br>/g, ' ').slice(0, 34),
+    }))
+
   const revisit =
     !cueState.cueId && !resumable && tour.tracksCompleted.includes(n)
-      ? (Object.keys(CUES) as CueId[])
-          .filter((id) => CUES[id].track === n && CUES[id].subtitleLines.length)
-          .map((id) => ({
-            id,
-            label: CUES[id].subtitleLines[0].text.replace(/<br>/g, ' ').slice(0, 34),
-          }))
+      ? revisitList
       : []
+
+  /*
+    이 거점의 이야기를 **끝까지 들었는가.**
+
+    `lastCueCompleted`는 정상 종료에서만 세워진다(cueEngine.finishCue).
+    그러니 그 큐가 next 없이 끝나는 큐라면 끊긴 것이 아니라 다 들은 것이다.
+    그런데 위의 재개 분기가 그것까지 집어삼켜 "통화가 잠시 끊겼어요"라고
+    말했다 — 멀쩡히 끝난 이야기를 사고로 만들고, 앞으로 갈 길은 안 알려준다.
+
+    한동안 드러나지 않았던 것은 큐들이 대개 미션을 열거나(ui) 다음 큐로
+    이어져서다. B1_WALK이 next도 미션도 없이 끝나는 첫 큐라 여기서 나왔다.
+  */
+  const finishedHere =
+    !cueState.cueId &&
+    !interaction &&
+    tour.tracksCompleted.includes(n) &&
+    Boolean(tour.lastCueCompleted) &&
+    CUES[tour.lastCueCompleted as CueId].track === n &&
+    CUES[tour.lastCueCompleted as CueId].next === null
+
+  /*
+    다음은 어디인가. 이야기의 차례를 따르되 강제하지는 않는다 —
+    /play의 접근 안내가 쓰는 것과 같은 셈법이다(마지막으로 이룬 소원 + 1).
+  */
+  const nextStation =
+    finishedHere && tour.tracksCompleted.length < TRACK_STATIONS.length
+      ? stationByTrack(Math.max(0, ...tour.tracksCompleted) + 1)
+      : null
 
   /*
     미션 화면 진입 계측(F-7) — 랭킹 부문1이 여기부터 mission_correct까지를
@@ -409,6 +439,69 @@ export default function TrackPageClient({ n }: { n: number }) {
             }
             endedAction={deckAction}
           />
+        ) : finishedHere ? (
+          /*
+            다 들었다. 사고가 아니라 이야기가 끝난 것이므로 다음 걸음을 준다.
+            여기서 길을 안 알려주면 화면에 남는 것이 '다시 듣기'뿐이라,
+            이야기는 끝났는데 갈 데가 없어 멈춘 것처럼 보인다.
+          */
+          <div className="rounded-2xl border border-line bg-paper p-5">
+            {nextStation ? (
+              <>
+                <p className="text-center font-mono-retro text-[10px] tracking-[0.2em] text-teal">
+                  다음 거점
+                </p>
+                <p className="mt-2 text-center font-display text-[20px] text-ink">
+                  {nextStation.name}
+                </p>
+                <p className="mt-3 text-center text-[13px] leading-relaxed text-ink-60">
+                  걸어가서 입구의 <b className="text-ink">QR</b>을 찍으면
+                  <br />
+                  소영이 이어서 이야기해 줄 거예요.
+                </p>
+              </>
+            ) : (
+              <p className="text-center text-[13px] leading-relaxed text-ink-60">
+                이 거점의 이야기는 여기까지예요.
+                <br />
+                플레이어에서 다음 거점을 골라주세요.
+              </p>
+            )}
+            <button
+              onClick={() => router.push('/play')}
+              className="btn-teal mt-4 w-full text-[14px]"
+            >
+              📼 플레이어로 가기
+            </button>
+            <button
+              onClick={() => router.push('/exploration')}
+              className="mt-2 w-full rounded-xl border border-line bg-cream-base py-2.5 text-[13px] text-ink"
+            >
+              🗺 길 안내 지도 보기
+            </button>
+
+            {/* 방금 들은 이야기를 다시 (D9 — 다시듣기는 무제한) */}
+            <div className="mt-4 border-t border-dashed border-line pt-3">
+              <p className="text-center font-mono-retro text-[10px] tracking-wider text-ink-60">
+                다시 듣기
+              </p>
+              <div className="mt-2 space-y-1.5">
+                {revisitList.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => {
+                      unlockAudio()
+                      void playCue(r.id)
+                    }}
+                    className="w-full rounded-xl border border-line bg-cream-base px-3 py-2.5 text-left text-[12.5px] leading-snug text-ink"
+                  >
+                    <span className="mr-1.5 text-teal">▶</span>
+                    {r.label}…
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         ) : resumable ? (
           <div className="rounded-2xl border border-line bg-paper p-5 text-center">
             <p className="text-[13px] text-ink-60">

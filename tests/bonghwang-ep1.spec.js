@@ -275,6 +275,52 @@ test.describe('거점 순서 — 강제하지 않는다', () => {
   })
 })
 
+test.describe('거점 이야기가 끝난 자리 — 다음 걸음을 준다', () => {
+  /*
+    B1_WALK은 next도 미션도 없이 끝나는 첫 큐다. 그래서 정상 종료인데도
+    §10 재개 분기에 걸려 "통화가 잠시 끊겼어요"가 떴고, 화면에 남는 것이
+    '다시 듣기'뿐이라 이야기는 끝났는데 갈 데가 없었다.
+
+    lastCueCompleted는 정상 종료에서만 세워지므로(cueEngine.finishCue),
+    끝맺음 큐가 거기 적혀 있으면 그것은 사고가 아니다.
+  */
+  test('B1_WALK이 끝나면 미야상회로 가라고 말한다', async ({ page }) => {
+    await seedTour(page, {
+      ...BASE_STATE,
+      tracksCompleted: [1],
+      speechMode: 'casual',
+      speechConsent: 'yes',
+      coupons: ['cp1'],
+      lastCueCompleted: 'B1_WALK',
+    })
+    await page.goto('/track/1?e2e=1')
+
+    await expect(page.getByText('다음 거점', { exact: true })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('미야상회')).toBeVisible()
+    // 끝난 이야기를 사고로 만들지 않는다
+    await expect(page.getByText(/통화가 잠시 끊겼어요/)).toHaveCount(0)
+    // 다시듣기는 여전히 열려 있다 (D9)
+    await expect(page.getByRole('button', { name: /^▶/ }).first()).toBeVisible()
+  })
+
+  test('다섯을 다 이룬 뒤에는 다음 거점을 지어내지 않는다', async ({ page }) => {
+    await seedTour(page, {
+      ...BASE_STATE,
+      tracksCompleted: [1, 2, 3, 4, 5],
+      speechMode: 'casual',
+      speechConsent: 'yes',
+      lastCueCompleted: 'B1_WALK',
+    })
+    await page.goto('/track/1?e2e=1')
+
+    await expect(page.getByText(/이 거점의 이야기는 여기까지예요/)).toBeVisible({
+      timeout: 15000,
+    })
+    // 머리표만 본다 — 대체 문구에도 '다음 거점'이라는 말이 들어간다
+    await expect(page.getByText('다음 거점', { exact: true })).toHaveCount(0)
+  })
+})
+
 test.describe('F-1 J-카드 — 진행도이자 수집첩', () => {
   test('이룬 소원에 밑줄, 다섯째 줄은 아버지의 몫', async ({ page }) => {
     await seedTour(page, {
