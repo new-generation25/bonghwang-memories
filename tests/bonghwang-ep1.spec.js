@@ -55,9 +55,15 @@ const BASE_STATE = {
   epilogueLiveVoice: false,
 }
 
-/** 거점 QR 게이트를 수동 코드로 통과한다 */
+/**
+ * 거점 QR 게이트를 수동 코드로 통과한다.
+ *
+ * QR 단추가 소원마다 하나씩 다섯 개다. 어느 것을 눌러도 스캐너는 다섯
+ * 거점을 다 받으므로 첫 줄로 연다 — 여는 단추가 아니라 넣는 코드가
+ * 어느 거점인지를 정한다.
+ */
 async function enterStation(page, code) {
-  await page.getByRole('button', { name: /거점 QR 스캔/ }).click()
+  await page.getByRole('button', { name: /거점 QR 스캔/ }).first().click()
   await page.getByPlaceholder('0000').fill(code)
   await page.getByRole('button', { name: '입장하기' }).click()
 }

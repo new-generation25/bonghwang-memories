@@ -24,16 +24,28 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { subscribeCueEvents } from '@/lib/cueEngine'
+import QrIcon from '@/components/QrIcon'
 import { playCassetteFlip, playStamp } from '@/lib/sfx'
 import { useTourState } from '@/hooks/useTourState'
 import { formatElapsed } from '@/lib/tourState'
-import { JCARD_FILLABLE_TRACKS, TRACK_STATIONS } from '@/lib/tracks'
+import { JCARD_FILLABLE_TRACKS, TRACK_STATIONS, type Station } from '@/lib/tracks'
 import { countAct2Done } from '@/lib/bingoCells'
 
 /** 다섯째 줄 상태 문구 — 잠금이 아니라 남겨둔 자리라는 뜻 */
 const FIFTH_WISH_RESERVED = '아버지의 몫'
 
-export default function JCard() {
+interface Props {
+  /**
+   * 소원마다 QR 단추를 단다 — 플레이어 화면에서만 넘긴다.
+   *
+   * 옵션인 이유는 `/me`도 이 카드를 쓰기 때문이다. 거기에는 스캐너를 열
+   * 상태가 없고, 있어야 할 이유도 없다 — 마이페이지는 되짚어 보는 곳이지
+   * 걷는 곳이 아니다.
+   */
+  onScan?: (station: Station) => void
+}
+
+export default function JCard({ onScan }: Props) {
   const tour = useTourState()
 
   const done = new Set(
@@ -102,46 +114,75 @@ export default function JCard() {
                 <span className="font-mono-retro text-[11px] text-ink-60">
                   A{station.track}
                 </span>
+                {/*
+                  밑줄은 글자 길이만큼만 긋는다.
+
+                  예전에는 남은 칸 전체에 그어져, 짧은 소원일수록 글자 뒤로
+                  빈 줄이 길게 남았다. 만년필로 그은 줄이라면 글자에서 끝난다.
+                  inline-block이라 폭이 글자에 맞춰진다.
+                */}
                 <span className="min-w-0 flex-1">
-                  {/* 손글씨는 획이 가늘어 작으면 안 읽힌다 — 본문보다 큼직하게 */}
-                  <span
-                    className={`block font-pen text-[24px] leading-normal ${
-                      filled ? 'text-ink' : 'text-ink-60'
-                    }`}
-                  >
-                    {station.wish}
-                  </span>
-                  {/* 만년필 밑줄 — 이룬 소원에만 긋는다 */}
-                  {filled && (
+                  <span className="inline-block max-w-full">
+                    {/* 손글씨는 획이 가늘어 작으면 안 읽힌다 — 본문보다 큼직하게 */}
                     <span
-                      className="block h-[2px] rounded-full bg-teal-dk/70"
-                      style={
-                        animate
-                          ? { animation: 'fadeIn 0.8s ease-in-out' }
-                          : undefined
-                      }
-                    />
-                  )}
-                </span>
-                <span
-                  className="shrink-0 text-[14px]"
-                  style={
-                    animate ? { animation: 'fadeIn 0.8s ease-in-out' } : undefined
-                  }
-                >
-                  {fillable ? (
-                    filled ? (
-                      '🖋'
-                    ) : (
-                      ''
-                    )
-                  ) : (
-                    /* 다섯째 줄 — 잠금 아이콘이 아니라 상태 문구(F-1) */
-                    <span className="font-mono-retro text-[10px] tracking-wider text-ink-60">
-                      {FIFTH_WISH_RESERVED}
+                      className={`block font-pen text-[24px] leading-normal ${
+                        filled ? 'text-ink' : 'text-ink-60'
+                      }`}
+                    >
+                      {station.wish}
                     </span>
-                  )}
+                    {/* 만년필 밑줄 — 이룬 소원에만 긋는다 */}
+                    {filled && (
+                      <span
+                        className="block h-[2px] rounded-full bg-teal-dk/70"
+                        style={
+                          animate
+                            ? { animation: 'fadeIn 0.8s ease-in-out' }
+                            : undefined
+                        }
+                      />
+                    )}
+                  </span>
                 </span>
+
+                {/*
+                  이룬 소원의 🖋는 뺐다 — 밑줄이 이미 같은 말을 하고 있어
+                  표식이 둘이었고, 그만큼 소원 글이 밀려 두 줄로 깨졌다.
+
+                  다섯째 줄의 '아버지의 몫'은 남긴다. 그건 상태 표식이 아니라
+                  이 줄이 왜 영영 안 채워지는지를 말하는 문구다(F-1).
+                */}
+                {!fillable && (
+                  <span className="shrink-0 font-mono-retro text-[10px] tracking-wider text-ink-60">
+                    {FIFTH_WISH_RESERVED}
+                  </span>
+                )}
+
+                {/*
+                  소원마다 QR. 세로로 세워 폭을 줄였다 — 가로로 눕히면
+                  손글씨가 밀린다.
+
+                  다섯째 줄에도 단다 — J-카드는 안 채워져도(아버지의 몫)
+                  방하림은 다녀와야 하는 거점이고 쿠폰도 거기서 나온다.
+                  이룬 소원에서도 지우지 않는다. 다녀온 거점은 다시듣기로
+                  들어가고(D9), 눈앞의 QR이 가장 가까운 입구다.
+
+                  실물 QR처럼 검정. 티얼은 이 앱의 구조색이라 앱바·탭이
+                  이미 쓰고 있어, 여기까지 초록이면 '누르는 곳'이 아니라
+                  또 하나의 장식으로 묻힌다.
+                */}
+                {onScan && (
+                  <button
+                    onClick={() => onScan(station)}
+                    aria-label={`${station.name} 거점 QR 스캔`}
+                    className="flex w-7 shrink-0 flex-col items-center gap-px rounded-md bg-shell py-1 text-cream active:scale-95"
+                  >
+                    <QrIcon size={14} />
+                    <span className="font-mono-retro text-[8px] leading-none tracking-wider">
+                      QR
+                    </span>
+                  </button>
+                )}
               </div>
               {/* 어느 가게의 소원인지 — 속지의 각주처럼 작게 */}
               <p className="mt-0.5 pl-[26px] font-mono-retro text-[10px] text-ink-60">

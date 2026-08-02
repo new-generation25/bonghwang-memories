@@ -40,9 +40,14 @@ const seed = (page, s) =>
 const coupons = (page) =>
   page.evaluate(() => JSON.parse(window.localStorage.getItem('bh_tour_v2')).coupons)
 
-/** 거점 QR 게이트 — 헤드리스에서는 4자리 수동 코드로 지난다 */
+/**
+ * 거점 QR 게이트 — 헤드리스에서는 4자리 수동 코드로 지난다.
+ *
+ * 단추는 소원마다 하나씩 다섯 개다. 어느 것을 눌러도 스캐너는 다섯 거점을
+ * 다 받으므로 첫 줄로 연다 — 어느 거점인지는 넣는 코드가 정한다.
+ */
 async function enter(page, code) {
-  await page.getByRole('button', { name: /거점 QR 스캔/ }).click()
+  await page.getByRole('button', { name: /거점 QR 스캔/ }).first().click()
   await page.getByPlaceholder('0000').fill(code)
   await page.getByRole('button', { name: '입장하기' }).click()
 }

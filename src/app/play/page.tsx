@@ -19,22 +19,6 @@ import { useTourState } from '@/hooks/useTourState'
 import { dispatchQr } from '@/lib/cueEngine'
 import { Station, TRACK_STATIONS, stationByTrack } from '@/lib/tracks'
 
-/**
- * QR 표식 — 실물 QR을 축약한 모양.
- * 이모지(📷)는 카메라를 뜻해서 '사진 찍기'로 읽힐 수 있다. 거점에 붙은
- * 종이 QR과 같은 그림이어야 무엇을 찾아야 하는지 바로 안다.
- */
-function QrIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      {/* 세 모서리의 찾기 표식 */}
-      <path d="M3 3h7v7H3V3zm2 2v3h3V5H5zM14 3h7v7h-7V3zm2 2v3h3V5h-3zM3 14h7v7H3v-7zm2 2v3h3v-3H5z" />
-      {/* 데이터 칸 몇 개 — 실물처럼 보이게 하는 최소한 */}
-      <path d="M14 14h2v2h-2v-2zm4 0h3v2h-3v-2zm-4 4h2v3h-2v-3zm4 1h3v2h-3v-2z" />
-    </svg>
-  )
-}
-
 export default function PlayerHomePage() {
   const tour = useTourState()
   const router = useRouter()
@@ -117,50 +101,21 @@ export default function PlayerHomePage() {
         트랙 리스트는 J-카드로 통합했다(F-1). 같은 다섯 소원을 목록과
         카드가 두 번 보여주고 있었다.
 
-        QR 버튼도 하나로 합쳤다 — 스캔값(BH88:T*)이 어느 거점인지 스스로
-        말하므로, 버튼이 소원마다 붙어 '어느 QR인지'를 설명할 필요가 없다.
-        어느 거점 QR을 찍어도 그 소원의 미션이 열린다. 순서는 소영의
-        대사와 지도가 안내할 뿐, 코드가 강제하지 않는다.
+        QR 단추는 **소원마다** 붙는다. 한동안 아래에 띠 버튼 하나로 합쳐
+        두었는데 — 스캔값(BH88:T*)이 어느 거점인지 스스로 말하니 소원마다
+        둘 이유가 없다고 봤다 — 골목에서 쓰는 모양이 그렇지 않았다. 눈앞의
+        가게를 보고 그 줄을 누르는 것이 자연스럽다.
+
+        어느 줄의 단추를 눌러도 스캐너는 다섯 거점을 다 받는다. 누른 줄로
+        가두면 손에 든 QR을 거절하게 되고, 그건 순서를 강제하지 않겠다는
+        결정과 어긋난다. 줄은 어디로 들어갈지가 아니라 어디에 서 있는지를
+        고르는 자리다.
 
         빙고 진입 카드는 예전에 뺐다 — 하단 탭의 '빙고'가 같은 일을 한다.
         슈퍼관리자의 임의 거점 입장은 조작 패널(SuperAdminBar)의 이동이 맡는다.
       */}
       <div className="mx-auto mt-4 w-full max-w-[380px] px-4">
-        <JCard />
-
-        {/*
-          다섯을 다 이룬 뒤에도 이 버튼을 남긴다.
-
-          예전에는 숨겼다 — 더 이룰 소원이 없으니 찍을 QR도 없다고 봤다.
-          지금은 다르다. 다녀온 거점으로 돌아가 이야기를 다시 들을 수 있고
-          (D9), 지도에서도 들어갈 수 있다. 그런데 골목에 서 있는 사람에게
-          가장 가까운 입구는 **눈앞의 QR**이다. 그것을 쓰려고 지도를 거치게
-          하면 한 단계를 더 걷게 만드는 셈이다.
-
-          하는 일이 달라졌으니 이름도 바꾼다.
-        */}
-        {(
-          <div className="cta-band mt-4">
-            <button
-              onClick={() => setShowScanner(true)}
-              aria-label="거점 QR 스캔"
-              /*
-                실물 QR처럼 검정. 티얼은 이 앱의 구조색이라 앱바·탭·버튼이
-                이미 쓰고 있어서, 여기까지 초록이면 '누르는 곳'이 아니라
-                '또 하나의 장식'으로 묻힌다. 검정 QR은 거점에 붙은 실물과
-                같은 그림이라 무엇을 찾아야 하는지도 같이 알려준다.
-              */
-              className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-shell py-3.5 text-cream active:scale-[0.99]"
-            >
-              <QrIcon />
-              <span className="font-display text-[15px]">
-                {completedCount < 5
-                  ? '거점 QR 찍고 소원 이루기'
-                  : '거점 QR 찍고 다시 듣기'}
-              </span>
-            </button>
-          </div>
-        )}
+        <JCard onScan={() => setShowScanner(true)} />
 
         <button
           onClick={() => router.push('/exploration')}
