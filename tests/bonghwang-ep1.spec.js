@@ -131,6 +131,14 @@ test.describe('D9 — 다시듣기와 자동재생 금지', () => {
 })
 
 test.describe('Track 1 — 미션 전 구간과 말 놓기 분기(D7)', () => {
+  /*
+    이 묶음은 트랙 1을 실제로 끝까지 듣는다 — walkTrack1 안의 대기만 130초다.
+    그런데 테스트 예산이 기본 30초여서, 대본이 길어지자(B0_CALL 79→95초 ·
+    B1_WALK 신설) 자막을 기다리다 예산이 먼저 끊겼다. 안쪽 expect들이 이미
+    60초·20초를 적어 둔 것이 원래 의도이므로, 예산을 거기 맞춘다.
+  */
+  test.describe.configure({ timeout: 240_000 })
+
   /** 코드 입장 → 개수 7 → 사장님 증언 → 사진까지. 말 놓기 물음 직전에서 멈춘다 */
   async function walkTrack1(page) {
     await page.goto('/play?e2e=1')
@@ -237,13 +245,27 @@ test.describe('거점 순서 — 강제하지 않는다', () => {
     await expect(page.getByText(/창가 자리/)).toBeVisible({ timeout: 20000 })
   })
 
-  test('이미 이룬 소원의 거점은 거절한다', async ({ page }) => {
+  /*
+    다녀온 거점의 QR도 받는다.
+
+    예전에는 여기서 "이미 이뤘어요"로 돌려보냈다. 그런데 눈앞의 QR이 그
+    거점으로 가는 가장 가까운 입구인데 거절하면, 이야기를 다시 들을 길이
+    없다 — 현장 모니터링의 "새로고침하면 재청취 경로가 없다"가 이 자리다.
+    지금은 들여보내되 도착 큐 대신 다시듣기 목록을 연다.
+  */
+  test('이미 이룬 소원의 거점도 QR로 들어간다 — 다시듣기로', async ({ page }) => {
     await seedTour(page, { ...BASE_STATE, tracksCompleted: [1] })
     await page.goto('/play?e2e=1')
     await enterStation(page, '1935')
 
-    await expect(page.getByText(/이미 이뤘어요/)).toBeVisible({ timeout: 10000 })
-    await expect(page).toHaveURL(/\/play/)
+    await expect(page).toHaveURL(/\/track\/1/, { timeout: 15000 })
+    await expect(page.getByText(/여기는 이미 다녀왔어요/)).toBeVisible({
+      timeout: 20000,
+    })
+    // 목록이 비어 있으면 '들어는 갔는데 들을 것이 없는' 상태다
+    await expect(
+      page.getByRole('button', { name: /^▶/ }).first()
+    ).toBeVisible({ timeout: 20000 })
   })
 })
 
