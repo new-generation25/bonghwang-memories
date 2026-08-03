@@ -209,14 +209,14 @@ let H=`<div class="card"><h2>시나리오 프리셋</h2><div class="btns" id="pr
   <div class="slots" id="slots"></div><div class="note" id="stNote"></div></div>
  <div id="srvExtra"></div></div>
  <div class="card"><h2>앱에 반영</h2>
- <div class="note" style="margin:0 0 8px">여기 값 중 <b>앱에 대응하는 자리가 있는 것만</b> 골라 복사합니다.
-  전환율·객단가처럼 앱에 없는 가정값은 넘어가지 않습니다.
-  <b>충당률은 일부러 뺐습니다</b> — 연차별 값을 등급별 칸에 옮길 방법이 없고, 잘못 넘기면 가게에 청구가 갑니다.</div>
- <div class="btns"><button onclick="copyAppPatch()">앱 반영안 복사</button></div>
+ <div class="note" style="margin:0 0 8px">여기 값 중 <b>앱에 대응하는 자리가 있는 일곱</b>만 넘어갑니다 —
+  쿠폰 액면 · 포인트 유효기간 · 배점 셋 · 등급별 회비 · 등급별 월 상한.
+  전환율·객단가처럼 앱에 없는 가정값은 담지 않습니다.
+  <b>충당률은 넘기지 않습니다</b> — 연차별 값을 등급별 칸에 옮길 대응이 없고, 잘못 넘어가면 가게에 청구가 갑니다.</div>
+ <div class="btns"><button onclick="applyToApp()" style="border-color:#2a78d6;color:#2a78d6;font-weight:700">앱에 반영</button></div>
  <div id="appPatchMsg" class="note" style="margin:6px 0 0"></div>
- <textarea id="appPatchOut" style="display:none;width:100%;height:120px;margin-top:6px;font:11px/1.5 ui-monospace,monospace"></textarea>
- <div class="note" style="margin:6px 0 0">복사한 뒤 <b>앱의 관리자 화면 → 정산 설정 → 「BEP 반영안 붙여넣기」</b>에 넣으세요.
-  무엇이 무엇으로 바뀌는지 거기서 보여드리고, 저장은 한 번 더 누르셔야 합니다.</div></div>
+ <div class="note" style="margin:6px 0 0">작은 창이 열립니다. <b>무엇이 무엇으로 바뀌는지 거기서 보여드리고,
+  한 번 더 누르셔야 저장됩니다.</b> 관리자 구글 로그인이 필요합니다.</div></div>
  <div class="card"><h2>1. 연차별 목표치 <span style="font-weight:400;font-size:11px;color:var(--ink3)">(각 연도 말 도달값)</span></h2>
  <div class="hdr"><span>항목</span><span>2026말</span><span>2027말</span><span>2028말</span></div>`;
 YKEYS.forEach(([k,lab])=>{H+=`<div class="row${KEYRANK[k]?" key":""}"><label data-t="${k}">${KEYRANK[k]?`<span class="rk">${RN[KEYRANK[k]]}</span>`:""}${lab}</label>${inp(k+"26")}${inp(k+"27")}${inp(k+"28")}</div>`;});
@@ -879,14 +879,28 @@ function appPatch(){
   /* 무료 등급 상한은 BEP에 대응하는 칸이 없다 — 앱 값을 그대로 둔다 */
   monthlyCap:{basic:v("limB"),premium:v("limP")}};
 }
-function copyAppPatch(){
- const txt=JSON.stringify(appPatch(),null,1),msg=document.getElementById("appPatchMsg"),ta=document.getElementById("appPatchOut");
- const fallback=()=>{ta.style.display="block";ta.value=txt;ta.select();
-  msg.innerHTML='<b>복사가 막혔습니다.</b> 아래 칸의 내용을 직접 복사하세요.';};
- if(!navigator.clipboard){fallback();return;}
- navigator.clipboard.writeText(txt).then(()=>{ta.style.display="none";
-  msg.innerHTML="✅ 복사했습니다 — 관리자 화면의 「BEP 반영안 붙여넣기」에 넣으세요.";},fallback);
+/* 값은 주소의 **fragment**로 넘긴다. 물음표 뒤가 아닌 이유는 fragment가
+   서버로 안 가서다 — 접속 기록에 수치가 남지 않는다.
+   btoa는 한글을 못 삼키므로 UTF-8을 한 번 접어서 넣는다(키는 영문이지만
+   나중에 한글 이름이 섞여도 안 깨지게). */
+function applyUrl(){
+ return "/admin/bep-apply#"+btoa(unescape(encodeURIComponent(JSON.stringify(appPatch()))));
 }
+function applyToApp(){
+ const msg=document.getElementById("appPatchMsg"),url=applyUrl();
+ const w=window.open(url,"bepApply","width=470,height=700");
+ if(!w){ /* 팝업 차단 — 막다른 길로 두지 않는다 */
+  msg.innerHTML=`팝업이 막혔습니다. <a href="${url}" target="_blank" rel="noopener" style="color:#2a78d6;font-weight:700">이 링크로 여세요</a>.`;
+  return; }
+ msg.textContent="열린 창에서 바뀌는 값을 확인하고 한 번 더 누르세요.";
+ w.focus();
+}
+/* 반영이 끝나면 작은 창이 알려 준다 */
+window.addEventListener("message",e=>{
+ if(e.origin!==location.origin||!e.data||e.data.type!=="bep-applied")return;
+ const msg=document.getElementById("appPatchMsg");
+ if(msg)msg.innerHTML="✅ 앱에 반영했습니다.";
+});
 function expJSON(){const a=document.createElement("a");
  a.href=URL.createObjectURL(new Blob([JSON.stringify({slots:SLOTS,current:snap()},null,1)],{type:"application/json"}));
  a.download="로컬메모리즈_BEP설정.json";a.click();}
