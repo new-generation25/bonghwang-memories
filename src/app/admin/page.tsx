@@ -372,6 +372,27 @@ export default function AdminPage() {
         시뮬레이터는 이 화면의 숫자와 성격이 다르다 — 여기는 지금 일어난
         일이고 저기는 앞으로의 가정이다. 그래서 섞지 않고 문만 낸다.
       */}
+      {/*
+        현장에서 여는 문은 맨 위에 둔다. 이 화면은 끝난 뒤 세어 보는 곳이고,
+        골목에 서 있는 사람에게 필요한 것은 지금 누가 어디서 멈췄는가다.
+      */}
+      <Link
+        href="/admin/live"
+        className="mb-4 flex items-center justify-between rounded-xl border border-rec/40 bg-rec/5 px-3.5 py-2.5"
+      >
+        <span className="min-w-0">
+          <span className="block text-[12.5px] font-bold text-ink">
+            🔴 지금 걷는 팀
+          </span>
+          <span className="block text-[11px] text-ink-60">
+            누가 어디쯤인지 · 멈춘 팀은 어디인지 — 20초마다 저절로 갱신
+          </span>
+        </span>
+        <span className="ml-3 shrink-0 rounded-lg bg-cream-dp px-2.5 py-1 font-mono-retro text-[10.5px] tracking-wider text-ink-60">
+          열기
+        </span>
+      </Link>
+
       <Link
         href="/admin/bep"
         className="mb-4 flex items-center justify-between rounded-xl border border-line bg-paper px-3.5 py-2.5"
