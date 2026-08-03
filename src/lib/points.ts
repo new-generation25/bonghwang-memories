@@ -27,6 +27,7 @@ import {
   getDocs,
 } from 'firebase/firestore'
 import { auth, db, isFirebaseReady } from './firebase'
+import { syncRanking } from './publicMirror'
 
 // ---------------------------------------------------------------------------
 // 포인트 표 — 여기만 고치면 전체에 반영된다
@@ -202,6 +203,12 @@ async function writeEntry(uid: string, entry: PointEntry): Promise<boolean> {
     { totalPoints: increment(entry.points), lastActiveAt: serverTimestamp() },
     { merge: true }
   )
+  /*
+    랭킹판이 보는 것은 이제 공개 문서다(publicMirror.ts). users를 닫으면서
+    갈라졌으므로 포인트가 오르는 자리마다 둘을 함께 올린다 — 여기 한 곳이
+    유일한 적립 통로라, 빠뜨릴 자리가 더 늘지는 않는다.
+  */
+  await syncRanking(uid, { addPoints: entry.points })
   return true
 }
 

@@ -32,8 +32,17 @@ export async function fetchRankings(): Promise<RankingEntry[]> {
   const { collection, getDocs, limit, orderBy, query } = await import(
     'firebase/firestore'
   )
+  /*
+    `users`가 아니라 `rankings`를 본다.
+
+    users는 본인·관리자만 읽는다 — 같은 문서에 로그인 아이디·결제 여부·
+    진행 상황이 함께 들어 있어서, 랭킹 하나 때문에 열어 두었다가 참여자
+    전원의 기록이 밖에서 통째로 읽혔다(publicMirror.ts).
+
+    이 문서에는 닉네임과 포인트뿐이다.
+  */
   const q = query(
-    collection(db, 'users'),
+    collection(db, 'rankings'),
     orderBy('totalPoints', 'desc'),
     limit(FETCH_LIMIT + FETCH_MARGIN)
   )

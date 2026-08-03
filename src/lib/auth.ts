@@ -16,15 +16,17 @@ import {
   setDoc,
   updateDoc,
   getDoc,
-  getDocs,
-  collection,
-  query,
-  where,
-  limit,
   serverTimestamp,
   deleteField,
 } from 'firebase/firestore'
 import { auth, db, isFirebaseReady } from './firebase'
+import {
+  claimNickname,
+  isNicknameTaken,
+  releaseNickname,
+  syncRanking,
+  toNicknameKey,
+} from './publicMirror'
 
 /**
  * 계정 시스템.
@@ -78,40 +80,19 @@ export function validateNickname(nickname: string): string | null {
   return null
 }
 
-/**
- * 닉네임 중복 확인.
- *
- * users 문서는 읽기 공개(firestore.rules)라 클라이언트에서 조회할 수 있다.
- * 대소문자·앞뒤 공백 차이로 같은 이름이 여러 개 생기지 않도록
- * 비교용 소문자 키(nicknameKey)를 함께 저장하고 그 키로 찾는다.
- *
- * 주의: 이건 편의 검사다. 두 사람이 동시에 같은 이름을 넣으면 둘 다 통과할 수
- * 있다. 완전한 유일성이 필요해지면 Firestore 트랜잭션이나
- * nicknames/{key} 예약 문서가 필요하다.
- */
-export function toNicknameKey(nickname: string): string {
-  return nickname.trim().toLowerCase()
-}
+/*
+  닉네임 열쇠와 중복 확인은 publicMirror로 옮겼다.
 
-export async function isNicknameTaken(
-  nickname: string,
-  /** 본인 문서는 중복으로 치지 않는다(닉네임 변경 시) */
-  exceptUid?: string
-): Promise<boolean> {
-  if (!isFirebaseReady() || !db) return false
-  const key = toNicknameKey(nickname)
-  if (!key) return false
+  예전에는 users를 직접 뒤졌다 — 읽기가 공개라 가능했던 일이다. 그 공개가
+  바로 참여자 진행 상황을 통째로 새게 한 구멍이라 닫았고, '이름이
+  쓰이는가'만 공개 문서(nicknames/{key})가 답한다.
 
-  const users = collection(db, 'users')
-  // nicknameKey는 이번 개편부터 저장한다. 그 전에 만들어진 문서에는 없으므로
-  // 원문 nickname으로도 한 번 더 찾는다(대소문자까지는 못 잡지만 정확 일치는 잡힌다).
-  const [byKey, byName] = await Promise.all([
-    getDocs(query(users, where('nicknameKey', '==', key), limit(2))),
-    getDocs(query(users, where('nickname', '==', nickname.trim()), limit(2))),
-  ])
+  덤으로 겹침도 없어졌다. 예전 검사는 '확인하고 만드는' 두 걸음 사이에
+  남이 끼어들 수 있었는데, 이제 문서 ID가 곧 이름이라 먼저 만든 쪽이 이긴다.
 
-  return [...byKey.docs, ...byName.docs].some((d) => d.id !== exceptUid)
-}
+  부르는 쪽(AuthModal)이 여기서 가져다 쓰고 있어 이름은 그대로 내보낸다.
+*/
+export { toNicknameKey, isNicknameTaken } from './publicMirror'
 
 const toInternalEmail = (loginId: string) => `${loginId.toLowerCase()}@${ID_DOMAIN}`
 
@@ -225,6 +206,17 @@ export async function signUp(
       createdAt: serverTimestamp(),
       lastUpdated: serverTimestamp(),
     })
+
+    /*
+      이름을 맡고 랭킹판에 자리를 낸다. users는 이제 본인·관리자만 읽으므로
+      밖에서 보이는 것은 이 둘뿐이다.
+
+      맡기에 실패해도 가입은 살린다 — 이미 계정이 만들어진 뒤라, 여기서
+      던지면 로그인은 되는데 프로필이 없는 계정이 남는다. 겹친 이름은
+      다음에 바꿀 때 걸린다.
+    */
+    await claimNickname(cred.user.uid, trimmedNickname).catch(() => {})
+    await syncRanking(cred.user.uid, { nickname: trimmedNickname, totalPoints: 0 })
 
     return profile
   } catch (error) {
@@ -401,6 +393,9 @@ export async function completeGoogleSignUp(
     lastUpdated: serverTimestamp(),
   })
 
+  await claimNickname(uid, trimmed).catch(() => {})
+  await syncRanking(uid, { nickname: trimmed, totalPoints: 0 })
+
   if (a.currentUser && a.currentUser.uid === uid) {
     await updateProfile(a.currentUser, { displayName: trimmed })
   }
@@ -422,11 +417,22 @@ export async function changeNickname(
     throw new Error('이미 사용 중인 닉네임입니다. 다른 이름을 골라주세요.')
   }
 
+  /*
+    새 이름을 **먼저 맡는다.** 놓기부터 하면 그 사이에 남이 채갈 수 있고,
+    맡기에 실패했는데 옛 이름을 이미 놓았으면 둘 다 없는 상태가 된다.
+  */
+  const before = (await getProfile(uid))?.nickname ?? ''
+  await claimNickname(uid, trimmed)
+
   await updateDoc(doc(d, 'users', uid), {
     nickname: trimmed,
     nicknameKey: toNicknameKey(trimmed),
     lastUpdated: serverTimestamp(),
   })
+  await syncRanking(uid, { nickname: trimmed })
+  if (before && toNicknameKey(before) !== toNicknameKey(trimmed)) {
+    await releaseNickname(before)
+  }
 
   if (a.currentUser && a.currentUser.uid === uid) {
     await updateProfile(a.currentUser, { displayName: trimmed })
