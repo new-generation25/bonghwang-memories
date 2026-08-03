@@ -56,6 +56,11 @@ export type AnalyticsEventName =
   // 보상 — 쿠폰은 빙고 첫 줄에 다섯 장, 그 뒤로는 줄마다 뽑기 한 번
   | 'coupon_granted'
   | 'gacha_drawn'
+  /*
+    화면이 죽은 자리(app/error.tsx). 현장에서 "이상해요"라는 말만
+    듣고는 어디를 봐야 할지 알 수 없어, 무엇이 났는지 함께 남긴다.
+  */
+  | 'app_error'
 
 export interface AnalyticsEvent {
   name: AnalyticsEventName
