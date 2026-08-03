@@ -56,6 +56,9 @@ button.act{background:#0e7c5a;color:#fff;border-color:#0e7c5a}
 .slot{display:inline-flex;align-items:center;gap:3px;background:#fff;border:1px solid var(--line);border-radius:5px;padding:2px 4px 2px 8px;font-size:11px}
 .slot b{color:var(--navy);cursor:pointer}.slot .x{cursor:pointer;color:var(--ink3);padding:0 3px;font-weight:700}
 .slot .x:hover{color:var(--bad)}
+/* 이름 고치기는 지우기와 색을 달리한다 — 나란히 있어 잘못 누르기 쉽다 */
+.slot .rn{cursor:pointer;color:var(--ink3);padding:0 3px}
+.slot .rn:hover{color:var(--navy)}
 .legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin:0 0 4px 6px}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .keytag{display:inline-block;background:var(--key);border:1px solid var(--keyb);color:#a2542a;border-radius:3px;padding:0 5px;font-size:10.5px;font-weight:700;margin-left:5px}
@@ -695,6 +698,14 @@ async function srvSave(){
 async function srvLoad(id){
  const s=SLIST.find(x=>x.id===id);if(!s)return;
  SCUR=id;setAll({...DEF,...s.params});calc();srvUI();}
+/* 이름만 고친다 — 화면 값이 아니라 **저장돼 있던 값**을 그대로 되돌려 보낸다.
+   snap()을 보내면 이름을 바꾸는 김에 지금 만지던 값으로 덮어써 버린다. */
+async function srvRename(id){
+ const s=SLIST.find(x=>x.id===id);if(!s)return;
+ const nm=(prompt("새 이름을 넣어주세요.",s.name||"")||"").trim();
+ if(!nm||nm===s.name)return;
+ try{await api("",{method:"POST",body:JSON.stringify({id:s.id,name:nm,note:s.note,params:s.params})});
+  await srvList();}catch(e){srvUI(e.message);}}
 async function srvDel(id){
  if(!confirm("이 시나리오를 삭제할까요?"))return;
  try{await api("?id="+encodeURIComponent(id),{method:"DELETE"});
@@ -727,9 +738,10 @@ function srvUI(err){
   <div class="slots" style="margin-top:8px">${SLIST.length?SLIST.map(x=>`<span class="slot" style="cursor:pointer;${x.id===SCUR?'background:#dbeafe;border-color:#2a78d6':''}" onclick="srvLoad('${x.id}')">
     <b>${(x.name||"이름 없음").slice(0,18)}</b>
     <span style="color:${(x.kpi&&x.kpi.cum2812)>=0?'var(--good)':'var(--bad)'}">${F((x.kpi&&x.kpi.cum2812)||0)}</span>
+    <span class="rn" onclick="event.stopPropagation();srvRename('${x.id}')" title="이름 고치기">✎</span>
     <span class="x" onclick="event.stopPropagation();srvDel('${x.id}')">×</span></span>`).join("")
    :`<span style="font-size:11px;color:var(--ink3)">저장된 시나리오가 없습니다.</span>`}</div>
-  <div class="note">이름으로 저장하면 기기·브라우저와 무관하게 같은 값을 다시 엽니다. 옆 숫자는 2028.12 누적 손익.
+  <div class="note">이름으로 저장하면 기기·브라우저와 무관하게 같은 값을 다시 엽니다. 옆 숫자는 2028.12 누적 손익. <b>✎</b>는 값은 그대로 두고 이름만 고칩니다.
    ${SCUR?`현재 <b>${(SLIST.find(x=>x.id===SCUR)||{}).name||""}</b>를 열어 둔 상태입니다.`:""}</div>`;
  if(ex)ex.innerHTML=`<div class="btns" style="margin-top:10px"><button onclick="expJSON()">파일로 내보내기</button>
    <button onclick="document.getElementById('impF').click()">파일에서 불러오기</button></div>
@@ -817,15 +829,27 @@ function loadSlot(i){const s=SLOTS[i];if(!s)return;setAll({...DEF,...s.d});calc(
 function delSlot(i){const s=SLOTS[i];if(!s)return;
  if(!confirm(`「${s.n}」을 지울까요? 되돌릴 수 없습니다.`))return;
  SLOTS.splice(i,1);persist();}
+/* 이름만 고친다.
+   예전에는 이름을 바꾸려면 불러와서 새 이름으로 다시 저장하는 수밖에
+   없었는데, 그러면 옛 이름이 그대로 남아 같은 값이 둘이 됐다. 어느 쪽이
+   지금 것인지 모르게 되는 것이 며칠 뒤 가장 헷갈리는 자리였다. */
+function renameSlot(i){const s=SLOTS[i];if(!s)return;
+ const nm=(prompt("새 이름을 넣어주세요.",s.n)||"").trim();
+ if(!nm||nm===s.n)return;
+ /* 다른 것이 이미 쓰는 이름이면 막는다 — 말없이 합치면 하나가 사라진다 */
+ if(SLOTS.some((x,j)=>j!==i&&x.n===nm)){slotMsg(`「${nm}」은 이미 있습니다. 다른 이름을 쓰거나 그것을 먼저 지워주세요.`);return;}
+ const old=s.n;s.n=nm;persist();
+ const el=document.getElementById("slotName");if(el&&el.value.trim()===old)el.value=nm;
+ slotMsg(`「${old}」을 「${nm}」으로 바꿨습니다.`,true);}
 function drawSlots(){const el=document.getElementById("slots");if(!el)return;
  const cur=((document.getElementById("slotName")||{}).value||"").trim();
  el.innerHTML=SLOTS.length?SLOTS.map((s,i)=>`<span class="slot" onclick="loadSlot(${i})" style="cursor:pointer;${s.n===cur?"background:#dbeafe;border-color:#2a78d6":""}" title="누르면 이 설정을 불러옵니다"><b>${esc(String(s.n).slice(0,20))}</b>
-  <span style="color:${s.cum>=0?'var(--good)':'var(--bad)'}">${F(s.cum)}</span><span class="x" onclick="event.stopPropagation();delSlot(${i})">×</span></span>`).join("")
+  <span style="color:${s.cum>=0?'var(--good)':'var(--bad)'}">${F(s.cum)}</span><span class="rn" onclick="event.stopPropagation();renameSlot(${i})" title="이름 고치기">✎</span><span class="x" onclick="event.stopPropagation();delSlot(${i})">×</span></span>`).join("")
   :`<span style="font-size:11px;color:var(--ink3)">저장된 설정이 없습니다.</span>`;
  document.getElementById("stNote").innerHTML=(OK
   ?"이름을 누르면 그 설정을 불러옵니다. 옆 숫자는 2028.12 누적 손익. <b>고치는 값은 저장을 누르지 않아도 이 브라우저에 남아</b> 새로고침해도 그대로입니다."
   :"⚠ 이 화면에서는 브라우저 저장이 막혀 있어 <b>새로고침하면 사라집니다.</b> 오래 보관하려면 '파일로 내보내기'를 쓰세요.")
-  +` 같은 이름으로 저장하면 덮어씁니다 · ${SLOTS.length}/${MAX_SLOTS}개.`;}
+  +` 같은 이름으로 저장하면 덮어씁니다 · <b>✎</b>는 값은 그대로 두고 이름만 고칩니다 · ${SLOTS.length}/${MAX_SLOTS}개.`;}
 function expJSON(){const a=document.createElement("a");
  a.href=URL.createObjectURL(new Blob([JSON.stringify({slots:SLOTS,current:snap()},null,1)],{type:"application/json"}));
  a.download="로컬메모리즈_BEP설정.json";a.click();}
