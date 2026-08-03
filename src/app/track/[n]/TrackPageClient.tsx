@@ -12,7 +12,7 @@
  * 지시자 실행은 모두 멱등이라 재실행이 안전하다.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import CuePlayer from '@/components/cue/CuePlayer'
 import PlacePhoto from '@/components/cue/PlacePhoto'
@@ -216,6 +216,33 @@ export default function TrackPageClient({ n }: { n: number }) {
     finishedHere && tour.tracksCompleted.length < TRACK_STATIONS.length
       ? stationByTrack(Math.max(0, ...tour.tracksCompleted) + 1)
       : null
+
+  /*
+    끊긴 이야기는 **글로 알리지 않고 그냥 다시 튼다.**
+
+    새로고침이나 QR 재진입으로 엔진이 비면 "통화가 잠시 끊겼어요"라는 안내와
+    버튼이 떴다. 참여자는 이야기를 들으러 온 것이지 사고 보고를 읽으러 온
+    것이 아니다 — 원래 듣던 자리에서 소리가 이어지는 것이 원안이다.
+
+    D9(시간 기반 자동재생 금지)에 걸리지 않는다. 여기서 트는 것은 **이미
+    들었던 큐**이고, 시간이나 위치가 아니라 참여자가 이 화면에 다시 들어온
+    행동이 방아쇠다. 이야기를 앞으로 밀지 않는다.
+
+    막히면 그때만 손을 빌린다. 브라우저는 탭 없이 시작된 소리를 막는데,
+    그 경우 playCue가 `playing: false`로 세워두고 CuePlayer가 「탭해서 계속」을
+    내놓는다(cueEngine.ts:512) — 글 대신 플레이어가 뜨는 것이라 원안에 가깝다.
+
+    한 번만 시도한다. 다 듣고 나면 다시 `resumable`이 서므로, 막지 않으면
+    끝날 때마다 저 혼자 되감아 튼다.
+  */
+  const autoResumed = useRef<CueId | null>(null)
+  useEffect(() => {
+    if (!resumable || interaction || finishedHere) return
+    if (autoResumed.current === resumable) return
+    autoResumed.current = resumable
+    unlockAudio()
+    void playCue(resumable)
+  }, [resumable, interaction, finishedHere])
 
   /*
     미션 화면 진입 계측(F-7) — 랭킹 부문1이 여기부터 mission_correct까지를
@@ -503,10 +530,15 @@ export default function TrackPageClient({ n }: { n: number }) {
             </div>
           </div>
         ) : resumable ? (
+          /*
+            위의 자동 재개가 소리를 트는 사이에만 스치는 화면이다(한 틱).
+            소리가 시작되면 cueId가 서서 플레이어로 넘어간다.
+
+            그래도 버튼을 남긴다 — 음원을 못 찾는 등으로 재개가 물러나면
+            여기가 마지막 길이다. 사고를 알리는 말투는 쓰지 않는다.
+          */
           <div className="rounded-2xl border border-line bg-paper p-5 text-center">
-            <p className="text-[13px] text-ink-60">
-              통화가 잠시 끊겼어요. 마지막 안내부터 다시 들을 수 있어요.
-            </p>
+            <p className="text-[13px] text-ink-60">듣던 곳부터 이어집니다…</p>
             <button
               onClick={() => {
                 unlockAudio()
@@ -514,7 +546,7 @@ export default function TrackPageClient({ n }: { n: number }) {
               }}
               className="btn-teal mt-3 w-full text-[14px]"
             >
-              ⏪ 마지막 안내 다시 듣기
+              ▶ 이어 듣기
             </button>
           </div>
         ) : revisit.length ? (

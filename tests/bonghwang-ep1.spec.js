@@ -128,9 +128,15 @@ test.describe('D9 — 다시듣기와 자동재생 금지', () => {
     })
     await page.goto('/track/4?e2e=1')
 
-    // §10 재개 화면 — 눌러야 소리가 난다
+    /*
+      §10 재개 화면 — 눌러야 소리가 난다.
+
+      끊긴 이야기는 이제 저절로 이어 트지만(TrackPageClient의 자동 재개),
+      B4_A처럼 **상호작용이 걸린 큐**는 거기서 빠진다. 라디오를 이어 듣는
+      것은 참여자가 데크를 눌러 시작하는 장면이라 손을 기다리는 것이 맞다.
+    */
     await expect(
-      page.getByRole('button', { name: /마지막 안내 다시 듣기/ })
+      page.getByRole('button', { name: /이어 듣기/ })
     ).toBeVisible({ timeout: 15000 })
     expect(await page.evaluate(() => window.__bhPlaying === true)).toBe(false)
   })
@@ -351,8 +357,7 @@ test.describe('D10 — B면 해제 임계값 (J-카드 소원 3개)', () => {
     })
     /*
       §10 재개 — 마지막 큐(B5_T3)를 기준으로 잠금 게이트가 바로 올라온다.
-      화면 아래 '마지막 안내 다시 듣기'는 그 게이트가 덮고 있으므로 누르지
-      않는다.
+      화면 아래 '이어 듣기'는 그 게이트가 덮고 있으므로 누르지 않는다.
     */
     await page.goto('/track/5?e2e=1')
     await expect(
