@@ -84,8 +84,22 @@ self.addEventListener('fetch', (event) => {
 
   // HTML 네비게이션은 네트워크 우선 → 새 배포/CSP가 즉시 반영된다.
   if (req.mode === 'navigate') {
+    /*
+      실패했을 때 '/'를 대신 내주는 것은 **앱 화면일 때만**이다.
+
+      iframe도 navigate로 온다. /bep/은 앱과 다른 문서(시뮬레이터)라
+      여기에 앱 첫 화면을 돌려주면 프레임 안에 엉뚱한 화면이 뜬다.
+      게다가 캐시에 담긴 응답은 **그때의 헤더까지 함께** 들고 있어서,
+      X-Frame-Options를 고쳐 배포해도 옛 DENY가 프레임에서 되살아났다 —
+      "연결을 거부했습니다"가 고친 뒤에도 남아 있던 자리가 여기다.
+    */
+    const inApp = !new URL(req.url).pathname.startsWith('/bep/');
     event.respondWith(
-      fetch(req).catch(() => caches.match(req).then((r) => r || caches.match('/')))
+      fetch(req).catch(() =>
+        caches
+          .match(req)
+          .then((r) => r || (inApp ? caches.match('/') : Response.error()))
+      )
     );
     return;
   }
