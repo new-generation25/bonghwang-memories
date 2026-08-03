@@ -566,11 +566,12 @@ export default function ScriptEditPage() {
               ↓ SCRIPT.md로 내려받기
             </button>
           )}
+          {/* 「되살리기」(임시 보관 복구)와 한 글자 차이라 정반대인 둘을 헷갈렸다 */}
           <button
             onClick={() => load(file)}
             className="rounded-lg border border-line px-3 py-1.5 text-[12px] text-ink-60"
           >
-            되돌리기
+            새로 불러오기
           </button>
           <button
             onClick={save}
