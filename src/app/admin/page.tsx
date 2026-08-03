@@ -203,6 +203,17 @@ export default function AdminPage() {
   }, [users, points, responses, posts, includeAdmin])
 
   /*
+    한 스크롤에 열셋을 세워 두었더니 성격이 다른 것들이 섞였다 — 보는 것,
+    돈, 살림. 현장에서 급히 진행을 보려는데 정산 설정 폼을 지나쳐야 했고,
+    되돌리기 어려운 조작이 단순 지표와 같은 높이에 놓여 있었다.
+
+    파일을 쪼개지 않고 탭으로만 가른다. 이 화면은 상태가 서로 얽혀 있어
+    (shops·cfg·month를 여러 칸이 함께 본다) 라우트를 나누면 자료 흐름부터
+    다시 짜야 한다. 지금 필요한 것은 그게 아니라 '어디를 봐야 하는가'다.
+  */
+  const [tab, setTab] = useState<AdminTab>('stats')
+
+  /*
     계측 이벤트는 view(excludeAdmins)를 안 탄다 — 그 함수는 users·points류만
     알아서, 여기서 같은 기준(adminUids)으로 거른다.
   */
@@ -442,6 +453,9 @@ export default function AdminPage() {
         </button>
       )}
 
+      <TabBar tab={tab} onChange={setTab} />
+
+      {tab === 'stats' && (<>
       {/* ───── 기간별 참여·매출 ───── */}
       <Section title="참여 · 매출" hint="결제 완료 기준">
         <div className="grid grid-cols-3 gap-2">
@@ -562,6 +576,9 @@ export default function AdminPage() {
         )}
       </Section>
 
+      </>)}
+
+      {tab === 'settle' && (<>
       {/* ───── 포인트 지급 내역 ───── */}
       <Section title="포인트 지급 현황" hint="적립 사유별">
         {Object.keys(pointsByReason).length === 0 ? (
@@ -582,6 +599,9 @@ export default function AdminPage() {
         )}
       </Section>
 
+      </>)}
+
+      {tab === 'ops' && (<>
       {/* ───── 가게 관리 ───── */}
       <Section title="골목 가게 관리" hint={`등록 ${shops.length}곳`}>
         {shops.length === 0 ? (
@@ -917,6 +937,9 @@ export default function AdminPage() {
         </p>
       </Section>
 
+      </>)}
+
+      {tab === 'settle' && (<>
       {/* ───── 골목 가게 정산 ───── */}
       <Section
         title="골목 가게 정산"
@@ -1274,6 +1297,9 @@ export default function AdminPage() {
         </div>
       </Section>
 
+      </>)}
+
+      {tab === 'stats' && (<>
       {/* ───── 인기 장소 ───── */}
       <Section title="많이 찾은 골목 · 가게" hint="빙고 칸 방문 수 — 가게 리포트 근거">
         {popular.length === 0 ? (
@@ -1331,6 +1357,9 @@ export default function AdminPage() {
         </div>
       </Section>
 
+      </>)}
+
+      {tab === 'ops' && (<>
       {/* ───── 설문 ───── */}
       <Section title="완주 설문" hint={`응답 ${view.responses.length}건`}>
         {view.responses.length === 0 ? (
@@ -1404,6 +1433,7 @@ export default function AdminPage() {
           ))
         )}
       </Section>
+      </>)}
     </Shell>
   )
 }
@@ -1456,6 +1486,49 @@ function Shell({ children, onRefresh }: { children: React.ReactNode; onRefresh?:
         </div>
       </header>
       <div className="mx-auto max-w-2xl px-4 py-4">{children}</div>
+    </div>
+  )
+}
+
+/**
+ * 성격으로 가른다 — 보는 것 · 돈 · 살림.
+ *
+ * '지금'은 여기 없다. 현장에서 여는 화면은 자료도 갱신 주기도 달라서
+ * /admin/live로 따로 냈다.
+ */
+type AdminTab = 'stats' | 'settle' | 'ops'
+
+const TABS: { id: AdminTab; label: string; hint: string }[] = [
+  { id: 'stats', label: '집계', hint: '무슨 일이 있었나' },
+  { id: 'settle', label: '정산', hint: '월말에 여는 곳' },
+  { id: 'ops', label: '운영', hint: '가게 · 설문 · 글' },
+]
+
+function TabBar({ tab, onChange }: { tab: AdminTab; onChange: (t: AdminTab) => void }) {
+  return (
+    <div className="sticky top-[57px] z-10 -mx-4 mb-4 border-b border-line bg-cream-base px-4 pb-2 pt-1">
+      <div className="flex gap-1.5">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className={`flex-1 rounded-xl border px-2 py-2 text-center ${
+              tab === t.id
+                ? 'border-teal bg-teal/10'
+                : 'border-line bg-paper'
+            }`}
+          >
+            <span
+              className={`block text-[12.5px] font-bold ${
+                tab === t.id ? 'text-teal-dk' : 'text-ink'
+              }`}
+            >
+              {t.label}
+            </span>
+            <span className="block text-[10px] text-ink-60">{t.hint}</span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
