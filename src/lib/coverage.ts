@@ -157,6 +157,81 @@ export function mergeSettlementConfig(raw: unknown): SettlementConfig {
 }
 
 // ---------------------------------------------------------------------------
+// BEP 시뮬레이터 반영안
+// ---------------------------------------------------------------------------
+
+/** 무엇이 무엇으로 바뀌는가 — 저장 전에 사람에게 보여줄 한 줄 */
+export interface BepPatchChange {
+  label: string
+  from: number
+  to: number
+}
+
+/** 반영안이 건드릴 수 있는 칸과 그 이름. 여기 없는 키는 들어와도 버린다 */
+const BEP_FIELDS: [keyof SettlementConfig, string][] = [
+  ['couponFaceWon', '쿠폰 액면(원)'],
+  ['pointExpiryMonths', '포인트 유효기간(개월)'],
+  ['missionPoints', '미션 칸 배점(P)'],
+  ['linePoints', '빙고 줄 배점(P)'],
+  ['completePoints', '완주 보너스(P)'],
+]
+
+const BEP_TIER_FIELDS: ['monthlyFee' | 'monthlyCap', string][] = [
+  ['monthlyFee', '월 회비'],
+  ['monthlyCap', '월 상한'],
+]
+
+/**
+ * BEP 시뮬레이터가 복사해 준 반영안을 설정 위에 얹는다.
+ *
+ * **충당률은 받지 않는다.** BEP는 연차별(2027·2028)로 잡고 여기는 등급별
+ * (무료·기본·프리미엄)로 잡아 옮길 대응이 없다. 게다가 지금은 시범운영이라
+ * 전 등급 0%인데 확정안은 100%다 — 실수로 넘어가면 가게에 할인액 전액이
+ * 청구된다. 들어와도 조용히 버리고, 버렸다는 것을 `ignored`로 알린다.
+ *
+ * 값을 바로 쓰지 않고 `changes`를 함께 돌려주는 이유는, 이 버튼이 **돈을
+ * 바꾸는 버튼**이라서다. 쿠폰 액면 하나가 4,500에서 3,500으로 조용히
+ * 내려가면 그 뒤 모든 청구서가 달라지는데 아무도 눈치채지 못한다.
+ */
+export function applyBepPatch(
+  cfg: SettlementConfig,
+  raw: unknown
+): { next: SettlementConfig; changes: BepPatchChange[]; ignored: string[] } {
+  const v = (raw ?? {}) as Record<string, unknown>
+  const changes: BepPatchChange[] = []
+  const ignored: string[] = []
+  const draft: Record<string, unknown> = { ...cfg }
+
+  const ok = (x: unknown): x is number =>
+    typeof x === 'number' && Number.isFinite(x) && x >= 0
+
+  for (const [key, label] of BEP_FIELDS) {
+    if (!ok(v[key])) continue
+    const to = Math.round(v[key] as number)
+    if (to !== cfg[key]) changes.push({ label, from: cfg[key] as number, to })
+    draft[key] = to
+  }
+
+  for (const [key, label] of BEP_TIER_FIELDS) {
+    const o = (v[key] ?? {}) as Partial<Record<MerchantTier, number>>
+    const next = { ...cfg[key] }
+    for (const tier of ['free', 'basic', 'premium'] as const) {
+      if (!ok(o[tier])) continue
+      const to = Math.round(o[tier] as number)
+      if (to !== cfg[key][tier]) {
+        changes.push({ label: `${label} · ${tier}`, from: cfg[key][tier], to })
+      }
+      next[tier] = to
+    }
+    draft[key] = next
+  }
+
+  if (v.coverage !== undefined) ignored.push('충당률')
+
+  return { next: mergeSettlementConfig(draft), changes, ignored }
+}
+
+// ---------------------------------------------------------------------------
 // 분담 계산
 // ---------------------------------------------------------------------------
 

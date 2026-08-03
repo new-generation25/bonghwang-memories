@@ -38,7 +38,8 @@ import {
   saveSettlementConfig,
   type SettlementDoc,
 } from '@/lib/settlement'
-import type { SettlementConfig, SettlementMerchant } from '@/lib/coverage'
+import { applyBepPatch } from '@/lib/coverage'
+import type { BepPatchChange, SettlementConfig, SettlementMerchant } from '@/lib/coverage'
 import {
   AdminCouponUse,
   AdminEvent,
@@ -113,6 +114,13 @@ export default function AdminPage() {
   const [cfgDraft, setCfgDraft] = useState<SettlementConfig>(DEFAULT_SETTLEMENT)
   const [cfgOpen, setCfgOpen] = useState(false)
   const [cfgMsg, setCfgMsg] = useState('')
+  /*
+    BEP 시뮬레이터에서 복사해 온 반영안. 시뮬레이터는 로그인이 없는 정적
+    페이지라 제 손으로 서버에 못 쓴다 — 쓰는 것은 여기서 한 번 더 누른다.
+  */
+  const [bepPaste, setBepPaste] = useState('')
+  const [bepChanges, setBepChanges] = useState<BepPatchChange[] | null>(null)
+  const [bepMsg, setBepMsg] = useState('')
   /** 어느 달을 정산하는가 — 기본은 이번 달 */
   const [month, setMonth] = useState(monthKey())
   const [closed, setClosed] = useState<SettlementDoc[]>([])
@@ -1279,6 +1287,62 @@ export default function AdminPage() {
               value={cfgDraft.completePoints}
               onChange={(v) => setCfgDraft({ ...cfgDraft, completePoints: v })}
             />
+          </div>
+
+          {/* ── BEP 반영안 붙여넣기 ── */}
+          <div className="mt-4 rounded-xl border border-line bg-shell p-3">
+            <p className="font-mono-retro text-[10px] tracking-[0.15em] text-ink-60">
+              BEP 반영안 붙여넣기
+            </p>
+            <p className="mt-1 text-[10.5px] leading-relaxed text-ink-60">
+              시뮬레이터의 「앱 반영안 복사」로 얻은 내용을 넣으세요.
+              <b className="text-ink"> 충당률은 받지 않습니다</b> — 연차별 값을
+              등급별 칸에 옮길 방법이 없습니다.
+            </p>
+            <textarea
+              value={bepPaste}
+              onChange={(e) => setBepPaste(e.target.value)}
+              rows={3}
+              placeholder='{"couponFaceWon": 3500, ...}'
+              className="mt-2 w-full rounded-lg border border-line bg-paper p-2 font-mono-retro text-[10.5px] text-ink"
+            />
+            <button
+              onClick={() => {
+                setBepMsg('')
+                setBepChanges(null)
+                let raw: unknown
+                try {
+                  raw = JSON.parse(bepPaste)
+                } catch {
+                  setBepMsg('읽을 수 없는 내용입니다. 복사한 것을 그대로 붙여넣으세요.')
+                  return
+                }
+                const { next, changes, ignored } = applyBepPatch(cfgDraft, raw)
+                setCfgDraft(next)
+                setBepChanges(changes)
+                setBepMsg(
+                  (changes.length
+                    ? '아래 칸에 얹었습니다. 확인하시고 저장을 누르세요.'
+                    : '바뀌는 값이 없습니다 — 이미 같습니다.') +
+                    (ignored.length ? ` (${ignored.join('·')}은 받지 않았습니다)` : '')
+                )
+              }}
+              className="mt-2 rounded-xl border border-line bg-paper px-3 py-2 text-[12px] font-bold text-ink"
+            >
+              읽어서 얹기
+            </button>
+            {bepMsg && <p className="mt-2 text-[11.5px] text-ink">{bepMsg}</p>}
+            {bepChanges && bepChanges.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {bepChanges.map((c) => (
+                  <li key={c.label} className="text-[11.5px] text-ink">
+                    {c.label} <span className="text-ink-60">{c.from.toLocaleString()}</span>
+                    {' → '}
+                    <b>{c.to.toLocaleString()}</b>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <button
