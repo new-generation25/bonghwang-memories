@@ -140,6 +140,6 @@ scripts/voices.json    보이스 설정 (voices.example.json이 템플릿)
 | `docs/SCRIPT.md` | **대사의 원본.** 배경·연표·인물 + 대본 전문. 안 정한 칸과 어긋난 곳도 여기 |
 | `docs/FLOW.md` | 랜딩부터 피날레까지 전체 진행 흐름 |
 | `docs/COUPON_FLOW.md` | 쿠폰·포인트 제도 한 장 요약 |
-| `docs/BEP_SIMULATOR.md` | `/admin/bep` 손익분기 시뮬레이터 — 값이 어디에 남는가 |
+| `docs/BEP_SIMULATOR.md` | `/bep/index.html` 손익분기 시뮬레이터(앱 밖) — 값이 어디에 남는가 |
 | `docs/GAME_UPDATE_PLAN.md` | 게임 요소 F-1~F-7 계획. 충돌 해소 방침과 구현 순서 |
 | `docs/HANDOFF_*.md` | 아카이브. "왜 그렇게 했나"를 캘 때만 연다 |

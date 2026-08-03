@@ -404,22 +404,34 @@ export default function AdminPage() {
         </span>
       </Link>
 
-      <Link
-        href="/admin/bep"
+      {/*
+        시뮬레이터는 **앱 밖으로 내보낸다.**
+
+        iframe으로 품고 있었는데, 폭 1080px에 입력 60여 개짜리 화면이라
+        폰에서는 어차피 못 쓴다. 게다가 앱을 홈 화면에 설치해 두면 주소창
+        없는 앱 창으로 열려 빠져나올 길도 없었다.
+
+        Link가 아니라 a로 여는 것은 앱 안에서 도는 화면이 아니라서다 —
+        target=_blank라야 설치된 앱 창에서도 브라우저 탭으로 빠진다.
+      */}
+      <a
+        href="/bep/index.html"
+        target="_blank"
+        rel="noopener noreferrer"
         className="mb-4 flex items-center justify-between rounded-xl border border-line bg-paper px-3.5 py-2.5"
       >
         <span className="min-w-0">
           <span className="block text-[12.5px] font-bold text-ink">
-            📈 BEP 시뮬레이터
+            📈 BEP 시뮬레이터 ↗
           </span>
           <span className="block text-[11px] text-ink-60">
-            손익분기·가맹점 목표를 따져 보는 곳 — 여기 숫자에는 영향이 없습니다
+            새 탭에서 열립니다 · 컴퓨터에서 보세요 — 여기 숫자에는 영향이 없습니다
           </span>
         </span>
         <span className="ml-3 shrink-0 rounded-lg bg-cream-dp px-2.5 py-1 font-mono-retro text-[10.5px] tracking-wider text-ink-60">
           열기
         </span>
-      </Link>
+      </a>
 
       {/* ───── 관리자 데이터 제외 ───── */}
       {adminCount > 0 && (
