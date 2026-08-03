@@ -711,6 +711,12 @@ function renderPoints(rows){
    누적이 +1,207만에서 +4,716만으로 바뀐다. 그래서 「지원사업 없음」 열을
    늘 나란히 둔다. 발표에서 실제로 방어해야 하는 숫자는 그쪽이다. */
 const MAN=n=>(n==null||isNaN(n))?"":Math.round(n/10000).toLocaleString("ko-KR")+"만";
+/*
+  표를 다시 세울지 말지. **값을 고치는 동안 표를 다시 그리면 안 된다** —
+  innerHTML을 갈아끼우는 순간 지금 치고 있던 input이 통째로 사라져서,
+  한 글자 넣을 때마다 커서가 날아간다. 사업을 더하거나 지울 때만 세운다.
+*/
+let GR_FULL=true;
 function grEdit(i,k,v){const g=GRANTS[i];if(!g)return;
  if(k==="name")g.name=v;
  else if(k==="prob")g.prob=Math.max(0,Math.min(1,(parseFloat(String(v).replace(/[^\d.]/g,""))||0)/100));
@@ -719,28 +725,24 @@ function grEdit(i,k,v){const g=GRANTS[i];if(!g)return;
 function grCover(i,k,v){const g=GRANTS[i];if(!g)return;
  g.cover[k]=(k==="rent")?(parseFloat(String(v).replace(/[^\d.-]/g,""))||0):!!v;
  keepCurrent();calc();}
-function grAdd(p){GRANTS.push(newGrant(p));keepCurrent();calc();}
-function grDel(i){GRANTS.splice(i,1);keepCurrent();calc();}
-function grClear(){GRANTS=[];keepCurrent();calc();}
+function grAdd(p){GRANTS.push(newGrant(p));GR_FULL=true;keepCurrent();calc();}
+function grDel(i){GRANTS.splice(i,1);GR_FULL=true;keepCurrent();calc();}
+function grClear(){GRANTS=[];GR_FULL=true;keepCurrent();calc();}
 /* 지원사업을 뺀 손익 — 같은 입력에서 목록만 비우고 한 번 더 돌린다 */
 function grantBare(){const keep=GRANTS;GRANTS=[];
  try{return model().rows;}finally{GRANTS=keep;}}
+/** 소진 / 잔액 한 칸 — 표를 다시 세우지 않고 이 칸만 갈아끼운다.
+    소진액은 따로 담지 않는다. 한도에서 남은 것을 빼면 나오는 값이라
+    두 곳에 두면 어긋날 자리만 는다 */
+function grLeftHTML(s,g){
+ const quota=+s.quota||0,left=+s.left||0,used=quota-left;
+ const dead=left>0&&(+g.end<=202812);
+ return `${MAN(used)} / ${dead?`<b style="color:var(--bad)">${MAN(left)} 소멸</b>`:MAN(left)}`;
+}
 function grantUI(){
  const e=document.getElementById("grPane");if(!e)return;
  const rows=window._rows||[];if(!rows.length){e.innerHTML="";return;}
  const st={};(window._grantState||[]).forEach(g=>st[g.id]=g);
- const bare=grantBare();
- const yr=(rs,y)=>rs.filter(r=>r.y===y).reduce((n,r)=>n+r.pl,0);
- const last=a=>a[a.length-1], minc=a=>Math.min(...a.map(x=>x.cash));
- const rec=a=>{const r=a.find(x=>x.cum>0);return r?r.ym:"없음";};
- const used=rows.reduce((n,r)=>n+r.subsidy,0);
- const waste=(window._grantState||[]).filter(g=>g.end<=202812).reduce((n,g)=>n+g.left,0);
- const need=(y,f)=>rows.filter(r=>r.y===y).reduce((n,r)=>n+f(r),0);
- const kit=r=>r.nk*V("ck"), gac=r=>r.gaCost, goods=r=>r.pay*V("cg");
- const rentMax=GRANTS.reduce((m,g)=>Math.max(m,g.cover.rent||0),0);
- const rentY=y=>rows.filter(r=>r.y===y).length*Math.min(V("opx"),rentMax);
- const sub=y=>need(y,r=>r.emp)+need(y,kit)+need(y,gac)+rentY(y);
-
  const list=!GRANTS.length
   ?`<div class="note">등록된 지원사업이 없습니다. 아래 프리셋을 누르거나 「+ 사업 추가」로 시작하세요.</div>`
   :`<div style="overflow-x:auto"><table style="min-width:880px"><thead><tr>
@@ -759,10 +761,22 @@ function grantUI(){
     <td><input type="checkbox" ${g.cover.kit?"checked":""} onchange="grCover(${i},'kit',this.checked)"></td>
     <td><input type="checkbox" ${g.cover.gacha?"checked":""} onchange="grCover(${i},'gacha',this.checked)"></td>
     <td><input type="checkbox" ${g.cover.goods?"checked":""} onchange="grCover(${i},'goods',this.checked)"></td>
-    <td style="text-align:right">${MAN(s.used)} / ${dead?`<b style="color:var(--bad)">${MAN(s.left)} 소멸</b>`:MAN(s.left)}</td>
+    <td id="grLeft${i}" style="text-align:right">${grLeftHTML(s,g)}</td>
     <td><button onclick="grDel(${i})" style="padding:2px 7px">삭제</button></td></tr>`;}).join("")
    +`</tbody></table></div>`;
 
+ /*
+   표는 사업을 더하거나 지울 때만 세운다. 값을 고치는 중에 세우면 지금 치고
+   있던 input이 사라져 한 글자마다 커서가 날아간다. 그 사이에도 바뀌어야 하는
+   것은 「소진 / 잔액」 칸과 아래 카드 셋뿐이라 그것만 갈아끼운다.
+ */
+ if(!GR_FULL&&document.getElementById("grDerived")){
+  GRANTS.forEach((g,i)=>{const c=document.getElementById("grLeft"+i);
+   if(c)c.innerHTML=grLeftHTML(st[g.id]||{used:0,left:0},g);});
+  document.getElementById("grDerived").innerHTML=grantDerivedHTML();
+  return;
+ }
+ GR_FULL=false;
  e.innerHTML=`
  <div class="card"><h2>지원사업 목록</h2>${list}
   <div class="btns" style="margin-top:8px"><button onclick="grAdd()">+ 사업 추가</button>${GRANTS.length?`<button onclick="grClear()">전부 지우기</button>`:``}</div>
@@ -775,7 +789,31 @@ function grantUI(){
   <div class="note" style="margin-top:8px"><b>대표 인건비는 칸을 두지 않았습니다.</b> 지침상 현물로만 계상할 수 있고 사업비로 지급할 수 없습니다 —
    칸이 있으면 쓸 수 있다고 오해하게 됩니다. 선정확률은 기대값 계산용입니다(실효 충당액 = 지원금 × 확률).
    <b>선정을 전제한 계획은 계획이 아닙니다.</b></div></div>
+ <div id="grDerived">${grantDerivedHTML()}</div>`;
+}
 
+/**
+ * 프리셋 · 연도별 충당 가능액 · 효과 요약.
+ *
+ * 목록 표와 갈라 둔 이유는 하나다 — **값을 고치는 동안 표를 다시 그리면
+ * 지금 치고 있던 input이 사라진다.** 이 셋은 표를 건드리지 않고 갈아끼운다.
+ * 인자를 안 받고 제 손으로 다시 세는 것은, 두 갈래에서 부르는데 넘길 값이
+ * 열 개라 한 자리라도 어긋나면 화면이 조용히 달라지기 때문이다.
+ */
+function grantDerivedHTML(){
+ const rows=window._rows||[];if(!rows.length)return "";
+ const bare=grantBare();
+ const yr=(rs,y)=>rs.filter(r=>r.y===y).reduce((n,r)=>n+r.pl,0);
+ const last=a=>a[a.length-1], minc=a=>Math.min(...a.map(x=>x.cash));
+ const rec=a=>{const r=a.find(x=>x.cum>0);return r?r.ym:"없음";};
+ const used=rows.reduce((n,r)=>n+r.subsidy,0);
+ const waste=(window._grantState||[]).filter(g=>g.end<=202812).reduce((n,g)=>n+g.left,0);
+ const need=(y,f)=>rows.filter(r=>r.y===y).reduce((n,r)=>n+f(r),0);
+ const kit=r=>r.nk*V("ck"), gac=r=>r.gaCost, goods=r=>r.pay*V("cg");
+ const rentMax=GRANTS.reduce((m,g)=>Math.max(m,g.cover.rent||0),0);
+ const rentY=y=>rows.filter(r=>r.y===y).length*Math.min(V("opx"),rentMax);
+ const sub=y=>need(y,r=>r.emp)+need(y,kit)+need(y,gac)+rentY(y);
+ return `
  <div class="card"><h2>프리셋 <span style="font-weight:400;font-size:11px;color:var(--ink3)">— 2026년 공고 기준. 매년 공고문에서 재확인하세요</span></h2>
   <div class="btns">${GRANT_PRESETS.map((p,i)=>`<button onclick="grAdd(GRANT_PRESETS[${i}])" title="${p.note}">${p.name}</button>`).join("")}</div>
   <div class="note" style="margin-top:6px">프리셋의 선정확률은 <b>30~50%</b>로 들어갑니다. 선정이 확정된 뒤 100%로 올리세요.</div></div>
