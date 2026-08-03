@@ -155,6 +155,17 @@ export const DEFAULTS = (() => {
     incr: 0.6,
     pMul: 3,
     vat: 0.1,
+
+    /*
+      지원사업 — 유일한 비(非)숫자 입력이다.
+
+      단일 pool 하나로는 «2027 초기창업패키지 + 2028 후속사업»처럼 연도별로
+      다른 사업을 이어 받는 계획을 표현할 수 없다. 사업마다 협약 기간·인정
+      항목·선정 확률이 달라서, 하나로 뭉치면 그 어느 것도 맞지 않는다.
+
+      형태는 `GRANT_SHAPE` 주석 참고. 비어 있으면 종전과 완전히 같다.
+    */
+    grants: [],
   };
   YEAR_KEYS.forEach(([k, , a, b, c]) => {
     D[k + "26"] = a;
@@ -163,6 +174,61 @@ export const DEFAULTS = (() => {
   });
   return D;
 })();
+
+/* ─────────────────────── 지원사업 ─────────────────────── */
+
+/**
+ * 지원사업 한 건의 모양 (`GRANT_SHAPE`).
+ *
+ * ```
+ * {
+ *   id: "g1", name: "초기창업패키지",
+ *   amount: 60000000,        // 정부지원금 (원)
+ *   start: 202701, end: 202712,
+ *   prob: 1,                 // 선정 확률 0~1 — 실효 충당액 = amount × prob
+ *   cover: {
+ *     emp: true,             // 직원 인건비 (대표는 지침상 현물 계상만이라 제외)
+ *     rent: 800000,          // 월 임차료 충당액. 0이면 미충당
+ *     kit: true,             // 3단 키트 원가
+ *     gacha: true,           // 뽑기 실물 원가
+ *     goods: false,          // 2단 굿즈 — 판매 동봉품이라 기본 false
+ *   },
+ * }
+ * ```
+ *
+ * `prob`을 두는 이유 — 선정을 전제한 계획은 계획이 아니다. 확정 전에는
+ * 0.3~0.5로 두고 보수적으로 본다.
+ */
+
+/**
+ * 옛 시나리오를 `grants` 배열로 옮긴다.
+ *
+ * 예전에는 사업비가 단일 pool(`subCap`·`subS`…)이었다. 그 구조로는 연도별로
+ * 다른 사업을 이어 받는 계획을 표현하지 못해 배열로 바꿨는데, 이미 저장된
+ * 시나리오가 있으므로 읽을 때 옮겨 준다. 옮기지 않으면 열 때마다 사업비가
+ * 조용히 0이 되고, 그 시나리오로 만든 계획이 전부 틀린다.
+ */
+export function migrateGrants(raw) {
+  if (Array.isArray(raw?.grants)) return raw.grants;
+  if (!raw?.subCap) return [];
+  return [
+    {
+      id: "legacy",
+      name: "사업비(구버전)",
+      amount: num(raw.subCap),
+      start: num(raw.subS) || 202701,
+      end: num(raw.subE) || 202712,
+      prob: 1,
+      cover: {
+        emp: num(raw.subEmp) >= 1,
+        rent: num(raw.subRent),
+        kit: num(raw.subK) >= 1,
+        gacha: num(raw.subA) >= 1,
+        goods: num(raw.subG) >= 1,
+      },
+    },
+  ];
+}
 
 /* ─────────────────────── 보조 계산 ─────────────────────── */
 
@@ -244,6 +310,20 @@ export function runModel(params) {
   const pt = pointEconomics(P);
   const cpn = couponEconomics(P);
   const appPoint = num(P.ptMode) >= 1;
+
+  /*
+    사업별 잔액. 사업 A가 남았다고 사업 B 기간에 쓸 수 없으므로 따로 센다.
+    한 달에 여러 사업 기간이 겹치면 **시작이 빠른 것부터** 소진한다 —
+    먼저 끝나는 사업을 먼저 써야 소멸이 줄어든다.
+  */
+  const gl = (Array.isArray(P.grants) ? P.grants : []).map((g, i) => ({
+    id: g?.id || `g${i + 1}`,
+    start: num(g?.start),
+    end: num(g?.end),
+    cover: g?.cover || {},
+    quota: num(g?.amount) * (g?.prob === undefined ? 1 : num(g.prob)),
+    left: num(g?.amount) * (g?.prob === undefined ? 1 : num(g.prob)),
+  })).sort((a, b) => a.start - b.start);
 
   const rows = [];
   let cum = 0, cash = 0, debt = 0, capped = false;
@@ -341,7 +421,86 @@ export function runModel(params) {
     if (ym >= num(P.ceoS)) ceo = y >= 2028 ? num(P.ceo2) : num(P.ceo1);
     const emp = ym >= num(P.empS) ? num(P.emp) : 0;
     const fix = num(P.opx) + (reg - 1) * num(P.rgx) + ceo + emp;
-    const pl = rev - cost - fix;
+
+    /* ── 사업비 충당 ── */
+
+    /*
+      이 달에 사업비로 덮을 수 있는 원가를 항목별로 남겨 둔다.
+
+      **덜어낸 만큼 pool을 깎는 것이 핵심이다.** 안 깎으면 두 사업이 같은
+      인건비를 각각 충당해 손익이 두 배로 좋아진다. 합계가 그럴듯해서
+      눈에 안 띄는 종류의 오류다.
+
+      임차료도 같다. 사양서 초안은 rent만 pool 밖에 뒀는데, 그러면 임차료를
+      충당하는 사업이 둘일 때 같은 월세를 두 번 받는다. 월 운영비(opx)를
+      천장으로 두고 함께 깎는다.
+
+      대표 인건비(ceo)는 아예 넣지 않는다. 지침상 현물 계상만 되고 사업비로
+      지급할 수 없다 — 칸을 두면 쓸 수 있다고 오해하게 된다.
+    */
+    /*
+      임차료 천장은 **그 달 활성 사업들이 신고한 값 중 가장 큰 것**이다.
+      사업마다 적는 `cover.rent`는 저마다의 몫이 아니라 **같은 사무실의 같은
+      월세**를 가리킨다. 각자 80만씩 적었다고 160만이 나가는 것이 아니다.
+      운영비(opx)를 넘을 수도 없다 — 월세는 그 안에 든 항목이다.
+    */
+    const rentCap = Math.min(
+      num(P.opx),
+      gl.reduce(
+        (m, gr) =>
+          ym >= gr.start && ym <= gr.end ? Math.max(m, num(gr.cover.rent)) : m,
+        0
+      )
+    );
+
+    const pool = {
+      emp,
+      kit: pay * ku * num(P.ck),
+      gacha: gaCost,
+      goods: pay * num(P.cg),
+      rent: rentCap,
+    };
+
+    let subsidy = 0;
+    const subsidyBy = {};
+    for (const gr of gl) {
+      if (gr.left <= 0) continue;
+      if (ym < gr.start || ym > gr.end) continue;
+
+      let want = 0;
+      if (gr.cover.emp) want += pool.emp;
+      if (gr.cover.kit) want += pool.kit;
+      if (gr.cover.gacha) want += pool.gacha;
+      if (gr.cover.goods) want += pool.goods;
+      want += Math.min(num(gr.cover.rent), pool.rent);
+
+      const take = Math.min(want, gr.left);
+      if (take <= 0) continue;
+      gr.left -= take;
+      subsidy += take;
+      subsidyBy[gr.id] = take;
+
+      // 덜어낸 만큼 항목을 비워 다음 사업이 같은 원가를 또 덮지 않게 한다
+      let rest = take;
+      if (num(gr.cover.rent) > 0) {
+        const d = Math.min(pool.rent, num(gr.cover.rent), rest);
+        pool.rent -= d;
+        rest -= d;
+      }
+      for (const k of ["emp", "kit", "gacha", "goods"]) {
+        if (!gr.cover[k] || rest <= 0) continue;
+        const d = Math.min(pool[k], rest);
+        pool[k] -= d;
+        rest -= d;
+      }
+    }
+
+    /*
+      변동원가·고정비계 열은 총액 그대로 두고 충당분을 따로 더한다.
+      두 열에서 빼 버리면 「원가가 얼마인가」와 「우리가 얼마를 냈나」가
+      한 숫자로 뭉개져, 지원사업이 끝난 뒤의 민낯을 볼 수 없다.
+    */
+    const pl = rev - cost - fix + subsidy;
     cum += pl;
 
     // 월 손익 0 이 되는 데 필요한 가맹점 수
@@ -373,7 +532,7 @@ export function runModel(params) {
       rewCost, gaCost, ptApp,
       ptMine: appPoint ? ptApp : usePt * (1 - cov),
       ptIssue: pay * pt.expected,
-      b2c, b2b, grpR, rev, cost,
+      b2c, b2b, grpR, rev, cost, subsidy, subsidyBy,
       opx: num(P.opx), rgx: (reg - 1) * num(P.rgx), ceo, emp, fix,
       bepG, pl, cum, inflow, ownOut, fin: intr + repay, debt, cash,
     });
@@ -396,6 +555,22 @@ export function runModel(params) {
     pointPerPay: Math.round(last.pay ? last.ptApp / last.pay : 0),
     gachaPerPay: Math.round(last.pay ? last.gaCost / last.pay : 0),
     coverage2812: Number(last.cov.toFixed(3)),
+    subsidyUsed: Math.round(rows.reduce((n, r) => n + r.subsidy, 0)),
+    subsidyByGrant: gl.map((gr) => ({
+      id: gr.id,
+      quota: Math.round(gr.quota),
+      used: Math.round(gr.quota - gr.left),
+      left: Math.round(gr.left),
+    })),
+    /*
+      소진하지 못하고 소멸된 금액 — 이월이 안 되므로 협약이 끝나면 사라진다.
+      **이 값이 크면 계획이 비현실적이라는 신호다.** 지원금을 크게 잡아도
+      인정 항목 소요가 작으면 그만큼은 애초에 쓸 수 없다.
+      아직 협약이 안 끝난 사업(모델 기간 밖까지 가는 것)은 세지 않는다.
+    */
+    grantWaste: Math.round(
+      gl.filter((gr) => gr.end <= 202812).reduce((n, gr) => n + gr.left, 0)
+    ),
   };
 
   return { rows, kpi, capped, coupon: cpn, point: pt };
@@ -417,13 +592,22 @@ export function makeScenario(name, params, note) {
   };
 }
 
-/** 저장된 시나리오를 읽을 때 — 없는 키는 기본값으로 채우고 남는 키는 버린다 */
+/**
+ * 저장된 시나리오를 읽을 때 — 없는 키는 기본값으로 채우고 남는 키는 버린다.
+ *
+ * **`grants`는 숫자 검사를 지나가면 안 된다.** `isFinite([])`가 참이라
+ * 그대로 두면 빈 배열이 `Number([])` → 0으로 바뀌고, 값이 든 배열은
+ * `isFinite`에 걸려 기본값으로 덮인다. 어느 쪽이든 저장은 되는데 불러오면
+ * 지원사업이 사라진다 — 화면도 멀쩡하고 오류도 없어서 알아채기 어렵다.
+ */
 export function normalizeParams(raw) {
   const out = {};
   Object.keys(DEFAULTS).forEach((k) => {
+    if (k === "grants") return;
     out[k] = raw && raw[k] !== undefined && raw[k] !== null && isFinite(raw[k])
       ? Number(raw[k])
       : DEFAULTS[k];
   });
+  out.grants = migrateGrants(raw);
   return out;
 }

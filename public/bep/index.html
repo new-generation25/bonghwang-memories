@@ -87,7 +87,7 @@ svg{display:block}
 <div id="alerts"></div><div class="cards" id="kpis"></div>
 <div class="tabs" id="tabs">
  <button data-p="tab1" class="on">월별 데이터</button><button data-p="tab2">그래프</button>
- <button data-p="tab5">상점 충당률 설계</button><button data-p="tab3">포인트 제도</button><button data-p="tab4">목표 역산</button></div>
+ <button data-p="tab6">지원사업</button><button data-p="tab5">상점 충당률 설계</button><button data-p="tab3">포인트 제도</button><button data-p="tab4">목표 역산</button></div>
 <div id="tab1" class="pane on"><div class="card">
  <h2>월별 데이터 <span style="font-weight:400;color:var(--ink3);font-size:11px">— 가로·세로 스크롤</span></h2>
  <div class="bar"><span style="font-size:11px;color:var(--ink3)">표 글자</span>
@@ -99,6 +99,7 @@ svg{display:block}
  <div class="legend"><span><i style="background:var(--s1)"></i>누적 손익 (운영만)</span><span><i style="background:var(--s2)"></i>보유 현금 (대출·자부담·이자 반영)</span></div>
  <div style="position:relative" id="chartBox"></div>
  <div class="note">누적 손익이 0선을 넘는 시점이 <b>실제 투자 회수(BEP)</b>. 보유 현금이 0선 아래면 그 기간 자금 부족.</div></div></div>
+<div id="tab6" class="pane"><div id="grPane"></div></div>
 <div id="tab5" class="pane"><div id="covPane"></div></div>
 <div id="tab3" class="pane"><div id="ptPane"></div></div>
 <div id="tab4" class="pane"><div id="gsPane"></div></div>
@@ -146,6 +147,35 @@ const DEF={cap:60,vis:30000,tm:2.5,run:1,opx:2100000,rgx:400000,ceoS:202703,ceo1
  pMission:100,pMissionN:5,pBonus:100,pBonusN:2.5,pBingo:500,pBingoN:2.2,pFinish:200,pRate:.6,pLife:6,
  cpUse:.5,mgn:.35,pEtc:400,pgShare:.30,pgCost:2500,pgRate:5000,feeS:202701,capMode:1,penMax:.30,gaN:2.2,gaP:.38,gaC:1895,vat:.1,covMode:1,covS:202701,limB:10000,limP:30000,exit:50000,thr:8000,useCap:1,fs:30000,rew:300,rewT:1,ptMode:1,d1:.40,m1:1,d2:.40,m2:1.5,d3:.20,m3:2.5,incr:.6,pMul:3};
 YKEYS.forEach(([k,,a,b,c])=>{DEF[k+"26"]=a;DEF[k+"27"]=b;DEF[k+"28"]=c;});
+
+/* ═══ 지원사업 ═══
+   숫자 입력이 아니라 목록이라 DEF에 넣지 않는다. DEF의 키는 그대로 입력칸이
+   되는데, 배열은 칸 하나로 그릴 수 없다.
+   src/lib/bepGrants.js와 같은 값이어야 한다 — 한쪽만 고치면 프리셋이 갈린다. */
+let GRANTS=[];
+const GRANT_PRESETS=[
+ {key:"early",name:"초기창업패키지(일반형)",amount:60000000,start:202701,end:202712,prob:.5,
+  note:"업력 3년 이내 · 1월 하순~2월 중순 공고 · 정부지원 70~100%"},
+ {key:"youth",name:"청년창업사관학교",amount:50000000,start:202703,end:202712,prob:.4,
+  note:"만 39세 이하 · 업력 3년 이내 · 2월"},
+ {key:"univ",name:"창업중심대학",amount:50000000,start:202704,end:202712,prob:.3,
+  note:"예비~업력 7년 · 2월"},
+ {key:"local",name:"소상공인 도약 지원(구 로컬크리에이터)",amount:20000000,start:202804,end:202812,prob:.5,
+  note:"영업 중 소상공인 · 4월 · 지역가치 창업가 계열"},
+ {key:"tour",name:"관광기업 육성·창업 지원",amount:30000000,start:202803,end:202812,prob:.4,
+  note:"관광 분야 창업기업 · 1~3월 · 로컬 관광 앱이라 적합도가 가장 높은 축"},
+ {key:"social",name:"사회적기업 육성(예비사회적기업)",amount:20000000,start:202803,end:202812,prob:.4,
+  note:"예비사회적기업 지정 · 지자체별 상이 · 인건비 지원 비중이 크다"},
+];
+/* 새 사업의 기본 충당 대상. 굿즈만 꺼 둔다 — 판매 동봉품은 사업비로 못 만든다 */
+const GRANT_COVER_DEFAULT={emp:true,rent:800000,kit:true,gacha:true,goods:false};
+let GSEQ=0;
+function newGrant(p){
+ GSEQ+=1;
+ return{id:"g"+GSEQ,name:(p&&p.name)||"새 지원사업",amount:(p&&p.amount)||0,
+  start:(p&&p.start)||202701,end:(p&&p.end)||202712,
+  prob:(p&&p.prob===undefined)?1:(p?p.prob:1),cover:{...GRANT_COVER_DEFAULT}};
+}
 const TIP={
 g:"연말 시점에 확보하는 QR 거점(제휴 상점) 수. 매출 산식의 첫 번째 곱셈 항. 지역 수 × 지역당 상한을 넘을 수 없다.",
 gb:"가맹비 0원인 일반 등급 상점 수. QR 스탠드와 쿠폰 자율 발행, 기본 노출만 제공.",
@@ -243,7 +273,9 @@ function put(k,v){const e=document.getElementById(k);if(!e)return;
  const b=base(k);if(YM.has(b)){e.value=String(Math.round(v));return;}
  const x=PCT.has(b)?v*100:v;
  e.value=(Math.abs(x)>=1000)?Math.round(x).toLocaleString("ko-KR"):(Math.round(x*1000)/1000);}
-function setAll(o){Object.keys(DEF).forEach(k=>{if(document.getElementById(k))put(k,o[k]!==undefined?o[k]:DEF[k]);});}
+function setAll(o){Object.keys(DEF).forEach(k=>{if(document.getElementById(k))put(k,o[k]!==undefined?o[k]:DEF[k]);});
+ GRANTS=Array.isArray(o.grants)?JSON.parse(JSON.stringify(o.grants)):[];
+ if(typeof grantUI==="function")grantUI();}
 /* ═══ 프리셋 ═══ */
 const PRESETS={"기준안":{},"신규직원 2028 연기":{empS:202801},"대표인건비 2028부터":{ceoS:202801,empS:202801},
  "단체 27년 20건":{grp27:20,grp28:40},"회비 1.5만/4만":{fb:15000,fp:40000},"실행률 50%":{run:.5},
@@ -286,6 +318,10 @@ function model(){
  const csv=(V("pMissionN")*V("pMission")+V("pBonusN")*V("pBonus")+V("pBingoN")*V("pBingo")+V("pFinish")+V("pEtc"))*V("pRate");
  const ptv=csv,pgU=V("pgRate")>0?V("pgCost")/V("pgRate"):0;
  const rows=[];let cum=0,cash=0,capped=false,debt=0,princ=V("l1")+V("l2");
+ /* 사업별 잔액. 시작이 빠른 것부터 소진한다 — 먼저 끝나는 사업을 먼저 써야 소멸이 준다 */
+ const gl=GRANTS.map((g,i)=>({id:g.id||("g"+(i+1)),name:g.name||"",start:+g.start||0,end:+g.end||0,
+  cover:g.cover||{},quota:(+g.amount||0)*(g.prob===undefined?1:(+g.prob||0)),
+  left:(+g.amount||0)*(g.prob===undefined?1:(+g.prob||0))})).sort((a,b)=>a.start-b.start);
  const li=MONTHS.findIndex(([y,m])=>y*100+m===V("l1m"));
  MONTHS.forEach(([y,m],i)=>{
   const ym=y*100+m,idx=y===2026?(m-9):(m-1);
@@ -319,7 +355,31 @@ function model(){
   const shopLoad=g?(b2b+shop-rewCost)/g:0;
   let ceo=0;if(ym>=V("ceoS"))ceo=y>=2028?V("ceo2"):V("ceo1");
   let emp=0;if(ym>=V("empS"))emp=V("emp");
-  const fix=V("opx")+(reg-1)*V("rgx")+ceo+emp,pl=rev-cost-fix;cum+=pl;
+  const fix=V("opx")+(reg-1)*V("rgx")+ceo+emp;
+  /* ── 사업비 충당 ── bepModel.js의 같은 자리와 한 글자도 다르면 안 된다 */
+  const rentCap=Math.min(V("opx"),gl.reduce((mx,gr)=>(ym>=gr.start&&ym<=gr.end)?Math.max(mx,gr.cover.rent||0):mx,0));
+  const pool={emp,kit:pay*ku*V("ck"),gacha:gaCost,goods:pay*V("cg"),rent:rentCap};
+  let subsidy=0;const subsidyBy={};
+  for(const gr of gl){
+   if(gr.left<=0)continue;
+   if(ym<gr.start||ym>gr.end)continue;
+   let want=0;
+   if(gr.cover.emp)want+=pool.emp;
+   if(gr.cover.kit)want+=pool.kit;
+   if(gr.cover.gacha)want+=pool.gacha;
+   if(gr.cover.goods)want+=pool.goods;
+   want+=Math.min(gr.cover.rent||0,pool.rent);
+   const take=Math.min(want,gr.left);
+   if(take<=0)continue;
+   gr.left-=take;subsidy+=take;subsidyBy[gr.id]=take;
+   /* 덜어낸 만큼 비운다 — 안 비우면 두 사업이 같은 원가를 각각 덮는다 */
+   let rest=take;
+   if((gr.cover.rent||0)>0){const d=Math.min(pool.rent,gr.cover.rent,rest);pool.rent-=d;rest-=d;}
+   for(const k of ["emp","kit","gacha","goods"]){
+    if(!gr.cover[k]||rest<=0)continue;
+    const d=Math.min(pool[k],rest);pool[k]-=d;rest-=d;}
+  }
+  const pl=rev-cost-fix+subsidy;cum+=pl;
   const perShop=tpd*30*run*cv*(price-vc)+(g?b2b/g:0);
   const bepG=perShop>0?(fix-grpR*(1-V("gc")))/perShop:NaN;
   let inflow=0;if(ym===V("l1m"))inflow+=V("l1");if(V("l2")&&ym===V("l2m"))inflow+=V("l2");
@@ -329,15 +389,15 @@ function model(){
   const ownOut=i<12?ownM:0;cash+=inflow+pl-ownOut-intr-repay;
   rows.push({ym:`${y}.${String(m).padStart(2,"0")}`,y,g,newg:0,gb,gp,reg,vis:reg*vis,tpd,run,qr,ppl,pen,cv,pay,
    n1:pay*(1-mix),n2:pay*mix,nk:pay*ku,mix,ku,cov,pu,price,vc,useCpn,usePt,useAll,mine,shop,lim,shopLoad,gs,rewCost,gaCost,ptApp,ptMine:appPt?ptApp:usePt*(1-cov),ptIssue:pay*ptv,
-   b2c,b2b,grpR,rev,cost,opx:V("opx"),rgx:(reg-1)*V("rgx"),ceo,emp,fix,bepG,pl,cum,inflow,ownOut,fin:intr+repay,cash});});
+   b2c,b2b,grpR,rev,cost,subsidy,subsidyBy,opx:V("opx"),rgx:(reg-1)*V("rgx"),ceo,emp,fix,bepG,pl,cum,inflow,ownOut,fin:intr+repay,cash});});
  rows.forEach((r,i)=>r.newg=i?r.g-rows[i-1].g:r.g);
- return{rows,capped};}
+ return{rows,capped,grantState:gl};}
 const COLS=[["연월","ym",s=>s],["가맹점","g",F1],["신규가맹","newg",F1],["일반상점","gb",F1],["프리미엄","gp",F1],["스토리","gs",F1],
  ["지역","reg",F],["유동인구","vis",F],["하루진입팀","tpd",v=>v.toFixed(2)],["실행률","run",P1],["QR진입팀","qr",F],
  ["순방문인원","ppl",F],["침투율","pen",P1],["전환율","cv",P2],["결제건수","pay",F],["1단건수","n1",F],["2단건수","n2",F],
  ["키트건수","nk",F1],["2단비중","mix",P1],["3단업셀","ku",P1],["충당률","cov",P1],["포인트실사용","pu",P1],
  ["건당단가","price",F],["건당원가","vc",F],["쿠폰사용액","useCpn",F],["포인트사용액","usePt",F],["리워드사용계","useAll",F],["상점충당한도","lim",F],["상점충당액","shop",F],["자사부담액","mine",F],["상점1곳월부담","shopLoad",F],
- ["B2C매출","b2c",F],["B2B회비","b2b",F],["송객리워드","rewCost",F],["뽑기실물원가","gaCost",F],["포인트앱내원가","ptApp",F],["단체매출","grpR",F],["매출","rev",F],["변동원가","cost",F],
+ ["B2C매출","b2c",F],["B2B회비","b2b",F],["송객리워드","rewCost",F],["뽑기실물원가","gaCost",F],["사업비충당","subsidy",F],["포인트앱내원가","ptApp",F],["단체매출","grpR",F],["매출","rev",F],["변동원가","cost",F],
  ["운영비","opx",F],["지역관리비","rgx",F],["대표인건비","ceo",F],["추가인건비","emp",F],["고정비계","fix",F],
  ["BEP거점","bepG",F1],["월손익","pl",F],["누적손익","cum",F],["대출","inflow",F],["자부담현금","ownOut",F],
  ["이자·상환","fin",F],["보유현금","cash",F]];
@@ -417,7 +477,7 @@ function hl(k){clearHl();const c=AFF[base(k)]||AFF[k];if(!c)return;
 function clearHl(){document.querySelectorAll("#tbl .hl").forEach(e=>e.classList.remove("hl"));}
 /* ═══ 렌더 ═══ */
 function render(){
- const{rows,capped}=model();window._rows=rows;
+ const{rows,capped,grantState}=model();window._rows=rows;window._grantState=grantState;
  const last=rows[rows.length-1],fp=rows.find(r=>r.pl>0),pb2=rows.find(r=>r.cum>0);
  const minCum=Math.min(...rows.map(r=>r.cum)),minCash=Math.min(...rows.map(r=>r.cash));
  const mcm=rows.find(r=>r.cash===minCash),over=rows.filter(r=>r.pen>V("penMax")+1e-9).length;
@@ -646,6 +706,106 @@ function renderPoints(rows){
    <td>${F(us*V("pgShare")*pgU)}</td>
    <td>${F(rs.reduce((a,r)=>a+r.ptIssue,0))}</td><td>${F(rs.reduce((a,r)=>a+r.ptMine,0))}</td></tr>`;});
  document.getElementById("ptTbl").innerHTML=t+"</tbody></table>";}
+/* ═══ 지원사업 탭 ═══
+   지원금은 이 사업 손익에서 가장 큰 단일 변수다 — 2027년 하나만 넣어도
+   누적이 +1,207만에서 +4,716만으로 바뀐다. 그래서 「지원사업 없음」 열을
+   늘 나란히 둔다. 발표에서 실제로 방어해야 하는 숫자는 그쪽이다. */
+const MAN=n=>(n==null||isNaN(n))?"":Math.round(n/10000).toLocaleString("ko-KR")+"만";
+function grEdit(i,k,v){const g=GRANTS[i];if(!g)return;
+ if(k==="name")g.name=v;
+ else if(k==="prob")g.prob=Math.max(0,Math.min(1,(parseFloat(String(v).replace(/[^\d.]/g,""))||0)/100));
+ else g[k]=parseFloat(String(v).replace(/[^\d.-]/g,""))||0;
+ keepCurrent();calc();}
+function grCover(i,k,v){const g=GRANTS[i];if(!g)return;
+ g.cover[k]=(k==="rent")?(parseFloat(String(v).replace(/[^\d.-]/g,""))||0):!!v;
+ keepCurrent();calc();}
+function grAdd(p){GRANTS.push(newGrant(p));keepCurrent();calc();}
+function grDel(i){GRANTS.splice(i,1);keepCurrent();calc();}
+function grClear(){GRANTS=[];keepCurrent();calc();}
+/* 지원사업을 뺀 손익 — 같은 입력에서 목록만 비우고 한 번 더 돌린다 */
+function grantBare(){const keep=GRANTS;GRANTS=[];
+ try{return model().rows;}finally{GRANTS=keep;}}
+function grantUI(){
+ const e=document.getElementById("grPane");if(!e)return;
+ const rows=window._rows||[];if(!rows.length){e.innerHTML="";return;}
+ const st={};(window._grantState||[]).forEach(g=>st[g.id]=g);
+ const bare=grantBare();
+ const yr=(rs,y)=>rs.filter(r=>r.y===y).reduce((n,r)=>n+r.pl,0);
+ const last=a=>a[a.length-1], minc=a=>Math.min(...a.map(x=>x.cash));
+ const rec=a=>{const r=a.find(x=>x.cum>0);return r?r.ym:"없음";};
+ const used=rows.reduce((n,r)=>n+r.subsidy,0);
+ const waste=(window._grantState||[]).filter(g=>g.end<=202812).reduce((n,g)=>n+g.left,0);
+ const need=(y,f)=>rows.filter(r=>r.y===y).reduce((n,r)=>n+f(r),0);
+ const kit=r=>r.nk*V("ck"), gac=r=>r.gaCost, goods=r=>r.pay*V("cg");
+ const rentMax=GRANTS.reduce((m,g)=>Math.max(m,g.cover.rent||0),0);
+ const rentY=y=>rows.filter(r=>r.y===y).length*Math.min(V("opx"),rentMax);
+ const sub=y=>need(y,r=>r.emp)+need(y,kit)+need(y,gac)+rentY(y);
+
+ const list=!GRANTS.length
+  ?`<div class="note">등록된 지원사업이 없습니다. 아래 프리셋을 누르거나 「+ 사업 추가」로 시작하세요.</div>`
+  :`<div style="overflow-x:auto"><table style="min-width:880px"><thead><tr>
+    <th style="text-align:left">사업명</th><th>지원금</th><th>시작</th><th>종료</th><th>선정확률</th>
+    <th>인건비</th><th>임차료(월)</th><th>키트</th><th>뽑기</th><th>굿즈</th><th>소진 / 잔액</th><th></th></tr></thead><tbody>`
+   +GRANTS.map((g,i)=>{const s=st[g.id]||{used:0,left:0};
+    const dead=s.left>0&&(+g.end<=202812);
+    return `<tr>
+    <td style="text-align:left"><input type="text" value="${String(g.name||"").replace(/"/g,"&quot;")}" style="width:186px" oninput="grEdit(${i},'name',this.value)"></td>
+    <td><input type="text" inputmode="numeric" value="${F(g.amount||0)}" style="width:94px;text-align:right" onchange="grEdit(${i},'amount',this.value)"></td>
+    <td><input type="text" inputmode="numeric" value="${g.start}" style="width:60px" onchange="grEdit(${i},'start',this.value)"></td>
+    <td><input type="text" inputmode="numeric" value="${g.end}" style="width:60px" onchange="grEdit(${i},'end',this.value)"></td>
+    <td><input type="text" inputmode="decimal" value="${Math.round((g.prob===undefined?1:g.prob)*100)}" style="width:46px;text-align:right" onchange="grEdit(${i},'prob',this.value)"></td>
+    <td><input type="checkbox" ${g.cover.emp?"checked":""} onchange="grCover(${i},'emp',this.checked)"></td>
+    <td><input type="text" inputmode="numeric" value="${F(g.cover.rent||0)}" style="width:74px;text-align:right" onchange="grCover(${i},'rent',this.value)"></td>
+    <td><input type="checkbox" ${g.cover.kit?"checked":""} onchange="grCover(${i},'kit',this.checked)"></td>
+    <td><input type="checkbox" ${g.cover.gacha?"checked":""} onchange="grCover(${i},'gacha',this.checked)"></td>
+    <td><input type="checkbox" ${g.cover.goods?"checked":""} onchange="grCover(${i},'goods',this.checked)"></td>
+    <td style="text-align:right">${MAN(s.used)} / ${dead?`<b style="color:var(--bad)">${MAN(s.left)} 소멸</b>`:MAN(s.left)}</td>
+    <td><button onclick="grDel(${i})" style="padding:2px 7px">삭제</button></td></tr>`;}).join("")
+   +`</tbody></table></div>`;
+
+ e.innerHTML=`
+ <div class="card"><h2>지원사업 목록</h2>${list}
+  <div class="btns" style="margin-top:8px"><button onclick="grAdd()">+ 사업 추가</button>${GRANTS.length?`<button onclick="grClear()">전부 지우기</button>`:``}</div>
+  ${GRANTS.some(g=>g.cover.goods)?`<div class="warn" style="margin-top:8px">
+   <b>판매 상품에 동봉하는 굿즈는 사업비로 제작할 수 없습니다.</b>
+   통합관리지침 재료비는 「사업계획서 상의 시제품을 개발·제작하는 데 소요되는 재료」로 한정되고,
+   제38조 ⑩은 시제품의 시금형은 제작할 수 있으나 양산목적 금형제작비는 집행할 수 없다고 규정합니다.
+   모두의창업 로컬트랙 창업활동자금도 집행불가 첫 항목이 「판매를 통한 수익 창출 목적의 완제품 제작 관련 비용」입니다.
+   시제품·테스트 배포용으로 <b>성격을 분리하는 경우에만</b> 체크하고, 그때 수량은 판매량이 아니라 테스트 수량이어야 합니다.</div>`:``}
+  <div class="note" style="margin-top:8px"><b>대표 인건비는 칸을 두지 않았습니다.</b> 지침상 현물로만 계상할 수 있고 사업비로 지급할 수 없습니다 —
+   칸이 있으면 쓸 수 있다고 오해하게 됩니다. 선정확률은 기대값 계산용입니다(실효 충당액 = 지원금 × 확률).
+   <b>선정을 전제한 계획은 계획이 아닙니다.</b></div></div>
+
+ <div class="card"><h2>프리셋 <span style="font-weight:400;font-size:11px;color:var(--ink3)">— 2026년 공고 기준. 매년 공고문에서 재확인하세요</span></h2>
+  <div class="btns">${GRANT_PRESETS.map((p,i)=>`<button onclick="grAdd(GRANT_PRESETS[${i}])" title="${p.note}">${p.name}</button>`).join("")}</div>
+  <div class="note" style="margin-top:6px">프리셋의 선정확률은 <b>30~50%</b>로 들어갑니다. 선정이 확정된 뒤 100%로 올리세요.</div></div>
+
+ <div class="card"><h2>연도별 충당 가능액 <span style="font-weight:400;font-size:11px;color:var(--ink3)">— 지원금 규모를 정하기 전에 보는 표</span></h2>
+  <table><thead><tr><th style="text-align:left">항목</th><th>2027 소요</th><th>2028 소요</th><th style="text-align:left">충당 가능</th></tr></thead><tbody>
+   <tr><td style="text-align:left">직원 인건비</td><td>${MAN(need(2027,r=>r.emp))}</td><td>${MAN(need(2028,r=>r.emp))}</td><td style="text-align:left">○</td></tr>
+   <tr><td style="text-align:left">3단 키트 원가</td><td>${MAN(need(2027,kit))}</td><td>${MAN(need(2028,kit))}</td><td style="text-align:left">△ 시제품 성격일 때</td></tr>
+   <tr><td style="text-align:left">뽑기 실물 원가</td><td>${MAN(need(2027,gac))}</td><td>${MAN(need(2028,gac))}</td><td style="text-align:left">△ 무료 제공분만</td></tr>
+   <tr><td style="text-align:left">사무실 임차료</td><td>${MAN(rentY(2027))}</td><td>${MAN(rentY(2028))}</td><td style="text-align:left">○ 월세만 (보증금·관리비 불가)</td></tr>
+   <tr style="font-weight:700"><td style="text-align:left">소계</td><td>${MAN(sub(2027))}</td><td>${MAN(sub(2028))}</td><td style="text-align:left">그 해에 실제로 쓸 수 있는 상한</td></tr>
+   <tr><td style="text-align:left">2단 굿즈 원가</td><td>${MAN(need(2027,goods))}</td><td>${MAN(need(2028,goods))}</td><td style="text-align:left"><b style="color:var(--bad)">✕ 판매 동봉품</b></td></tr>
+   <tr><td style="text-align:left">대표 인건비</td><td>${MAN(need(2027,r=>r.ceo))}</td><td>${MAN(need(2028,r=>r.ceo))}</td><td style="text-align:left"><b style="color:var(--bad)">✕ 현물 계상만</b></td></tr>
+  </tbody></table>
+  <div class="note" style="margin-top:6px">임차료 줄은 등록된 사업이 신고한 월 충당액 중 <b>가장 큰 값</b>으로 셉니다 —
+   사업마다 적는 월세는 각자의 몫이 아니라 <b>같은 사무실의 같은 월세</b>입니다.</div></div>
+
+ <div class="card"><h2>효과 요약</h2>
+  <table><thead><tr><th style="text-align:left"></th><th>지원사업 없음</th><th>현재 설정</th><th>차이</th></tr></thead><tbody>
+   <tr><td style="text-align:left">2027 손익</td><td>${MAN(yr(bare,2027))}</td><td>${MAN(yr(rows,2027))}</td><td>${MAN(yr(rows,2027)-yr(bare,2027))}</td></tr>
+   <tr><td style="text-align:left">2028 손익</td><td>${MAN(yr(bare,2028))}</td><td>${MAN(yr(rows,2028))}</td><td>${MAN(yr(rows,2028)-yr(bare,2028))}</td></tr>
+   <tr style="font-weight:700"><td style="text-align:left">2028.12 누적</td><td>${MAN(last(bare).cum)}</td><td>${MAN(last(rows).cum)}</td><td>${MAN(last(rows).cum-last(bare).cum)}</td></tr>
+   <tr><td style="text-align:left">현금 최저점</td><td>${MAN(minc(bare))}</td><td>${MAN(minc(rows))}</td><td>${MAN(minc(rows)-minc(bare))}</td></tr>
+   <tr><td style="text-align:left">투자 회수</td><td>${rec(bare)}</td><td>${rec(rows)}</td><td></td></tr>
+   <tr><td style="text-align:left">충당 합계</td><td>—</td><td>${MAN(used)}</td><td>${waste>0?`<b style="color:var(--bad)">${MAN(waste)} 소멸</b>`:"소멸 없음"}</td></tr>
+  </tbody></table>
+  <div class="note" style="margin-top:6px"><b>「지원사업 없음」 열을 늘 함께 봅니다.</b>
+   지원금을 뺀 자립 손익이 발표에서 실제로 방어해야 하는 숫자입니다.
+   소멸이 크면 계획이 비현실적이라는 신호입니다 — 지원금을 크게 잡아도 인정 항목 소요가 작으면 그만큼은 애초에 쓸 수 없습니다.</div></div>`;
+}
 /* ═══ 목표 역산 ═══ */
 function renderGoal(){
  const cur={};Object.keys(DEF).forEach(k=>{if(document.getElementById(k))cur[k]=V(k);});
@@ -813,7 +973,10 @@ try{SLOTS=JSON.parse(localStorage.getItem(SKEY)||"[]");}catch(e){OK=false;}
 /* 예전 슬롯은 이름이 번호였다 — 지우지 않고 이름으로 옮긴다 */
 SLOTS=(Array.isArray(SLOTS)?SLOTS:[]).map(s=>typeof s.n==="string"?s:{...s,n:"설정 "+s.n});
 function esc(t){return String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
-function snap(){const o={};Object.keys(DEF).forEach(k=>{if(document.getElementById(k))o[k]=V(k);});return o;}
+function snap(){const o={};Object.keys(DEF).forEach(k=>{if(document.getElementById(k))o[k]=V(k);});
+ /* 지원사업은 입력칸이 아니라 목록이라 따로 싣는다. 안 실으면 저장은 되는데
+    불러오면 사라진다 — 화면도 멀쩡하고 오류도 없어서 알아채기 어렵다 */
+ o.grants=JSON.parse(JSON.stringify(GRANTS));return o;}
 /* 값을 만질 때마다 지금 화면을 통째로 남긴다.
    '저장'을 누르는 것은 이름을 붙여 남기는 일이고, 이쪽은 아무것도 누르지
    않아도 F5·탭 닫기에서 입력이 날아가지 않게 하는 장치다. 60여 개를 손으로
@@ -1000,7 +1163,7 @@ function hz(){const e=document.querySelector("#tab1 .scroll");e.classList.toggle
 function syncOwn(){const t=V("ownT"),k=Math.min(V("ownK"),t);put("ownK",k);put("own",t-k);}
 /* keepCurrent는 서버 저장을 쓰는 중에도 돈다 — 저장을 누르기 전 상태를
    지키는 것이 목적이라, 어디에 저장하느냐와는 상관이 없다 */
-function calc(){syncOwn();render();keepCurrent();if(!(SRV&&AUTHED))drawSlots();fsQueue();}
+function calc(){syncOwn();render();grantUI();keepCurrent();if(!(SRV&&AUTHED))drawSlots();fsQueue();}
 document.addEventListener("change",e=>{if(/^impF/.test(e.target.id)&&e.target.files&&e.target.files[0])impJSON(e.target.files[0]);});
 addEventListener("resize",()=>{if(document.getElementById("tab2").classList.contains("on"))drawChart(window._rows);});
 srvUI();
