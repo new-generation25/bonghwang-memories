@@ -167,6 +167,34 @@ export function getCueState(): CuePlaybackState {
   return state
 }
 
+/**
+ * 지나온 큐를 순서대로 남긴다.
+ *
+ * 어느 갈래로 갔는지는 자막으로 확인할 수밖에 없었는데, 자막은 다음 큐가
+ * 오면 지워지는 스쳐 지나가는 값이다. 그래서 E2E가 느려지면(병렬 실행 등)
+ * 확인이 붙기 전에 이미 다음 대사로 바뀌어 있었다 — 말 놓기 분기
+ * (B1_YES/B1_NO) 테스트가 간헐적으로 깨진 자리가 여기다.
+ *
+ * 사라지지 않는 자국을 하나 남겨 거기서 확인하게 한다. tourState의
+ * lastCueCompleted는 하나짜리라 뒤 큐가 덮어써서 이 일을 못 한다.
+ * 창을 새로 열면 비는 값이라 저장하지 않는다 — 진행 상태가 아니라 자취다.
+ */
+const cueTrace: CueId[] = []
+/** 다시듣기를 무한히 눌러도 메모리가 늘지 않도록 뒤쪽만 남긴다 */
+const CUE_TRACE_MAX = 200
+
+export function getCueTrace(): readonly CueId[] {
+  return cueTrace
+}
+
+function recordCue(id: CueId) {
+  cueTrace.push(id)
+  if (cueTrace.length > CUE_TRACE_MAX) cueTrace.shift()
+  if (typeof window !== 'undefined') {
+    ;(window as unknown as Record<string, unknown>).__bhCueTrace = cueTrace
+  }
+}
+
 // -----------------------------------------------------------------------------
 // 내부 재생 리소스
 // -----------------------------------------------------------------------------
@@ -449,6 +477,7 @@ export async function playCue(id: CueId): Promise<void> {
     ended: false,
     pendingAutoChain: null,
   })
+  recordCue(id)
 
   const src = await resolveSource(cue)
 

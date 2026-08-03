@@ -33,6 +33,17 @@ async function eventNames(page) {
   )
 }
 
+/**
+ * 지금까지 지나온 큐 이름들 (cueEngine의 __bhCueTrace).
+ *
+ * **자막으로 갈래를 확인하지 마라.** 자막은 다음 큐가 오면 교체되는
+ * 스쳐 지나가는 값이라, 러너가 느릴 때(--workers=2 등) 확인이 붙기 전에
+ * 이미 다음 대사로 넘어가 있다. 자취는 지워지지 않으므로 늦게 봐도 남아 있다.
+ */
+async function cueTrace(page) {
+  return page.evaluate(() => window.__bhCueTrace ?? [])
+}
+
 const BASE_STATE = {
   phase: 'act1',
   currentTrack: 0,
@@ -184,8 +195,11 @@ test.describe('Track 1 — 미션 전 구간과 말 놓기 분기(D7)', () => {
     await expect(ask).toBeVisible({ timeout: 60000 })
     await ask.click()
 
-    // B1_YES 자막 — 승낙에만 나오는 대사
-    await expect(page.getByText(/이제 말 놓을게/)).toBeVisible({ timeout: 20000 })
+    // 승낙 갈래로 갔다 — 자막이 아니라 큐 자취로 본다(cueTrace 주석 참고)
+    await expect
+      .poll(async () => await cueTrace(page), { timeout: 20000 })
+      .toContain('B1_YES')
+    expect(await cueTrace(page)).not.toContain('B1_NO')
 
     const state = await page.evaluate(() =>
       JSON.parse(window.localStorage.getItem('bh_tour_v2'))
@@ -215,12 +229,12 @@ test.describe('Track 1 — 미션 전 구간과 말 놓기 분기(D7)', () => {
     await expect(no).toBeVisible({ timeout: 60000 })
     await no.click()
 
-    // B1_NO 자막 — 거절에만 나오는 대사
-    await expect(page.getByText(/친구가 되어주면 좋겠는데/)).toBeVisible({
-      timeout: 20000,
-    })
-    // 승낙 대사는 나오지 않는다
-    await expect(page.getByText(/이제 말 놓을게/)).toHaveCount(0)
+    // 거절 갈래로 갔다 — 자막이 아니라 큐 자취로 본다(cueTrace 주석 참고)
+    await expect
+      .poll(async () => await cueTrace(page), { timeout: 20000 })
+      .toContain('B1_NO')
+    // 승낙 번들은 지나가지 않았다
+    expect(await cueTrace(page)).not.toContain('B1_YES')
 
     // D7 — 거절해도 전환은 일어난다(뒤의 대사가 전부 반말이다)
     await expect
