@@ -226,8 +226,7 @@ let H=`<div class="card"><h2>시나리오 프리셋</h2><div class="btns" id="pr
   <b>충당률은 넘기지 않습니다</b> — 연차별 값을 등급별 칸에 옮길 대응이 없고, 잘못 넘어가면 가게에 청구가 갑니다.</div>
  <div class="btns"><button onclick="applyToApp()" style="border-color:#2a78d6;color:#2a78d6;font-weight:700">앱에 반영</button></div>
  <div id="appPatchMsg" class="note" style="margin:6px 0 0"></div>
- <div class="note" style="margin:6px 0 0"><b>무엇이 무엇으로 바뀌는지 먼저 보여드리고, 「반영한다」를 누르셔야 저장됩니다.</b>
-  처음 한 번은 반영 열쇠(<code>BEP_EXPORT_TOKEN</code>)를 넣어야 합니다.</div></div>
+ <div class="note" style="margin:6px 0 0"><b>무엇이 무엇으로 바뀌는지 먼저 보여드리고, 「반영한다」를 누르셔야 저장됩니다.</b></div></div>
  <div class="card"><h2>1. 연차별 목표치 <span style="font-weight:400;font-size:11px;color:var(--ink3)">(각 연도 말 도달값)</span></h2>
  <div class="hdr"><span>항목</span><span>2026말</span><span>2027말</span><span>2028말</span></div>`;
 YKEYS.forEach(([k,lab])=>{H+=`<div class="row${KEYRANK[k]?" key":""}"><label data-t="${k}">${KEYRANK[k]?`<span class="rk">${RN[KEYRANK[k]]}</span>`:""}${lab}</label>${inp(k+"26")}${inp(k+"27")}${inp(k+"28")}</div>`;});
@@ -896,6 +895,15 @@ function appPatch(){
 const TKEY="lm_bep_token_v1";
 function bepToken(){try{return localStorage.getItem(TKEY)||"";}catch(e){return "";}}
 function setBepToken(t){try{localStorage.setItem(TKEY,t);}catch(e){}}
+/* 관리자 화면이 링크에 실어 보낸 열쇠를 챙긴다. 이미 구글 로그인을 마친
+   사람에게 열쇠를 또 물을 이유가 없다. 주소에서는 바로 지운다 — 새로고침
+   해도 남고, 주소창을 남에게 보여줄 일이 있다. */
+(function(){
+ const m=/(?:^|[#&])k=([^&]+)/.exec(location.hash||"");
+ if(!m)return;
+ try{setBepToken(decodeURIComponent(m[1]));}catch(e){}
+ history.replaceState(null,"",location.pathname+location.search);
+})();
 
 async function postSettings(dryRun){
  const r=await fetch("/api/bep/settings",{method:"POST",
@@ -910,9 +918,14 @@ async function postSettings(dryRun){
 /* 열쇠를 묻는 자리. prompt를 쓰지 않는 것은 브라우저마다 막기 때문이다 */
 function askToken(){
  const msg=document.getElementById("appPatchMsg");
- msg.innerHTML=`<div class="row one" style="margin:6px 0"><label>반영 열쇠</label>
-   <input type="password" id="bepTok" placeholder="BEP_EXPORT_TOKEN"></div>
-  <button onclick="saveTokenAndApply()">확인</button>`;
+ msg.innerHTML=`<div style="margin:8px 0 0">
+   <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">반영 열쇠 <b>BEP_EXPORT_TOKEN</b></div>
+   <div style="display:flex;gap:6px">
+    <input type="password" id="bepTok" style="flex:1;min-width:0;max-width:280px" placeholder="열쇠를 넣어주세요"
+     onkeydown="if(event.key==='Enter')saveTokenAndApply()">
+    <button onclick="saveTokenAndApply()" style="flex:0 0 auto">확인</button></div>
+   <div class="note" style="margin:4px 0 0">관리자 화면(<b>/admin → 📈 BEP 시뮬레이터</b>)에서 열면 묻지 않습니다.</div>
+  </div>`;
  const e=document.getElementById("bepTok");if(e)e.focus();
 }
 function saveTokenAndApply(){

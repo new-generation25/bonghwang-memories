@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { auth } from '@/lib/firebase'
 import { ALL_CELLS, BINGO_CELLS } from '@/lib/bingoCells'
 import { REASON_LABEL, PointReason } from '@/lib/points'
 import { DEFAULT_SURVEY } from '@/lib/survey'
@@ -113,6 +114,15 @@ export default function AdminPage() {
   const [cfgDraft, setCfgDraft] = useState<SettlementConfig>(DEFAULT_SETTLEMENT)
   const [cfgOpen, setCfgOpen] = useState(false)
   const [cfgMsg, setCfgMsg] = useState('')
+  /*
+    시뮬레이터에 실어 보낼 반영 열쇠.
+
+    시뮬레이터는 로그인이 없는 정적 파일이라 공유 토큰으로 인증하는데,
+    여기까지 온 사람은 이미 구글 로그인을 마쳤다. 한 번 더 신분을 대라고
+    묻지 않도록 대신 받아서 링크에 실어 준다. 못 받으면 빈 문자열이고,
+    그때는 시뮬레이터가 제 화면에서 열쇠를 묻는다.
+  */
+  const [bepKey, setBepKey] = useState('')
   /** 어느 달을 정산하는가 — 기본은 이번 달 */
   const [month, setMonth] = useState(monthKey())
   const [closed, setClosed] = useState<SettlementDoc[]>([])
@@ -178,6 +188,28 @@ export default function AdminPage() {
   useEffect(() => {
     if (state === 'ready') void loadClosed(month)
   }, [month, state, loadClosed])
+
+  useEffect(() => {
+    if (state !== 'ready') return
+    let alive = true
+    ;(async () => {
+      try {
+        const idToken = await auth?.currentUser?.getIdToken()
+        if (!idToken) return
+        const r = await fetch('/api/bep/token', {
+          headers: { authorization: `Bearer ${idToken}` },
+        })
+        if (!r.ok) return // 404(열쇠 미설정)·503(자격증명 없음) — 조용히 넘어간다
+        const { token } = await r.json()
+        if (alive && token) setBepKey(token)
+      } catch {
+        /* 열쇠를 못 받아도 시뮬레이터는 열린다 */
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [state])
 
   useEffect(() => {
     if (loading) return
@@ -415,7 +447,8 @@ export default function AdminPage() {
         target=_blank라야 설치된 앱 창에서도 브라우저 탭으로 빠진다.
       */}
       <a
-        href="/bep/index.html"
+        /* 열쇠는 #뒤로 싣는다 — fragment는 서버로 안 가 접속 기록에 안 남는다 */
+        href={bepKey ? `/bep/index.html#k=${encodeURIComponent(bepKey)}` : '/bep/index.html'}
         target="_blank"
         rel="noopener noreferrer"
         className="mb-4 flex items-center justify-between rounded-xl border border-line bg-paper px-3.5 py-2.5"
