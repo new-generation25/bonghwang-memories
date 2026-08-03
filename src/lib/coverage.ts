@@ -156,6 +156,39 @@ export function mergeSettlementConfig(raw: unknown): SettlementConfig {
   }
 }
 
+/**
+ * 참여자도 읽는 칸 — 배점·문턱·유효기간. 나머지는 `config/settlement`에 남는다.
+ *
+ * 충당률·회비·상한은 여기 넣지 않는다. 참여자에게 보이면 안 되고 가게끼리도
+ * 서로의 것을 알면 안 된다(규칙이 `config/settlement`을 관리자에게만 연다).
+ * 화면에 안 그리는 것으로는 부족하다 — 문서를 읽을 수 있으면 읽힌다.
+ *
+ * **여기(순수 계산 쪽)에 두는 이유는 서버도 같은 목록을 봐야 해서다.**
+ * `settlement.ts`는 `'use client'`라 라우트 핸들러가 못 읽는다. 갈라 적으면
+ * 한쪽만 고쳐져 충당률이 공개 문서로 새는 날이 온다.
+ */
+export const SETTLEMENT_PUBLIC_KEYS = [
+  'minRedeemPoints',
+  'pointExpiryMonths',
+  'missionPoints',
+  'linePoints',
+  'completePoints',
+] as const
+
+/** 설정을 공개분과 관리자분으로 가른다 — 두 문서에 나눠 쓴다 */
+export function splitSettlementConfig(cfg: SettlementConfig): {
+  publicPart: Record<string, number>
+  privatePart: Record<string, unknown>
+} {
+  const publicPart: Record<string, number> = {}
+  for (const k of SETTLEMENT_PUBLIC_KEYS) publicPart[k] = cfg[k]
+
+  const privatePart = { ...cfg } as Record<string, unknown>
+  for (const k of SETTLEMENT_PUBLIC_KEYS) delete privatePart[k]
+
+  return { publicPart, privatePart }
+}
+
 // ---------------------------------------------------------------------------
 // BEP 시뮬레이터 반영안
 // ---------------------------------------------------------------------------

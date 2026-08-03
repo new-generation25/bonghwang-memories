@@ -70,6 +70,17 @@ svg{display:block}
 .flow div span:last-child{text-align:right;font-variant-numeric:tabular-nums}
 .flow .tot{font-weight:700;border-bottom:2px solid var(--navy);color:var(--navy)}
 </style></head><body>
+<!-- 반영 확인 창. 화면 안에 두는 것은 새 창이 팝업 차단에 걸리기 때문이다 -->
+<div id="applyDlg" style="display:none;position:fixed;inset:0;z-index:99;background:rgba(11,11,11,.45);
+ align-items:center;justify-content:center;padding:16px">
+ <div style="background:var(--surface-1);border:1px solid var(--line);border-radius:12px;
+  max-width:420px;width:100%;max-height:80vh;overflow:auto;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.25)">
+  <h2 style="margin:0 0 10px;font-size:15px">앱에 반영할까요?</h2>
+  <div id="applyBody" style="font-size:12.5px;line-height:1.6"></div>
+  <div class="btns" style="margin-top:14px;justify-content:flex-end">
+   <button id="applyNo" onclick="closeApplyDialog()">반영 안 함</button>
+   <button id="applyGo" onclick="confirmApply()" style="border-color:#2a78d6;color:#2a78d6;font-weight:700">반영한다</button></div>
+ </div></div>
 <header><h1>로컬 메모리즈 — BEP 시뮬레이터</h1>
 <p>왼쪽 값을 고치면 즉시 재계산 · 2026.09 ~ 2028.12 (28개월) · 항목에 마우스를 올리면 설명과 영향받는 열이 표시됩니다<span class="keytag">주황 ①~⑦ = 손익을 바꾸는 핵심 지표(추천순)</span></p></header>
 <div class="wrap"><div id="inputs"></div><div>
@@ -215,8 +226,8 @@ let H=`<div class="card"><h2>시나리오 프리셋</h2><div class="btns" id="pr
   <b>충당률은 넘기지 않습니다</b> — 연차별 값을 등급별 칸에 옮길 대응이 없고, 잘못 넘어가면 가게에 청구가 갑니다.</div>
  <div class="btns"><button onclick="applyToApp()" style="border-color:#2a78d6;color:#2a78d6;font-weight:700">앱에 반영</button></div>
  <div id="appPatchMsg" class="note" style="margin:6px 0 0"></div>
- <div class="note" style="margin:6px 0 0">작은 창이 열립니다. <b>무엇이 무엇으로 바뀌는지 거기서 보여드리고,
-  한 번 더 누르셔야 저장됩니다.</b> 관리자 구글 로그인이 필요합니다.</div></div>
+ <div class="note" style="margin:6px 0 0"><b>무엇이 무엇으로 바뀌는지 먼저 보여드리고, 「반영한다」를 누르셔야 저장됩니다.</b>
+  처음 한 번은 반영 열쇠(<code>BEP_EXPORT_TOKEN</code>)를 넣어야 합니다.</div></div>
  <div class="card"><h2>1. 연차별 목표치 <span style="font-weight:400;font-size:11px;color:var(--ink3)">(각 연도 말 도달값)</span></h2>
  <div class="hdr"><span>항목</span><span>2026말</span><span>2027말</span><span>2028말</span></div>`;
 YKEYS.forEach(([k,lab])=>{H+=`<div class="row${KEYRANK[k]?" key":""}"><label data-t="${k}">${KEYRANK[k]?`<span class="rk">${RN[KEYRANK[k]]}</span>`:""}${lab}</label>${inp(k+"26")}${inp(k+"27")}${inp(k+"28")}</div>`;});
@@ -879,28 +890,81 @@ function appPatch(){
   /* 무료 등급 상한은 BEP에 대응하는 칸이 없다 — 앱 값을 그대로 둔다 */
   monthlyCap:{basic:v("limB"),premium:v("limP")}};
 }
-/* 값은 주소의 **fragment**로 넘긴다. 물음표 뒤가 아닌 이유는 fragment가
-   서버로 안 가서다 — 접속 기록에 수치가 남지 않는다.
-   btoa는 한글을 못 삼키므로 UTF-8을 한 번 접어서 넣는다(키는 영문이지만
-   나중에 한글 이름이 섞여도 안 깨지게). */
-function applyUrl(){
- return "/admin/bep-apply#"+btoa(unescape(encodeURIComponent(JSON.stringify(appPatch()))));
+/* 확인은 **이 화면 안에서** 한다. 새 창을 열면 값을 고치던 자리에서 손이
+   떠나고, 크롬 팝업 차단에 걸리면 거기서 끝난다.
+   토큰은 한 번만 묻고 이 브라우저에 남긴다 — /api/bep/export와 같은 열쇠다. */
+const TKEY="lm_bep_token_v1";
+function bepToken(){try{return localStorage.getItem(TKEY)||"";}catch(e){return "";}}
+function setBepToken(t){try{localStorage.setItem(TKEY,t);}catch(e){}}
+
+async function postSettings(dryRun){
+ const r=await fetch("/api/bep/settings",{method:"POST",
+  headers:{"content-type":"application/json","authorization":"Bearer "+bepToken()},
+  body:JSON.stringify({patch:appPatch(),dryRun:!!dryRun})});
+ if(r.status===404)throw new Error("열쇠가 맞지 않습니다. 아래에서 다시 넣어주세요.");
+ if(r.status===503)throw new Error("서버에 관리자 자격증명이 없습니다(FIREBASE_SERVICE_ACCOUNT).");
+ if(!r.ok)throw new Error("HTTP "+r.status);
+ return r.json();
 }
-function applyToApp(){
- const msg=document.getElementById("appPatchMsg"),url=applyUrl();
- const w=window.open(url,"bepApply","width=470,height=700");
- if(!w){ /* 팝업 차단 — 막다른 길로 두지 않는다 */
-  msg.innerHTML=`팝업이 막혔습니다. <a href="${url}" target="_blank" rel="noopener" style="color:#2a78d6;font-weight:700">이 링크로 여세요</a>.`;
-  return; }
- msg.textContent="열린 창에서 바뀌는 값을 확인하고 한 번 더 누르세요.";
- w.focus();
-}
-/* 반영이 끝나면 작은 창이 알려 준다 */
-window.addEventListener("message",e=>{
- if(e.origin!==location.origin||!e.data||e.data.type!=="bep-applied")return;
+
+/* 열쇠를 묻는 자리. prompt를 쓰지 않는 것은 브라우저마다 막기 때문이다 */
+function askToken(){
  const msg=document.getElementById("appPatchMsg");
- if(msg)msg.innerHTML="✅ 앱에 반영했습니다.";
-});
+ msg.innerHTML=`<div class="row one" style="margin:6px 0"><label>반영 열쇠</label>
+   <input type="password" id="bepTok" placeholder="BEP_EXPORT_TOKEN"></div>
+  <button onclick="saveTokenAndApply()">확인</button>`;
+ const e=document.getElementById("bepTok");if(e)e.focus();
+}
+function saveTokenAndApply(){
+ const e=document.getElementById("bepTok"),t=(e&&e.value||"").trim();
+ if(!t)return;
+ setBepToken(t);applyToApp();
+}
+
+async function applyToApp(){
+ const msg=document.getElementById("appPatchMsg");
+ if(!bepToken()){askToken();return;}
+ msg.textContent="지금 앱 값과 맞춰 보는 중…";
+ try{
+  const r=await postSettings(true);
+  msg.textContent="";
+  openApplyDialog(r.changes||[],r.ignored||[]);
+ }catch(err){msg.textContent=err.message;if(/열쇠/.test(err.message))askToken();}
+}
+
+/* 확인 창 — 무엇이 무엇으로 바뀌는지 보여주고 두 갈래로 묻는다.
+   confirm()을 안 쓰는 것은 줄바꿈과 굵은 글씨가 안 되기 때문이다.
+   돈이 바뀌는 자리라 "쿠폰 액면 4,500 → 3,500"이 한눈에 읽혀야 한다. */
+function openApplyDialog(changes,ignored){
+ const d=document.getElementById("applyDlg");
+ const body=document.getElementById("applyBody");
+ body.innerHTML=changes.length
+  ? `<p style="margin:0 0 8px">아래 <b>${changes.length}개</b>를 앱에 반영합니다.</p>
+     <table style="width:100%;border-collapse:collapse;font-size:12px">
+      ${changes.map(c=>`<tr><td style="padding:4px 0;color:var(--ink3)">${c.label}</td>
+       <td style="padding:4px 0;text-align:right">${Number(c.from).toLocaleString()}
+       → <b style="color:#2a78d6">${Number(c.to).toLocaleString()}</b></td></tr>`).join("")}
+     </table>`
+  : `<p style="margin:0">바뀌는 값이 없습니다 — 앱에 이미 같은 값이 들어 있습니다.</p>`;
+ if(ignored.length)body.innerHTML+=`<div class="note" style="margin:8px 0 0"><b>${ignored.join("·")}은 넘기지 않았습니다.</b>
+   BEP는 연차별로, 앱은 등급별로 잡아 옮길 대응이 없습니다. 잘못 넘어가면 가게에 청구가 갑니다.</div>`;
+ document.getElementById("applyGo").style.display=changes.length?"":"none";
+ d.style.display="flex";
+}
+function closeApplyDialog(){document.getElementById("applyDlg").style.display="none";}
+async function confirmApply(){
+ const body=document.getElementById("applyBody");
+ document.getElementById("applyGo").disabled=true;
+ try{
+  await postSettings(false);
+  body.innerHTML=`<p style="margin:0"><b>✅ 앱에 반영했습니다.</b></p>
+   <div class="note" style="margin:8px 0 0">참여자 화면의 배점은 바로 따라갑니다.
+    가게에 걸린 율은 그대로라 관리자 화면에서 등급을 다시 눌러야 움직입니다.</div>`;
+  document.getElementById("applyGo").style.display="none";
+  document.getElementById("applyNo").textContent="닫기";
+ }catch(err){body.innerHTML=`<p style="margin:0;color:var(--bad)">${err.message}</p>`;}
+ document.getElementById("applyGo").disabled=false;
+}
 function expJSON(){const a=document.createElement("a");
  a.href=URL.createObjectURL(new Blob([JSON.stringify({slots:SLOTS,current:snap()},null,1)],{type:"application/json"}));
  a.download="로컬메모리즈_BEP설정.json";a.click();}

@@ -34,6 +34,7 @@ import {
   DEFAULT_SETTLEMENT,
   mergeSettlementConfig,
   settlementDueAt,
+  splitSettlementConfig,
   type SettlementConfig,
   type SettlementRow,
 } from './coverage'
@@ -41,21 +42,6 @@ import {
 // ---------------------------------------------------------------------------
 // 설정값
 // ---------------------------------------------------------------------------
-
-/**
- * 참여자도 읽는 칸 — 배점·문턱·유효기간.
- *
- * 충당률·회비·상한은 여기 넣지 않는다. 그 값들은 참여자에게 보이면 안 되고,
- * 가게끼리도 서로의 것을 알면 안 된다(규칙이 `config/settlement`을 관리자에게만
- * 연다). 화면에 안 그리는 것으로는 부족하다 — 문서를 읽을 수 있으면 읽힌다.
- */
-const PUBLIC_KEYS = [
-  'minRedeemPoints',
-  'pointExpiryMonths',
-  'missionPoints',
-  'linePoints',
-  'completePoints',
-] as const
 
 /**
  * 앱이 켜질 때 한 번.
@@ -110,12 +96,7 @@ export async function fetchSettlementConfig(): Promise<SettlementConfig> {
 export async function saveSettlementConfig(cfg: SettlementConfig): Promise<void> {
   if (!db) throw new Error('서버에 닿지 못했습니다.')
   const merged = mergeSettlementConfig(cfg)
-
-  const publicPart: Record<string, number> = {}
-  for (const k of PUBLIC_KEYS) publicPart[k] = merged[k]
-
-  const privatePart = { ...merged } as Partial<SettlementConfig>
-  for (const k of PUBLIC_KEYS) delete privatePart[k]
+  const { publicPart, privatePart } = splitSettlementConfig(merged)
 
   await Promise.all([
     setDoc(doc(db, 'config', 'points'), publicPart, { merge: true }),
