@@ -30,7 +30,8 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://firebasestorage.googleapis.com/v0/b/bonghwang-memories.firebasestorage.app/o\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://firebasestorage.googleapis.com/v0/b/bonghwang-memories.appspot.com/o\")",
       "Bash(curl -s -X POST \"https://firebasestorage.googleapis.com/v0/b/bonghwang-memories.firebasestorage.app/o?name=posts/_probe.txt\" -H \"Content-Type: text/plain\" --data \"probe\" -w \"\\\\nHTTP %{http_code}\\\\n\")",
-      "Bash(curl -s -D - -o /dev/null http://localhost:3000/community)"
+      "Bash(curl -s -D - -o /dev/null http://localhost:3000/community)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/ --max-time 5)"
     ]
   }
 }

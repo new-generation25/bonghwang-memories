@@ -2,7 +2,9 @@
   "name": "bonghwang-memories",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": "22.x" },
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev -p 3000",
     "dev:emulator": "node scripts/dev-emulator.mjs",
@@ -21,7 +23,8 @@
     "script:bake": "npm run script:apply && node scripts/generate-audio.mjs && node scripts/fix-durations.mjs && node scripts/update-sw-version.js",
     "check:redeem": "node scripts/check-redeem.mjs",
     "check:signup": "node scripts/check-signup.mjs",
-    "check:bep": "node scripts/verify-bep.mjs"
+    "check:bep": "node scripts/verify-bep.mjs",
+    "check:bep:app": "node scripts/check-bep-app.mjs"
   },
   "dependencies": {
     "canvas": "^3.1.2",

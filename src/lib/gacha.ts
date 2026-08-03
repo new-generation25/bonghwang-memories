@@ -28,6 +28,8 @@
  * `slots` 합이 GACHA_SLOTS와 같기만 하면 된다(E2E가 검사한다).
  */
 
+import { COUPONS } from './coupons'
+
 /** 뽑기판 칸 수 — 상품별 slots의 합이 정확히 이 값이어야 한다 */
 export const GACHA_SLOTS = 50
 
@@ -275,4 +277,71 @@ export function prizesOf(seed: string, drawnSlots: number[]): GachaPrize[] {
     if (prize) out.push(prize)
   }
   return out
+}
+
+// ---------------------------------------------------------------------------
+// 판이 만들어 내는 원가 — BEP 모델의 입력
+// ---------------------------------------------------------------------------
+
+export interface GachaEconomics {
+  /** 실물(안내소 교환) 칸 수 */
+  physicalSlots: number
+  /** 한 판에서 실물이 나올 확률 — BEP의 `gaP` */
+  physicalShare: number
+  /** 실물 한 건의 평균 원가(원) — BEP의 `gaC` */
+  avgPhysicalCost: number
+  /** 원가를 몰라 액면으로 대신 센 쿠폰. 비어야 위 값이 참값이다 */
+  missingCost: string[]
+  /** 한 판이 내보내는 가게 쿠폰 액면 기대값(원) — 할인이라 충당 대상이다 */
+  shopCouponFacePerDraw: number
+  /** 한 판이 적립하는 포인트 기대값(p) */
+  pointsPerDraw: number
+}
+
+/**
+ * 상품표에서 뽑기 원가를 뽑아낸다.
+ *
+ * 세 갈래를 갈라 센다. 성격이 서로 달라 한 덩어리로 세면 틀린다:
+ *  · **실물**(안내소 교환) — 우리가 사서 건넨다. 나가는 순간 원가다
+ *  · **가게 쿠폰** — 할인이라 가게와 나눠 진다(충당률)
+ *  · **포인트** — 1p = 1원으로 쓰이거나 굿즈로 교환된다
+ *
+ * BEP의 `gaP`·`gaC`를 손으로 적어 두면 상품표를 고칠 때마다 조용히
+ * 어긋난다. 실제로 어긋나 있었다 — 확정안은 실물 15%였는데 판은 38%다.
+ * `npm run check:bep:app`이 여기 값과 `bepModel.js`의 기본값을 대조한다.
+ */
+export function gachaEconomics(): GachaEconomics {
+  let physicalSlots = 0
+  let physicalCost = 0
+  let shopFace = 0
+  let points = 0
+  const missingCost: string[] = []
+
+  for (const prize of GACHA_PRIZES) {
+    if (prize.kind === 'points') {
+      points += (prize.points ?? 0) * prize.slots
+      continue
+    }
+    const spec = prize.couponId ? COUPONS[prize.couponId] : undefined
+    if (!spec) continue
+
+    if (spec.scope === 'info') {
+      // 안내소에서 물건을 건넨다 — 원가가 그 자리에서 나간다
+      physicalSlots += prize.slots
+      if (spec.costWon === undefined) missingCost.push(spec.id)
+      physicalCost += (spec.costWon ?? spec.unitWon) * prize.slots
+    } else {
+      // 가게 쿠폰·공용권 — 액면이 곧 할인액이고 충당률이 걸린다
+      shopFace += spec.unitWon * prize.slots
+    }
+  }
+
+  return {
+    physicalSlots,
+    physicalShare: physicalSlots / GACHA_SLOTS,
+    avgPhysicalCost: physicalSlots ? Math.round(physicalCost / physicalSlots) : 0,
+    missingCost,
+    shopCouponFacePerDraw: Math.round(shopFace / GACHA_SLOTS),
+    pointsPerDraw: Math.round(points / GACHA_SLOTS),
+  }
 }
