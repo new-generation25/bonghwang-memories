@@ -22,6 +22,7 @@ import {
   where,
   limit,
   serverTimestamp,
+  deleteField,
 } from 'firebase/firestore'
 import { auth, db, isFirebaseReady } from './firebase'
 
@@ -114,6 +115,32 @@ export async function isNicknameTaken(
 
 const toInternalEmail = (loginId: string) => `${loginId.toLowerCase()}@${ID_DOMAIN}`
 
+/**
+ * 아이디를 **문서에 적지 않는다.**
+ *
+ * users 문서는 공개로 읽힌다 — 닉네임을 게시글·랭킹에 띄워야 해서다
+ * (firestore.rules의 `allow read: if true`). 거기에 아이디가 함께 들어
+ * 있으면 게시글의 authorUid로 문서를 열어 가입자 아이디를 통째로
+ * 긁을 수 있다. 비밀번호의 절반이 공개돼 있는 셈이었다.
+ *
+ * 지울 수 있는 것은 이미 내부 이메일에 같은 값이 들어 있기 때문이다 —
+ * `{아이디}@bonghwang.local`. 그 이메일은 로그인한 본인만 읽는다.
+ */
+const fromInternalEmail = (email: string | null | undefined): string => {
+  if (!email) return ''
+  const [id, domain] = email.split('@')
+  return domain === ID_DOMAIN ? id : ''
+}
+
+/** 문서에 적을 몫 — loginId만 뺀다. 새 칸이 늘어도 여기 한 곳만 본다 */
+const toStoredProfile = (p: Profile) => ({
+  uid: p.uid,
+  nickname: p.nickname,
+  provider: p.provider,
+  totalScore: p.totalScore,
+  completedMissions: p.completedMissions,
+})
+
 /** Firebase 오류 코드를 사용자가 읽을 수 있는 한국어로 변환 */
 function toKoreanError(code: string): string {
   switch (code) {
@@ -191,8 +218,9 @@ export async function signUp(
       completedMissions: [],
     }
 
+    // loginId는 빼고 적는다 — 위 fromInternalEmail 주석 참고
     await setDoc(doc(d, 'users', cred.user.uid), {
-      ...profile,
+      ...toStoredProfile(profile),
       nicknameKey: toNicknameKey(trimmedNickname),
       createdAt: serverTimestamp(),
       lastUpdated: serverTimestamp(),
@@ -326,7 +354,14 @@ export async function linkPassword(loginId: string, password: string): Promise<v
   try {
     const credential = EmailAuthProvider.credential(toInternalEmail(loginId), password)
     await linkWithCredential(user, credential)
-    await updateDoc(doc(d, 'users', user.uid), { loginId: loginId.toLowerCase() })
+    /*
+      아이디는 문서에 안 적는다. 이제 잇고 나면 내부 이메일이 곧 아이디라
+      본인만 읽는다 — 예전에 적어 두던 것을 지우기까지 한다.
+    */
+    await updateDoc(doc(d, 'users', user.uid), {
+      loginId: deleteField(),
+      lastUpdated: serverTimestamp(),
+    })
   } catch (error) {
     const code = (error as { code?: string }).code ?? ''
     if (code === 'auth/email-already-in-use' || code === 'auth/credential-already-in-use') {
@@ -360,7 +395,7 @@ export async function completeGoogleSignUp(
   }
 
   await setDoc(doc(d, 'users', uid), {
-    ...profile,
+    ...toStoredProfile(profile),
     nicknameKey: toNicknameKey(trimmed),
     createdAt: serverTimestamp(),
     lastUpdated: serverTimestamp(),
@@ -405,10 +440,20 @@ export async function signOutUser(): Promise<void> {
   await signOut(auth)
 }
 
+/**
+ * 프로필을 읽는다.
+ *
+ * `loginId`는 문서에 없다(공개로 읽히는 자리다). 본인 것을 볼 때만
+ * 내부 이메일에서 되찾아 채운다 — 남의 프로필에서는 빈 문자열이고,
+ * 그것이 맞다.
+ */
 export async function getProfile(uid: string): Promise<Profile | null> {
   if (!db) return null
   const snap = await getDoc(doc(db, 'users', uid))
-  return snap.exists() ? (snap.data() as Profile) : null
+  if (!snap.exists()) return null
+  const data = snap.data() as Profile
+  const mine = auth?.currentUser?.uid === uid
+  return { ...data, loginId: mine ? fromInternalEmail(auth?.currentUser?.email) : '' }
 }
 
 /** 로그인 상태 구독. Firebase 미설정이면 즉시 비로그인으로 통지한다 */

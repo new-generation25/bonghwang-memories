@@ -39,13 +39,21 @@ service cloud.firestore {
     // ───────── 사용자 프로필 ─────────
     // 닉네임을 게시글·랭킹에 표시해야 하므로 읽기는 공개.
     // 문서 ID가 곧 uid이므로 본인만 만들고 고칠 수 있다.
+    //
+    // **로그인 아이디는 여기 두지 않는다.** 읽기가 공개라, 게시글의
+    // authorUid로 문서를 열면 가입자 아이디를 통째로 긁을 수 있었다 —
+    // 비밀번호의 절반이 공개된 셈이다. 아이디는 이미 내부 이메일
+    // ({아이디}@bonghwang.local)에 들어 있고 그것은 본인만 읽는다.
+    // 규칙으로 막는 것은 코드 한 곳만 되돌려도 다시 새기 때문이다.
     match /users/{userId} {
       allow read: if true;
-      allow create: if (isOwner(userId) && request.resource.data.uid == userId)
-                    || isAdmin();
-      allow update: if (isOwner(userId)
+      allow create: if ((isOwner(userId) && request.resource.data.uid == userId)
+                        || isAdmin())
+                    && !('loginId' in request.resource.data);
+      allow update: if ((isOwner(userId)
                         && request.resource.data.uid == resource.data.uid)
-                    || isAdmin();
+                        || isAdmin())
+                    && !('loginId' in request.resource.data);
       // 관리자만 지울 수 있다 — 데모 데이터 정리용
       allow delete: if isAdmin();
 
