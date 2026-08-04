@@ -1087,8 +1087,13 @@ function appPatch(){
   couponFaceWon:v("cp"),pointExpiryMonths:v("pLife"),
   missionPoints:v("pMission"),linePoints:v("pBingo"),completePoints:v("pFinish"),
   monthlyFee:{free:v("fb"),basic:v("fp"),premium:v("fs")},
-  /* 무료 등급 상한은 BEP에 대응하는 칸이 없다 — 앱 값을 그대로 둔다 */
-  monthlyCap:{basic:v("limB"),premium:v("limP")}};
+  /* limB는 gb(일반=무료) 상점의 상한이고, limP는 프리미엄·스토리 둘이 함께 쓴다
+     — 모델이 `gb*limB + (gp+gs)*limP`로 센다(bepModel.js). 회비를 fb→free·
+     fp→basic·fs→premium으로 놓았으면 상한도 같은 줄에 서야 한다. 한 등급이
+     회비와 상한을 서로 다른 BEP 등급에서 받으면 어느 쪽도 맞지 않는다.
+     예전에는 limB를 basic에 넣고 "무료 등급은 대응하는 칸이 없다"고 적어
+     두었는데, 지금 모든 가게가 무료 등급이라 **정작 쓰이는 한 칸만 빠졌다.** */
+  monthlyCap:{free:v("limB"),basic:v("limP"),premium:v("limP")}};
 }
 /* 확인은 **이 화면 안에서** 한다. 새 창을 열면 값을 고치던 자리에서 손이
    떠나고, 크롬 팝업 차단에 걸리면 거기서 끝난다.
