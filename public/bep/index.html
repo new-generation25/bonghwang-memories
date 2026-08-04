@@ -1117,8 +1117,25 @@ async function postSettings(dryRun){
   body:JSON.stringify({patch:appPatch(),dryRun:!!dryRun})});
  if(r.status===404)throw new Error("열쇠가 맞지 않습니다. 아래에서 다시 넣어주세요.");
  if(r.status===503)throw new Error("서버에 관리자 자격증명이 없습니다(FIREBASE_SERVICE_ACCOUNT).");
+ if(r.status>=500)throw new Error("앱의 반영 창구가 죽어 있습니다(HTTP "+r.status+"). 배포 설정을 고쳐야 하는 자리라 열쇠를 다시 넣어도 같은 곳에서 막힙니다.");
  if(!r.ok)throw new Error("HTTP "+r.status);
  return r.json();
+}
+
+/* 열쇠를 묻기 전에 창구가 열려 있는지 먼저 본다.
+   서버가 죽어 있는데 열쇠부터 물으면, 받는 사람은 제 열쇠를 의심하며
+   몇 번을 다시 넣는다 — 무엇을 넣어도 안 되는 자리인데 그렇게 보이지
+   않는다. 일부러 틀린 열쇠로 찔러 본다. 살아 있으면 404를 내고
+   아무것도 건드리지 않는다. */
+async function apiTrouble(){
+ try{
+  const r=await fetch("/api/bep/settings",{method:"POST",
+   headers:{"content-type":"application/json","authorization":"Bearer probe"},
+   body:JSON.stringify({patch:{},dryRun:true})});
+  if(r.status===503)return "<b>서버에 관리자 자격증명이 없습니다(503).</b> 열쇠와는 무관한 문제입니다.";
+  if(r.status>=500)return "<b>앱의 반영 창구가 죽어 있습니다("+r.status+").</b> 열쇠를 넣어도 반영되지 않습니다 — 배포 설정을 먼저 고쳐야 합니다.";
+  return "";
+ }catch(e){return "<b>앱 서버에 닿지 못했습니다.</b> 이 파일을 앱 주소에서 열었는지 보세요.";}
 }
 
 /* 열쇠를 묻는 자리. prompt를 쓰지 않는 것은 브라우저마다 막기 때문이다 */
@@ -1142,7 +1159,13 @@ function saveTokenAndApply(){
 
 async function applyToApp(){
  const msg=document.getElementById("appPatchMsg");
- if(!bepToken()){askToken();return;}
+ /* 다운로드해 둔 파일을 그냥 연 자리 — 부를 서버가 없다 */
+ if(!SRV){msg.innerHTML="<b>로컬 파일로 열려 있습니다.</b> 앱 주소(<b>/bep/index.html</b>)에서 열어야 반영할 수 있습니다.";return;}
+ if(!bepToken()){
+  msg.textContent="반영 창구가 열려 있는지 보는 중…";
+  const bad=await apiTrouble();
+  if(bad){msg.innerHTML=bad;return;}
+  askToken();return;}
  msg.textContent="지금 앱 값과 맞춰 보는 중…";
  try{
   const r=await postSettings(true);

@@ -123,6 +123,14 @@ export default function AdminPage() {
     그때는 시뮬레이터가 제 화면에서 열쇠를 묻는다.
   */
   const [bepKey, setBepKey] = useState('')
+  /*
+    열쇠를 **왜** 못 받았는지.
+
+    예전에는 조용히 넘어갔다. 그러면 시뮬레이터가 제 화면에서 열쇠를 묻고,
+    받는 사람은 제 열쇠를 의심하며 몇 번을 다시 넣는다 — 정작 원인은
+    서버가 죽어 있는 것이라 무엇을 넣어도 안 된다. 이유를 여기 적어 둔다.
+  */
+  const [bepKeyMsg, setBepKeyMsg] = useState('')
   /** 어느 달을 정산하는가 — 기본은 이번 달 */
   const [month, setMonth] = useState(monthKey())
   const [closed, setClosed] = useState<SettlementDoc[]>([])
@@ -199,11 +207,29 @@ export default function AdminPage() {
         const r = await fetch('/api/bep/token', {
           headers: { authorization: `Bearer ${idToken}` },
         })
-        if (!r.ok) return // 404(열쇠 미설정)·503(자격증명 없음) — 조용히 넘어간다
+        if (!r.ok) {
+          /*
+            상태마다 할 일이 다르다. 500만은 사람이 손쓸 여지가 없는 자리라
+            "열쇠를 넣지 마세요"까지 적는다 — 넣어도 반영이 같은 벽에 막힌다.
+          */
+          if (alive) {
+            setBepKeyMsg(
+              r.status >= 500 && r.status !== 503
+                ? `열쇠를 못 받았습니다 — 서버의 BEP 창구가 죽어 있습니다(${r.status}). 시뮬레이터가 열쇠를 묻더라도 넣지 마세요. 넣어도 반영은 같은 곳에서 막힙니다.`
+                : r.status === 503
+                  ? '열쇠를 못 받았습니다 — 서버에 관리자 자격증명이 없습니다(503).'
+                  : r.status === 404
+                    ? '열쇠가 서버에 설정돼 있지 않습니다(BEP_EXPORT_TOKEN). 시뮬레이터는 열리지만 「앱에 반영」은 못 씁니다.'
+                    : `열쇠를 못 받았습니다(${r.status}). 로그아웃했다 다시 들어와 보세요.`
+            )
+          }
+          return
+        }
         const { token } = await r.json()
         if (alive && token) setBepKey(token)
       } catch {
-        /* 열쇠를 못 받아도 시뮬레이터는 열린다 */
+        /* 열쇠를 못 받아도 시뮬레이터는 열린다 — 숫자를 보는 데는 지장이 없다 */
+        if (alive) setBepKeyMsg('열쇠를 못 받았습니다 — 서버에 닿지 못했습니다.')
       }
     })()
     return () => {
@@ -446,25 +472,30 @@ export default function AdminPage() {
         Link가 아니라 a로 여는 것은 앱 안에서 도는 화면이 아니라서다 —
         target=_blank라야 설치된 앱 창에서도 브라우저 탭으로 빠진다.
       */}
-      <a
-        /* 열쇠는 #뒤로 싣는다 — fragment는 서버로 안 가 접속 기록에 안 남는다 */
-        href={bepKey ? `/bep/index.html#k=${encodeURIComponent(bepKey)}` : '/bep/index.html'}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mb-4 flex items-center justify-between rounded-xl border border-line bg-paper px-3.5 py-2.5"
-      >
-        <span className="min-w-0">
-          <span className="block text-[12.5px] font-bold text-ink">
-            📈 BEP 시뮬레이터 ↗
+      <div className="mb-4">
+        <a
+          /* 열쇠는 #뒤로 싣는다 — fragment는 서버로 안 가 접속 기록에 안 남는다 */
+          href={bepKey ? `/bep/index.html#k=${encodeURIComponent(bepKey)}` : '/bep/index.html'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between rounded-xl border border-line bg-paper px-3.5 py-2.5"
+        >
+          <span className="min-w-0">
+            <span className="block text-[12.5px] font-bold text-ink">
+              📈 BEP 시뮬레이터 ↗
+            </span>
+            <span className="block text-[11px] text-ink-60">
+              새 탭에서 열립니다 · 컴퓨터에서 보세요 — 여기 숫자에는 영향이 없습니다
+            </span>
           </span>
-          <span className="block text-[11px] text-ink-60">
-            새 탭에서 열립니다 · 컴퓨터에서 보세요 — 여기 숫자에는 영향이 없습니다
+          <span className="ml-3 shrink-0 rounded-lg bg-cream-dp px-2.5 py-1 font-mono-retro text-[10.5px] tracking-wider text-ink-60">
+            열기
           </span>
-        </span>
-        <span className="ml-3 shrink-0 rounded-lg bg-cream-dp px-2.5 py-1 font-mono-retro text-[10.5px] tracking-wider text-ink-60">
-          열기
-        </span>
-      </a>
+        </a>
+        {bepKeyMsg && (
+          <p className="mt-1.5 px-1 text-[11px] leading-snug text-rec">{bepKeyMsg}</p>
+        )}
+      </div>
 
       {/* ───── 관리자 데이터 제외 ───── */}
       {adminCount > 0 && (
