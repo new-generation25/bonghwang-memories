@@ -201,8 +201,19 @@ export default function TrackPageClient({ n }: { n: number }) {
     이어져서다. B1_WALK이 next도 미션도 없이 끝나는 첫 큐라 여기서 나왔다.
   */
   const finishedHere =
-    !cueState.cueId &&
     !interaction &&
+    /*
+      **소리가 끝난 자리도 여기다.** 예전에는 `!cueState.cueId`를 달아서
+      엔진이 빈 경우(새로고침·재진입)에만 이 패널이 떴다. 그런데 큐가
+      끝나도 `cueId`는 그대로 서 있으므로(finishCue는 ended만 세운다),
+      **정작 다 듣고 난 그 순간에는 뜨지 않았다.**
+
+      그 자리에서 무슨 일이 벌어지냐면 — 데크의 PLAY·FF·STOP이 전부
+      `onClick` 없이 그려진다(CuePlayer의 ended 분기). 눌리는 키는
+      다시듣기 하나뿐이고, 어디로 가야 하는지 말해주는 것은 아무것도 없다.
+      「점빵이 하나 있어」에서 멈춰 보이던 것이 이것이다.
+    */
+    (!cueState.cueId || (cueState.ended && !cueState.pendingAutoChain)) &&
     tour.tracksCompleted.includes(n) &&
     Boolean(tour.lastCueCompleted) &&
     CUES[tour.lastCueCompleted as CueId].track === n &&
@@ -450,23 +461,14 @@ export default function TrackPageClient({ n }: { n: number }) {
         작아지고 프레임이 바뀌어서 거점마다 다른 화면처럼 보였다.
       */}
       <div className="mx-auto mt-4 w-full max-w-[380px]">
-        {cueState.cueId ? (
-          <CuePlayer
-            /*
-              늘 켠다. 예전에는 미션이 뜨면 껐는데, 그 순간 프레임이 통째로
-              다른 배치로 갈아타면서 거점 그림이 갑자기 작아졌다. 이제 상자
-              높이가 내용에 맞춰지므로 미션이 그 아래로 이어진다.
-            */
-            fill
-            /* 미션이 덮고 있는 동안에는 데크를 치운다 — 막 뒤에 깔려
-               보이기만 하고 눌리지 않는 물건이 된다 */
-            deckHidden={Boolean(interactionNode)}
-            center={
-              <PlacePhoto name={station.name} photo={station.photo} track={n} />
-            }
-            endedAction={deckAction}
-          />
-        ) : finishedHere ? (
+        {/*
+          **다 들은 자리를 플레이어보다 먼저 본다.**
+
+          순서가 뒤였을 때는 `cueState.cueId`가 늘 먼저 걸려서, 소리가
+          끝나도 눌리지 않는 데크만 남았다. 다 들은 것은 재생 상태가 아니라
+          **다음 걸음이 필요한 상태**다 — 그러니 그쪽을 먼저 묻는다.
+        */}
+        {finishedHere ? (
           /*
             다 들었다. 사고가 아니라 이야기가 끝난 것이므로 다음 걸음을 준다.
             여기서 길을 안 알려주면 화면에 남는 것이 '다시 듣기'뿐이라,
@@ -529,6 +531,22 @@ export default function TrackPageClient({ n }: { n: number }) {
               </div>
             </div>
           </div>
+        ) : cueState.cueId ? (
+          <CuePlayer
+            /*
+              늘 켠다. 예전에는 미션이 뜨면 껐는데, 그 순간 프레임이 통째로
+              다른 배치로 갈아타면서 거점 그림이 갑자기 작아졌다. 이제 상자
+              높이가 내용에 맞춰지므로 미션이 그 아래로 이어진다.
+            */
+            fill
+            /* 미션이 덮고 있는 동안에는 데크를 치운다 — 막 뒤에 깔려
+               보이기만 하고 눌리지 않는 물건이 된다 */
+            deckHidden={Boolean(interactionNode)}
+            center={
+              <PlacePhoto name={station.name} photo={station.photo} track={n} />
+            }
+            endedAction={deckAction}
+          />
         ) : resumable ? (
           /*
             위의 자동 재개가 소리를 트는 사이에만 스치는 화면이다(한 틱).
