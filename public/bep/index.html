@@ -309,7 +309,7 @@ const PRESETS={"기준안":{},"신규직원 2028 연기":{empS:202801},"대표�
  "전환율 +2%p":{cv27:.12,cv28:.14},"충당률 현실화 30/45%":{cov27:.30,cov28:.45}};
 const pb=document.getElementById("presets");
 Object.keys(PRESETS).forEach(n=>{const b=document.createElement("button");b.textContent=n;
- b.onclick=()=>{setAll({...DEF,...PRESETS[n]});[...pb.children].forEach(c=>c.classList.remove("on"));b.classList.add("on");calc();};pb.appendChild(b);});
+ b.onclick=()=>{applyScenario({...DEF,...PRESETS[n]});[...pb.children].forEach(c=>c.classList.remove("on"));b.classList.add("on");calc();};pb.appendChild(b);});
 pb.children[0].classList.add("on");
 setAll(DEF);
 document.addEventListener("input",e=>{if(e.target.tagName==="INPUT"&&e.target.type==="text")calc();});
@@ -935,7 +935,7 @@ async function srvSave(){
   SCUR=r.id;await srvList();}catch(e){srvUI(e.message);}}
 async function srvLoad(id){
  const s=SLIST.find(x=>x.id===id);if(!s)return;
- SCUR=id;setAll({...DEF,...s.params});calc();srvUI();}
+ SCUR=id;applyScenario(s.params);calc();srvUI();}
 /* 이름만 고친다 — 화면 값이 아니라 **저장돼 있던 값**을 그대로 되돌려 보낸다.
    snap()을 보내면 이름을 바꾸는 김에 지금 만지던 값으로 덮어써 버린다. */
 async function srvRename(id){
@@ -966,8 +966,13 @@ function srvUI(err){
   e.innerHTML=`<div class="warn" style="margin:2px 0 8px">서버 저장에 연결하지 못했습니다 (${err}). 아래 로컬 저장을 쓰세요 — <b>지금 값은 이 브라우저에만 남습니다.</b></div>`;
   if(lb)lb.style.display=""; if(ex)ex.innerHTML=""; return; }
  if(md)md.textContent="(서버 저장 · 기기와 무관)";
- // 정상 — 서버 저장이 주가 되고 로컬 슬롯은 접어 둔다
- if(lb)lb.style.display="none";
+ /*
+   서버가 붙어도 브라우저 저장을 감추지 않는다.
+   예전에는 접어 두었는데, 그러면 **이 브라우저에 저장해 둔 것에 닿을 길이
+   없어진다.** 서버가 주가 되는 것과 지난 저장을 못 보게 하는 것은 다른
+   일이다. 어디에 남는지는 각 상자의 머리말이 말한다.
+ */
+ if(lb)lb.style.display="";
  e.innerHTML=`<div class="row one" style="margin-bottom:6px"><label>시나리오 이름</label>
    <input type="text" id="srvName" placeholder="예) 2028 회수 기준안"></div>
   <div class="btns"><button onclick="srvSave()" style="border-color:#2a78d6;color:#2a78d6;font-weight:700">${SCUR?"덮어쓰기 저장":"새로 저장"}</button>
@@ -1041,8 +1046,37 @@ function snap(){const o={};Object.keys(DEF).forEach(k=>{if(document.getElementBy
    않아도 F5·탭 닫기에서 입력이 날아가지 않게 하는 장치다. 60여 개를 손으로
    맞춰 놓고 새로고침 한 번에 잃는 것이 이 화면에서 가장 아픈 사고였다. */
 function keepCurrent(){try{localStorage.setItem(CKEY,JSON.stringify(snap()));}catch(e){OK=false;}}
+
+/*
+  ═══ 불러오기는 이 문 하나로만 지나간다 ═══
+
+  브라우저 슬롯 · 파일 · 서버 · 새로고침 복원 — 들어오는 길이 넷이다.
+  넷이 제각각 setAll을 부르면 검증도 넷, 옛 형식 변환도 넷이 되고,
+  그중 하나만 안 고쳐지는 일이 실제로 일어났다(파일로 불러오면 사업비가
+  사라지던 것 · 슬롯을 10개만 읽던 것).
+
+  하는 일은 셋이다.
+   · 숫자가 아닌 값은 버리고 기본값으로 메운다 — 남의 파일이나 깨진 파일이
+     그대로 들어오면 어디서 틀렸는지 못 찾는다
+   · 옛 형식(단일 pool `subCap`)을 지원사업 목록으로 옮긴다
+   · 화면에 얹는다
+
+  `calc()`는 부르지 않는다. 부르는 쪽이 저장·목록 갱신까지 마친 뒤
+  한 번만 돌리는 편이 낫다.
+*/
+function normalizeIn(o){
+ const out={};
+ Object.keys(DEF).forEach(k=>{
+  const v=o&&o[k];
+  out[k]=(v!==undefined&&v!==null&&isFinite(v))?Number(v):DEF[k];
+ });
+ out.grants=migrateGrantsIn(o);
+ return out;
+}
+function applyScenario(o){setAll(normalizeIn(o));}
+
 function restoreCurrent(){try{const o=JSON.parse(localStorage.getItem(CKEY)||"null");
- if(!o||typeof o!=="object")return false;setAll({...DEF,...o});return true;}catch(e){return false;}}
+ if(!o||typeof o!=="object")return false;applyScenario(o);return true;}catch(e){return false;}}
 /* 이름으로 저장하고, 같은 이름이면 덮어쓴다.
    예전에는 누를 때마다 슬롯이 하나씩 늘고 10개를 넘으면 가장 오래된 것을
    **말없이** 지웠다. 한 시나리오를 다듬는 동안 한도에 닿아, 며칠 전에 잡아둔
@@ -1064,7 +1098,7 @@ function slotMsg(t,ok){const e=document.getElementById("slotMsg");if(!e)return;
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(SLOTS));}catch(e){OK=false;}drawSlots();}
 /* 슬롯은 **자리 번호**로 가리킨다. 이름을 attribute에 그대로 박으면
    따옴표 하나로 onclick이 깨진다 */
-function loadSlot(i){const s=SLOTS[i];if(!s)return;setAll({...DEF,...s.d});calc();
+function loadSlot(i){const s=SLOTS[i];if(!s)return;applyScenario(s.d);calc();
  const el=document.getElementById("slotName");if(el)el.value=s.n;
  drawSlots();slotMsg(`「${s.n}」을 불러왔습니다.`,true);}
 function delSlot(i){const s=SLOTS[i];if(!s)return;
@@ -1084,8 +1118,14 @@ function renameSlot(i){const s=SLOTS[i];if(!s)return;
  slotMsg(`「${old}」을 「${nm}」으로 바꿨습니다.`,true);}
 function drawSlots(){const el=document.getElementById("slots");if(!el)return;
  const cur=((document.getElementById("slotName")||{}).value||"").trim();
- el.innerHTML=SLOTS.length?SLOTS.map((s,i)=>`<span class="slot" onclick="loadSlot(${i})" style="cursor:pointer;${s.n===cur?"background:#dbeafe;border-color:#2a78d6":""}" title="누르면 이 설정을 불러옵니다"><b>${esc(String(s.n).slice(0,20))}</b>
-  <span style="color:${s.cum>=0?'var(--good)':'var(--bad)'}">${F(s.cum)}</span><span class="rn" onclick="event.stopPropagation();renameSlot(${i})" title="이름 고치기">✎</span><span class="x" onclick="event.stopPropagation();delSlot(${i})">×</span></span>`).join("")
+ /* 언제 저장했는지와 지원사업 몇 건이 든 설정인지를 함께 보인다.
+    이름과 누적 손익만으로는 어느 것이 최신인지, 지원금을 넣고 잡은
+    안인지 뺀 안인지 구분할 수 없었다 */
+ const when=t=>{if(!t)return"";const d=new Date(t);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;};
+ const gcnt=s=>((s.d&&Array.isArray(s.d.grants))?s.d.grants.length:0);
+ el.innerHTML=SLOTS.length?SLOTS.map((s,i)=>`<span class="slot" onclick="loadSlot(${i})" style="cursor:pointer;${s.n===cur?"background:#dbeafe;border-color:#2a78d6":""}" title="${esc(String(s.n))} · 저장 ${when(s.at)||"시각 없음"}${gcnt(s)?` · 지원사업 ${gcnt(s)}건`:" · 지원사업 없음"}"><b>${esc(String(s.n).slice(0,20))}</b>
+  <span style="color:${s.cum>=0?'var(--good)':'var(--bad)'}">${F(s.cum)}</span>${gcnt(s)?`<span style="color:var(--ink3)">💰${gcnt(s)}</span>`:""}<span style="color:var(--ink3);font-size:10px">${when(s.at)}</span><span class="rn" onclick="event.stopPropagation();renameSlot(${i})" title="이름 고치기">✎</span><span class="x" onclick="event.stopPropagation();delSlot(${i})">×</span></span>`).join("")
   :`<span style="font-size:11px;color:var(--ink3)">저장된 설정이 없습니다.</span>`;
  document.getElementById("stNote").innerHTML=(OK
   ?"이름을 누르면 그 설정을 불러옵니다. 옆 숫자는 2028.12 누적 손익. <b>고치는 값은 저장을 누르지 않아도 이 브라우저에 남아</b> 새로고침해도 그대로입니다."
@@ -1244,7 +1284,7 @@ function impJSON(f){const r=new FileReader();r.onload=()=>{try{const o=JSON.pars
   SLOTS=cut>0?o.slots.slice(-MAX_SLOTS):o.slots;
   if(cut>0)alert(`저장 슬롯이 ${o.slots.length}개라 최근 ${MAX_SLOTS}개만 불러왔습니다. ${cut}개는 파일에 그대로 남아 있습니다.`);
  }
- if(o.current)setAll({...DEF,...o.current});persist();calc();}catch(e){alert("파일을 읽을 수 없습니다.");}};r.readAsText(f);}
+ if(o.current)applyScenario(o.current);persist();calc();}catch(e){alert("파일을 읽을 수 없습니다.");}};r.readAsText(f);}
 function csv(){let s="﻿"+COLS.map(c=>c[0]).join(",")+"\n";
  window._rows.forEach(r=>{s+=COLS.map(([n,k])=>typeof r[k]==="number"?r[k].toFixed(2):r[k]).join(",")+"\n";});
  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([s],{type:"text/csv"}));a.download="로컬메모리즈_월별데이터.csv";a.click();}
