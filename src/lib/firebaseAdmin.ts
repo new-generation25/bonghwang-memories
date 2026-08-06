@@ -19,7 +19,7 @@
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app'
 import { getFirestore, type Firestore } from 'firebase-admin/firestore'
 import { getAuth, type Auth } from 'firebase-admin/auth'
-import { isAdminEmail } from './adminEmails'
+import { isSuperAdminEmail } from './adminEmails'
 
 const APP_NAME = 'bonghwang-admin'
 
@@ -71,7 +71,10 @@ export function adminAuth(): Auth | null {
 }
 
 /**
- * 요청 헤더의 ID 토큰을 검증하고 관리자면 uid를 낸다.
+ * 요청 헤더의 ID 토큰을 검증하고 슈퍼관리자면 uid를 낸다.
+ *
+ * 일반관리자는 지나지 못한다 — 여기를 지나면 시나리오·정산 값이 열리는데,
+ * 그것은 앱을 걸어보는 등급의 일이 아니다(adminEmails.ts의 등급 표).
  *
  * 커스텀 클레임(`admin === true`)이 아니라 **토큰의 이메일**로 판정한다.
  * 이 프로젝트는 처음부터 그렇게 갈랐고 firestore.rules도 같은 식이다 —
@@ -88,7 +91,7 @@ export async function adminUidFromRequest(req: Request): Promise<string | null> 
 
   try {
     const decoded = await auth.verifyIdToken(token)
-    return isAdminEmail(decoded.email) ? decoded.uid : null
+    return isSuperAdminEmail(decoded.email) ? decoded.uid : null
   } catch {
     return null
   }

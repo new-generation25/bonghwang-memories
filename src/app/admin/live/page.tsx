@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { AdminUser, fetchUsers, isAdminUser } from '@/lib/admin'
+import { AdminUser, fetchUsers, isSuperAdminUser } from '@/lib/admin'
 import { TRACK_STATIONS } from '@/lib/tracks'
 
 /** 자동 갱신 주기 */
@@ -86,7 +86,7 @@ export default function LivePage() {
 
   useEffect(() => {
     if (loading) return
-    if (!isAdminUser()) {
+    if (!isSuperAdminUser()) {
       setState('denied')
       return
     }
@@ -144,7 +144,7 @@ export default function LivePage() {
           <h2 className="mt-2 font-display text-[17px] text-ink">관리자 전용</h2>
           <p className="mt-1 text-[12.5px] leading-relaxed text-ink-60">
             {profile
-              ? '이 계정에는 권한이 없습니다. 관리자 구글 계정으로 로그인해주세요.'
+              ? '이 계정에는 데이터를 볼 권한이 없습니다. 슈퍼관리자 구글 계정으로 로그인해주세요.'
               : '구글 계정으로 로그인해주세요.'}
           </p>
           <Link href="/" className="btn-teal mt-4 inline-block px-5 text-[14px]">

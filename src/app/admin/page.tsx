@@ -61,7 +61,7 @@ import {
   fetchUsers,
   funnel,
   hourlyStarts,
-  isAdminUser,
+  isSuperAdminUser,
   periodStats,
   surveySummary,
   CONTRACT_LABEL,
@@ -239,7 +239,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (loading) return
-    if (!isAdminUser()) {
+    if (!isSuperAdminUser()) {
       setState('denied')
       return
     }
@@ -420,7 +420,7 @@ export default function AdminPage() {
           <h2 className="mt-2 font-display text-[17px] text-ink">관리자 전용</h2>
           <p className="mt-1 text-[12.5px] leading-relaxed text-ink-60">
             {profile
-              ? '이 계정에는 권한이 없습니다. 관리자 구글 계정으로 로그인해주세요.'
+              ? '이 계정에는 데이터를 볼 권한이 없습니다. 슈퍼관리자 구글 계정으로 로그인해주세요.'
               : '구글 계정으로 로그인해주세요.'}
           </p>
           <Link href="/" className="btn-teal mt-4 inline-block px-5 text-[14px]">

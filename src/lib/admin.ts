@@ -24,19 +24,36 @@ import {
 } from 'firebase/firestore'
 import { auth, db, isFirebaseReady } from './firebase'
 import { PointReason } from './points'
-import { ADMIN_EMAILS, isAdminEmail } from './adminEmails'
+import {
+  ADMIN_EMAILS,
+  SUPER_ADMIN_EMAILS,
+  isAdminEmail,
+  isSuperAdminEmail,
+} from './adminEmails'
 
 /**
- * 이 이메일로 로그인한 사람만 관리자 화면을 볼 수 있다 (firestore.rules와 동일).
- *
  * 목록 자체는 `adminEmails.ts`에 있다 — 서버 라우트도 같은 값을 봐야 하는데
  * 이 파일은 `'use client'`라 거기서 import할 수 없기 때문이다. 여기서는
  * 기존 import 경로가 끊기지 않도록 다시 내보내기만 한다.
  */
-export { ADMIN_EMAILS }
+export { ADMIN_EMAILS, SUPER_ADMIN_EMAILS }
 
+/**
+ * 관리자인가 — 등급을 가리지 않는다.
+ *
+ * 이 판정이 여는 것은 **진행을 건너뛰는 쪽**이다(superAdmin.ts). 참여자
+ * 데이터를 보는 화면은 아래 `isSuperAdminUser()`를 봐야 한다.
+ */
 export function isAdminUser(): boolean {
   return isAdminEmail(auth?.currentUser?.email)
+}
+
+/**
+ * 참여자 데이터를 볼 수 있는가 — 콘트롤 패널·라이브가 이것을 본다
+ * (firestore.rules의 `isAdmin()`과 같은 값이다).
+ */
+export function isSuperAdminUser(): boolean {
+  return isSuperAdminEmail(auth?.currentUser?.email)
 }
 
 /**
@@ -55,6 +72,9 @@ export function isAdminUser(): boolean {
  * 이 필드는 권한이 아니다. 규칙상 누구나 자기 문서에 쓸 수 있지만, 그래봐야
  * 자기를 랭킹에서 숨기는 것이 전부다. 관리자 권한은 토큰의 이메일로만
  * 판정하므로 이 값으로는 아무것도 열리지 않는다.
+ *
+ * 등급은 가리지 않는다. 일반관리자는 순서를 건너뛰며 전 구간을 되풀이해
+ * 걷는 계정이라, 오히려 이쪽 기록이 더 빨리 쌓인다.
  */
 export async function markAdminAccount(uid: string): Promise<void> {
   if (!isFirebaseReady() || !db || !isAdminUser()) return

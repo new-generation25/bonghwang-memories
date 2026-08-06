@@ -14,7 +14,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { isAdminUser } from '@/lib/admin'
+import { isAdminUser, isSuperAdminUser } from '@/lib/admin'
 import { linkGoogle } from '@/lib/auth'
 import { BUILD_COMMIT } from '@/lib/buildVersion'
 import {
@@ -218,7 +218,30 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
               </button>
 
               {/*
-                관리자 전용 — 참여자에게는 항목이 아예 보이지 않는다.
+                콘솔은 슈퍼관리자만 — 참여자 데이터가 열리는 문이라
+                아래 건너뛰기 모드와 등급이 다르다(adminEmails.ts).
+                일반관리자에게는 항목이 아예 보이지 않는다. 눌러봐야
+                화면이 '권한 없음'을 내는 문을 세워둘 이유가 없다.
+              */}
+              {(isSuperAdminUser() || REHEARSAL) && (
+                <button
+                  onClick={() => {
+                    onClose()
+                    router.push('/admin')
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl border border-teal bg-teal/10 px-4 py-3 text-left"
+                >
+                  <span className="text-[13px] font-bold text-teal-dk">
+                    🛠 관리자 콘솔
+                  </span>
+                  <span className="text-[12px] text-teal-dk">›</span>
+                </button>
+              )}
+
+              {/*
+                건너뛰기는 일반관리자부터 — 앱을 걸어보는 것이 그 등급의 일이다.
+                참여자에게는 항목이 아예 보이지 않는다.
+
                 리허설 빌드에서는 계정 없이도 보인다. 자동 검증이 구글
                 OAuth를 통과할 수 없어서, 계정을 요구하면 이 아래 화면
                 전체가 검증 밖으로 빠진다(superAdmin.ts와 같은 이유).
@@ -226,19 +249,6 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
               */}
               {(isAdminUser() || REHEARSAL) && (
                 <>
-                  <button
-                    onClick={() => {
-                      onClose()
-                      router.push('/admin')
-                    }}
-                    className="flex w-full items-center justify-between rounded-xl border border-teal bg-teal/10 px-4 py-3 text-left"
-                  >
-                    <span className="text-[13px] font-bold text-teal-dk">
-                      🛠 관리자 콘솔
-                    </span>
-                    <span className="text-[12px] text-teal-dk">›</span>
-                  </button>
-
                   {/*
                     켜면 순서를 무시하고, 끄면 참여자와 똑같이 진행한다.
                     끄는 것으로 되감기지는 않는다 — 그 안내는 띠 안에 있다.
@@ -259,7 +269,7 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps) {
                           superOn ? 'text-rec' : 'text-ink'
                         }`}
                       >
-                        🔓 슈퍼관리자 모드
+                        🔓 진행 건너뛰기 모드
                       </span>
                       <span className="block text-[11px] text-ink-60">
                         {superOn

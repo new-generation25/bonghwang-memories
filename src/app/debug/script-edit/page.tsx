@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { isAdminUser } from '@/lib/admin'
+import { isSuperAdminUser } from '@/lib/admin'
 import { loadDraft, saveDraft } from '@/lib/scriptDraft'
 
 /** 고칠 수 있는 파일 — 서버의 목록과 같아야 한다 */
@@ -225,7 +225,7 @@ export default function ScriptEditPage() {
   /** 저장 안 한 수정이 이 기기에 남아 있을 때 */
   const [stash, setStash] = useState<string | null>(null)
 
-  useEffect(() => setAdmin(isAdminUser()), [profile])
+  useEffect(() => setAdmin(isSuperAdminUser()), [profile])
 
   const load = useCallback(async (name: Source) => {
     setStatus('불러오는 중…')

@@ -28,7 +28,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useTourState } from '@/hooks/useTourState'
 import { markGachaDrawn } from '@/lib/tourState'
 import { awardDynamic } from '@/lib/points'
-import { isAdminUser } from '@/lib/admin'
+import { isSuperAdminUser } from '@/lib/admin'
 import { logEvent } from '@/lib/analytics'
 
 export default function MyRecordPage() {
@@ -110,7 +110,11 @@ export default function MyRecordPage() {
             <h1 className="appbar-title text-[19px]">나의 기록</h1>
             <div className="flex shrink-0 items-center gap-1.5">
               {/*
-                관리자 문 — 관리자 계정으로 로그인했을 때만 선다.
+                관리자 문 — 슈퍼관리자로 로그인했을 때만 선다.
+
+                일반관리자에게는 세우지 않는다. 그 등급이 여는 것은 진행
+                건너뛰기이고 콘솔은 '권한 없음'을 낸다 — 눌러야 알게 되는
+                문은 없느니만 못하다(adminEmails.ts의 등급 표).
 
                 주소를 외워 치지 않고 들어갈 자리가 필요했다. 여기에 두는
                 이유는 하단 탭의 '나의 기록'이 어느 화면에서든 한 번에 닿는
@@ -120,7 +124,7 @@ export default function MyRecordPage() {
                 자신과 firestore.rules다. 여기서 감추는 것은 참여자에게
                 쓸모없는 문을 보이지 않게 하려는 것뿐이다.
               */}
-              {!authLoading && profile && isAdminUser() && (
+              {!authLoading && profile && isSuperAdminUser() && (
                 <Link
                   href="/admin"
                   aria-label="관리자 화면 열기"
