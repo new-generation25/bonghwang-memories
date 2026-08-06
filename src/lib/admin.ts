@@ -24,6 +24,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db, isFirebaseReady } from './firebase'
 import { PointReason } from './points'
+import { syncRanking } from './publicMirror'
 import {
   ADMIN_EMAILS,
   SUPER_ADMIN_EMAILS,
@@ -82,6 +83,15 @@ export async function markAdminAccount(uid: string): Promise<void> {
     // uid를 함께 넣는다 — 문서가 아직 없으면 merge가 create가 되는데,
     // 규칙이 create에 uid == 문서 id를 요구한다.
     await setDoc(doc(db, 'users', uid), { uid, isAdmin: true }, { merge: true })
+    /*
+      랭킹판에도 같은 표시를 남긴다.
+
+      users를 닫은 뒤로 참여자가 보는 순위표는 rankings/{uid}만 읽는다
+      (rankings.ts가 거기 isAdmin으로 거른다). 그런데 표시는 users에만
+      찍혀서, 집계에서는 빠지는데 **참여자 눈에 보이는 순위표에는 그대로
+      남았다** — 건너뛰기로 채운 점수가 1등에 서는 자리다.
+    */
+    await syncRanking(uid, { isAdmin: true })
   } catch {
     // 실패해도 앱 흐름을 막지 않는다. 다음 로그인 때 다시 시도된다.
   }
