@@ -98,6 +98,30 @@ export default function SuperAdminBar() {
     setOpen(false)
   }
 
+  /**
+   * 완주 인증서(S40)로 바로 간다.
+   *
+   * 손으로 가려면 ~A5 완료 처리 → 빙고 열기 → 투어 마치기 → 마칠게요,
+   * 화면 셋을 거쳐야 한다. 인증서는 캔버스로 굽는 인쇄물이라 도안을 한 번
+   * 고칠 때마다 그 셋을 되풀이하게 된다.
+   *
+   * **시작 시각을 먼저 채우는 것이 핵심이다.** 그 값은 인트로를 끝내거나
+   * 트랙 화면에 들어갈 때 잡히는데(TrackPageClient), 건너뛰기로 완료
+   * 처리만 하면 비어 있다. 그러면 인증서의 일련번호가 '——', 날짜와
+   * 함께한 시간이 '—'로 굽힌다 — 도안을 보러 온 자리에서 제일 눈에 띄는
+   * 칸 셋이 빈다. 없으면 90분 전에 시작한 것으로 친다.
+   */
+  const openCertificate = () => {
+    completeUpTo(5)
+    mutateTour((prev) => ({
+      startTime: prev.startTime ?? Date.now() - 90 * 60 * 1000,
+      // 피날레가 act2를 보고 done으로 확정하며 완주 보너스를 낸다
+      phase: 'act2',
+    }))
+    setOpen(false)
+    router.push('/finale')
+  }
+
   const openBingo = () => {
     mutateTour((prev) => ({
       phase: 'act2',
@@ -167,6 +191,13 @@ export default function SuperAdminBar() {
               className="mt-3 w-full rounded-lg border border-line bg-cream py-2 text-[12px] font-bold text-ink"
             >
               ▶ 인트로 다시 보기 — 테이프 · 전화
+            </button>
+
+            <button
+              onClick={openCertificate}
+              className="mt-2 w-full rounded-lg border border-line bg-cream py-2 text-[12px] font-bold text-ink"
+            >
+              🏁 완주 인증서 보기 — A1~A5 완료로 치고 피날레로
             </button>
 
             <div className="mt-2 grid grid-cols-2 gap-2">
