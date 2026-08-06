@@ -11,6 +11,10 @@
  * users/{uid} 프로필 문서까지 남긴다(auth.ts의 signUp과 같은 모양).
  * 콘솔에서 계정만 만들면 그 문서가 없어 로그인 뒤 화면이 어긋난다.
  *
+ * **문서에 `loginId`를 적지 않는다.** 규칙이 그 칸을 아예 거부한다 —
+ * users는 한때 공개로 읽혔고, 거기 아이디가 있으면 비밀번호의 절반이
+ * 공개된 셈이었다. 아이디는 이미 내부 이메일에 들어 있다.
+ *
  * 아이디·가게이름·비밀번호는 아래 표에 적혀 있고, 결과를
  * shop-qr/accounts.txt로 뽑는다. 그 폴더는 gitignore다 — 저장소에
  * 올라가면 남의 가게 쿠폰을 대신 처리할 수 있다.
@@ -96,6 +100,9 @@ const app = initializeApp({
 const auth = getAuth(app)
 const db = getFirestore(app)
 
+/** publicMirror.ts의 toNicknameKey와 같아야 한다 */
+const nicknameKey = (n) => n.trim().toLowerCase().replace(/\//g, '_')
+
 fs.mkdirSync(OUT, { recursive: true })
 let kept = fs.existsSync(STORE) ? JSON.parse(fs.readFileSync(STORE, 'utf8')) : {}
 
@@ -122,12 +129,14 @@ for (const shop of SHOPS) {
     /*
       프로필 문서. 규칙이 isOwner(userId)를 요구하므로 방금 만든 계정으로
       로그인된 이 순간에 써야 한다 — 관리자 권한으로는 못 만든다.
+
+      loginId는 넣지 않는다 — 규칙이 그 칸이 있으면 create를 통째로
+      거부해서, 넣으면 Auth 계정만 생기고 문서가 없는 계정이 남는다.
     */
     await setDoc(doc(db, 'users', uid), {
       uid,
-      loginId: shop.loginId,
       nickname: shop.nickname,
-      nicknameKey: shop.nickname.trim().toLowerCase(),
+      nicknameKey: nicknameKey(shop.nickname),
       provider: 'password',
       totalScore: 0,
       completedMissions: [],
