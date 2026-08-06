@@ -51,7 +51,18 @@ export default function FinalePage() {
     }
   }, [tour.phase])
 
-  // 앨범 사진 로드 (IndexedDB → object URL)
+  /*
+    앨범 사진 로드 (IndexedDB → object URL)
+
+    투어 상태가 바뀌면 다시 읽는다. 예전에는 한 번만 읽었는데, 첫 렌더의
+    tour는 반드시 초기값이다 — useTourState가 hydration 전에는 빈 상태를
+    돌려주기 때문이다(서버 렌더와 첫 프레임이 같아야 한다).
+
+    빙고판에서 넘어올 때는 앱이 이미 hydrate돼 있어 첫 렌더부터 진짜
+    값이라 드러나지 않았다. **이 화면을 새로고침하거나 주소로 바로 열면**
+    빈 목록을 읽고 그대로 굳어서, 앨범도 인증서 사진 띠도 통째로 빈다.
+    90분을 걷고 찍은 사진이 새로고침 한 번에 사라져 보이는 자리다.
+  */
   useEffect(() => {
     const revokes: (() => void)[] = []
     ;(async () => {
@@ -82,8 +93,7 @@ export default function FinalePage() {
       }
     })()
     return () => revokes.forEach((fn) => fn())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [tour.photos, tour.bsideEntry])
 
   // 시리얼 — 시작 시각 기반 (실서비스 전환 시 Firestore 카운터로 교체 지점).
   // startTime이 없으면(=hydration 전 초기 렌더 포함) Date.now()를 쓰지 않는다 —
