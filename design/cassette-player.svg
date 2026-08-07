@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 276" width="360" height="276" role="img" aria-label="카세트 플레이어">
+  <title>봉황 메모리즈 — 카세트 플레이어</title>
+  <defs>
+    <clipPath id="labelClip"><rect x="22" y="16" width="256" height="110" rx="6"/></clipPath>
+    <clipPath id="deckWindowClip"><rect x="145.82" y="39" width="168" height="78" rx="5"/></clipPath>
+    <linearGradient id="shellFace" x1="0" y1="0" x2="0.75" y2="1">
+      <stop offset="0%" stop-color="#d8d5cf"/><stop offset="42%" stop-color="#b9b5ad"/>
+      <stop offset="62%" stop-color="#cfccc5"/><stop offset="100%" stop-color="#a9a49b"/>
+    </linearGradient>
+    <linearGradient id="doorFace" x1="0" y1="0" x2="0.62" y2="1">
+      <stop offset="0%" stop-color="#e4e1db"/><stop offset="55%" stop-color="#c9c5be"/>
+      <stop offset="100%" stop-color="#dad7d0"/>
+    </linearGradient>
+    <linearGradient id="winGlass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d0b0a"/><stop offset="100%" stop-color="#171413"/>
+    </linearGradient>
+    <linearGradient id="glassSheen" x1="0" y1="0" x2="1" y2="0.32">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.17"/>
+      <stop offset="14%" stop-color="#ffffff" stop-opacity="0.17"/>
+      <stop offset="26%" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="34%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="keyBar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8f8a82"/><stop offset="100%" stop-color="#6f6a63"/>
+    </linearGradient>
+    <linearGradient id="keyFace" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e2ded7"/><stop offset="100%" stop-color="#b6b1a9"/>
+    </linearGradient>
+    <linearGradient id="digit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#efe9d8"/><stop offset="100%" stop-color="#cfc7b2"/>
+    </linearGradient>
+    <radialGradient id="knob" cx="0.34" cy="0.3" r="0.75">
+      <stop offset="0%" stop-color="#8e8981"/><stop offset="100%" stop-color="#5f5b55"/>
+    </radialGradient>
+    <pattern id="grille" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="#c3bfb8"/>
+      <circle cx="3" cy="3" r="1.1" fill="#6f6a63"/>
+    </pattern>
+    <pattern id="keyBrush" width="2" height="1" patternUnits="userSpaceOnUse">
+      <rect width="1" height="1" fill="#ffffff" opacity="0.5"/>
+      <rect x="1" width="1" height="1" fill="#000000" opacity="0.06"/>
+    </pattern>
+  </defs>
+
+  <g id="player-shell">
+    <rect width="360" height="276" rx="14" fill="url(#shellFace)"/>
+    <rect x="0.5" y="0.5" width="359" height="1.5" rx="0.75" fill="#ffffff" opacity="0.85"/>
+    <circle cx="11" cy="11" r="3" fill="#9a958c" stroke="#7a756d"/>
+    <circle cx="349" cy="11" r="3" fill="#9a958c" stroke="#7a756d"/>
+  </g>
+
+  <g id="deck-grille">
+    <rect x="14" y="14" width="89.64" height="128" rx="8" fill="url(#grille)"/>
+  </g>
+
+  <g id="deck-door">
+    <rect x="113.64" y="14" width="232.36" height="128" rx="9" fill="url(#doorFace)"/>
+    <g id="deck-window">
+      <rect x="145.82" y="39" width="168" height="78" rx="5" fill="url(#winGlass)"/>
+      <g clip-path="url(#deckWindowClip)">
+        <g transform="translate(229.82 25) scale(0.68) translate(-150 0)">
+    <g id="cassette-body">
+      <rect width="300" height="190" rx="12" fill="#262422"/>
+      <rect x="0.5" y="0.5" width="299" height="2" rx="1" fill="#ffffff" opacity="0.12"/>
+    </g>
+
+    <g id="screws">
+      <g>
+        <circle cx="12" cy="12" r="4" fill="#45403c" stroke="#171514" stroke-width="2"/>
+        <rect x="8.5" y="11" width="7" height="2" fill="#171514"/>
+      </g>
+      <g>
+        <circle cx="288" cy="12" r="4" fill="#45403c" stroke="#171514" stroke-width="2"/>
+        <rect x="284.5" y="11" width="7" height="2" fill="#171514"/>
+      </g>
+      <g>
+        <circle cx="12" cy="178" r="4" fill="#45403c" stroke="#171514" stroke-width="2"/>
+        <rect x="8.5" y="177" width="7" height="2" fill="#171514"/>
+      </g>
+      <g>
+        <circle cx="288" cy="178" r="4" fill="#45403c" stroke="#171514" stroke-width="2"/>
+        <rect x="284.5" y="177" width="7" height="2" fill="#171514"/>
+      </g>
+    </g>
+
+    <g id="label" clip-path="url(#labelClip)">
+      <rect x="22" y="16" width="256" height="110" rx="6" fill="#F3EAD3"/>
+      <g id="stripes">
+        <rect x="22" y="48" width="256" height="6" fill="#F2B33D"/>
+        <rect x="22" y="57.5" width="256" height="6" fill="#E8722C"/>
+        <rect x="22" y="67" width="256" height="6" fill="#2E8A80"/>
+      </g>
+      <text x="150" y="63.41" text-anchor="middle" font-family="'Gamja Flower',cursive" font-size="26" letter-spacing="-1.04" fill="#262422">소영에게 — 1988. 9. 17.</text>
+      <text x="267" y="89.5" text-anchor="end" font-family="'Black Han Sans',sans-serif" font-size="17" fill="#D93A2B">88</text>
+    </g>
+
+    <g id="window">
+      <rect x="66" y="80" width="168" height="40" rx="20" fill="#141210"/>
+      <rect x="110" y="89" width="9.6" height="22" rx="2" fill="#5b4634"/>
+      <g id="reel-supply">
+        <circle cx="89" cy="100" r="15" fill="#EFEBE2"/>
+        <circle cx="89" cy="100" r="13" fill="#EFEBE2"/>
+        <path d="M89 100 L93.02 87.64 A13 13 0 0 1 96.64 89.48 Z" fill="#b9b2a6"/>
+        <path d="M89 100 L99.52 92.36 A13 13 0 0 1 101.36 95.98 Z" fill="#b9b2a6"/>
+        <path d="M89 100 L102 100 A13 13 0 0 1 101.36 104.02 Z" fill="#b9b2a6"/>
+        <path d="M89 100 L99.52 107.64 A13 13 0 0 1 96.64 110.52 Z" fill="#b9b2a6"/>
+        <path d="M89 100 L93.02 112.36 A13 13 0 0 1 89 113 Z" fill="#b9b2a6"/>
+        <path d="M89 100 L84.98 112.36 A13 13 0 0 1 81.36 110.52 Z" fill="#b9b2a6"/>
+        <path d="M89 100 L78.48 107.64 A13 13 0 0 1 76.64 104.02 Z" fill="#b9b2a6"/>
+        <path d="M89 100 L76 100 A13 13 0 0 1 76.64 95.98 Z" fill="#b9b2a6"/>
+        <path d="M89 100 L78.48 92.36 A13 13 0 0 1 81.36 89.48 Z" fill="#b9b2a6"/>
+        <path d="M89 100 L84.98 87.64 A13 13 0 0 1 89 87 Z" fill="#b9b2a6"/>
+        <circle cx="89" cy="100" r="7" fill="#141210"/>
+      </g>
+      <g id="reel-takeup">
+        <circle cx="211" cy="100" r="15" fill="#EFEBE2"/>
+        <circle cx="211" cy="100" r="13" fill="#EFEBE2"/>
+        <path d="M211 100 L215.02 87.64 A13 13 0 0 1 218.64 89.48 Z" fill="#b9b2a6"/>
+        <path d="M211 100 L221.52 92.36 A13 13 0 0 1 223.36 95.98 Z" fill="#b9b2a6"/>
+        <path d="M211 100 L224 100 A13 13 0 0 1 223.36 104.02 Z" fill="#b9b2a6"/>
+        <path d="M211 100 L221.52 107.64 A13 13 0 0 1 218.64 110.52 Z" fill="#b9b2a6"/>
+        <path d="M211 100 L215.02 112.36 A13 13 0 0 1 211 113 Z" fill="#b9b2a6"/>
+        <path d="M211 100 L206.98 112.36 A13 13 0 0 1 203.36 110.52 Z" fill="#b9b2a6"/>
+        <path d="M211 100 L200.48 107.64 A13 13 0 0 1 198.64 104.02 Z" fill="#b9b2a6"/>
+        <path d="M211 100 L198 100 A13 13 0 0 1 198.64 95.98 Z" fill="#b9b2a6"/>
+        <path d="M211 100 L200.48 92.36 A13 13 0 0 1 203.36 89.48 Z" fill="#b9b2a6"/>
+        <path d="M211 100 L206.98 87.64 A13 13 0 0 1 211 87 Z" fill="#b9b2a6"/>
+        <circle cx="211" cy="100" r="7" fill="#141210"/>
+      </g>
+    </g>
+
+    <g id="bottom">
+      <path d="M90 150 L210 150 L225 176 L75 176 Z" fill="#171514"/>
+      <circle cx="139.5" cy="163" r="3.5" fill="#45403c"/>
+      <circle cx="160.5" cy="163" r="3.5" fill="#45403c"/>
+    </g>
+        </g>
+        <rect x="145.82" y="39" width="168" height="78" rx="5" fill="url(#glassSheen)"/>
+      </g>
+      <rect x="146.32" y="39.5" width="167" height="77" rx="4.5" fill="none" stroke="#000000" stroke-opacity="0.6"/>
+      <rect x="145.82" y="117" width="168" height="1" fill="#ffffff" opacity="0.95"/>
+    </g>
+  </g>
+
+  <g id="deck-meta">
+    <circle cx="29" cy="165" r="13" fill="url(#knob)"/>
+    <g id="deck-counter">
+      <rect x="52" y="155" width="54" height="20" rx="3" fill="#17150f"/>
+        <rect x="56" y="158" width="10" height="14" rx="1" fill="url(#digit)"/>
+        <text x="61" y="168" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="11" fill="#2b2420">1</text>
+        <rect x="68" y="158" width="10" height="14" rx="1" fill="url(#digit)"/>
+        <text x="73" y="168" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="11" fill="#2b2420">9</text>
+        <rect x="80" y="158" width="10" height="14" rx="1" fill="url(#digit)"/>
+        <text x="85" y="168" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="11" fill="#2b2420">8</text>
+        <rect x="92" y="158" width="10" height="14" rx="1" fill="url(#digit)"/>
+        <text x="97" y="168" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="11" fill="#2b2420">8</text>
+    </g>
+    <text x="344" y="168.25" text-anchor="end" font-family="'Share Tech Mono',monospace" font-size="9" letter-spacing="1.8" fill="#2B2420" fill-opacity="0.42">A ▸</text>
+  </g>
+
+  <g id="player-keys">
+    <rect x="14" y="188" width="332" height="72" rx="6" fill="url(#keyBar)"/>
+      <g id="key-rew">
+        <rect x="18" y="196" width="62.4" height="62" rx="3" fill="#5d5952"/>
+        <rect x="18" y="193" width="62.4" height="62" rx="3" fill="url(#keyFace)" stroke="#6a655e"/>
+        <rect x="18.5" y="193.5" width="61.4" height="61" rx="2.5" fill="url(#keyBrush)"/>
+        <path d="M47.7 206.63 L36.7 213.63 L47.7 220.63 Z" fill="rgba(43,36,32,0.28)"/><path d="M61.7 206.63 L50.7 213.63 L61.7 220.63 Z" fill="rgba(43,36,32,0.28)"/>
+        <text x="49.2" y="239.13" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="10.5" font-weight="700" letter-spacing="1.47" fill="rgba(43,36,32,0.28)" opacity="0.6">REW</text>
+      </g>
+      <g id="key-play">
+        <rect x="83.4" y="196" width="62.4" height="62" rx="3" fill="#5d5952"/>
+        <rect x="83.4" y="193" width="62.4" height="62" rx="3" fill="url(#keyFace)" stroke="#57534c"/>
+        <rect x="83.9" y="193.5" width="61.4" height="61" rx="2.5" fill="url(#keyBrush)"/>
+        <path d="M107.1 204.63 L122.1 213.63 L107.1 222.63 Z" fill="#F2B33D"/>
+        <text x="114.6" y="239.13" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="10.5" font-weight="700" letter-spacing="1.47" fill="#F2B33D" opacity="0.95">PLAY</text>
+      </g>
+      <g id="key-ff">
+        <rect x="148.8" y="196" width="62.4" height="62" rx="3" fill="#5d5952"/>
+        <rect x="148.8" y="193" width="62.4" height="62" rx="3" fill="url(#keyFace)" stroke="#6a655e"/>
+        <rect x="149.3" y="193.5" width="61.4" height="61" rx="2.5" fill="url(#keyBrush)"/>
+        <path d="M167.5 206.63 L178.5 213.63 L167.5 220.63 Z" fill="rgba(43,36,32,0.28)"/><path d="M181.5 206.63 L192.5 213.63 L181.5 220.63 Z" fill="rgba(43,36,32,0.28)"/>
+        <text x="180" y="239.13" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="10.5" font-weight="700" letter-spacing="1.47" fill="rgba(43,36,32,0.28)" opacity="0.6">FF</text>
+      </g>
+      <g id="key-stop">
+        <rect x="214.2" y="196" width="62.4" height="62" rx="3" fill="#5d5952"/>
+        <rect x="214.2" y="193" width="62.4" height="62" rx="3" fill="url(#keyFace)" stroke="#6a655e"/>
+        <rect x="214.7" y="193.5" width="61.4" height="61" rx="2.5" fill="url(#keyBrush)"/>
+        <rect x="237.9" y="206.13" width="15" height="15" rx="1" fill="rgba(43,36,32,0.28)"/>
+        <text x="245.4" y="239.13" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="10.5" font-weight="700" letter-spacing="1.47" fill="rgba(43,36,32,0.28)" opacity="0.6">STOP</text>
+      </g>
+      <g id="key-rec">
+        <rect x="279.6" y="196" width="62.4" height="62" rx="3" fill="#5d5952"/>
+        <rect x="279.6" y="193" width="62.4" height="62" rx="3" fill="url(#keyFace)" stroke="#6a655e"/>
+        <rect x="280.1" y="193.5" width="61.4" height="61" rx="2.5" fill="url(#keyBrush)"/>
+        <circle cx="310.8" cy="213.63" r="7.5" fill="rgba(43,36,32,0.28)"/>
+        <text x="310.8" y="239.13" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="10.5" font-weight="700" letter-spacing="1.47" fill="rgba(43,36,32,0.28)" opacity="0.6">REC</text>
+      </g>
+  </g>
+</svg>
