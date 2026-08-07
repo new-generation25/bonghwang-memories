@@ -59,7 +59,7 @@
     <g id="deck-window">
       <rect x="145.82" y="39" width="168" height="78" rx="5" fill="url(#winGlass)"/>
       <g clip-path="url(#deckWindowClip)">
-        <g transform="translate(229.82 25) scale(0.68) translate(-150 0)">
+        <g id="tape-in-window" transform="translate(229.82 25) scale(0.68) translate(-150 0)">
     <g id="cassette-body">
       <rect width="300" height="190" rx="12" fill="#262422"/>
       <rect x="0.5" y="0.5" width="299" height="2" rx="1" fill="#ffffff" opacity="0.12"/>
